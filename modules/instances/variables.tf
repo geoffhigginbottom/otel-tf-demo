@@ -44,6 +44,9 @@ variable "windows_server_ami" {
 variable "my_public_ip" {
   default = []
 }
+variable "splunk_ent_eip" {
+  default = []
+}
 
 ### SignalFX Variables ###
 variable "access_token" {

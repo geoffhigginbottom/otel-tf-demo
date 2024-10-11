@@ -22,7 +22,7 @@ eks_fargate_cluster_enabled = false # Not Working Yet
 gateway_count = "0"
 apache_web_count = "0"
 haproxy_count = "0"
-mysql_count = "0"
+mysql_count = "0" #uses var.collector_version
 ms_sql_count = "0"
 windows_server_count = "0"
 splunk_ent_count = "0"
@@ -55,7 +55,7 @@ splunk_itsi_ids = [
   ]
 
 ### AWS Variables ###
-#region = "<REGION>"
+#region = "<REGION>" - ensue this aligns with EIP setting below
 
 ## VPC Settings ##
 vpc_cidr_block          = "172.32.0.0/16"
@@ -64,9 +64,12 @@ subnet_count            = "2"
 ## Auth Settings ##
 key_name                = "<NAME>"
 private_key_path        = "~/.ssh/id_rsa"
-instance_type           = "t2.micro"
 aws_access_key_id       = "<ACCCESS_KEY_ID>>"
 aws_secret_access_key   = "<SECRET_ACCESS_KEY>>"
+
+## Misc Instance Types ##
+instance_type           = "t2.micro"
+gateway_instance_type   = "t2.small"
 
 ### SOC Variables ###
 soc_integration_id      = "<ID>"
@@ -86,11 +89,12 @@ windows_proxied_server_agent_url = "https://raw.githubusercontent.com/geoffhiggi
 windows_fluentd_url              = "https://s3.amazonaws.com/packages.treasuredata.com/4/windows/td-agent-4.4.1-x64.msi" #https://docs.fluentd.org/installation/install-by-msi#td-agent-v4 https://td-agent-package-browser.herokuapp.com/4/windows
 windows_tdagent_conf_url         = "https://raw.githubusercontent.com/geoffhigginbottom/sfx-tf-demo/master/modules/proxied_instances/config_files/td-agent.conf"
 windows_eventlog_conf_url        = "https://raw.githubusercontent.com/geoffhigginbottom/sfx-tf-demo/master/modules/proxied_instances/config_files/eventlog.conf"
-collector_version                = "0.78.0" #https://docs.splunk.com/Observability/gdi/opentelemetry/install-windows.html#otel-install-windows https://github.com/signalfx/splunk-otel-collector/releases
 
 ### Collector Variables ###
-### https://quay.io/repository/signalfx/splunk-otel-collector?tab=tags
-gateway_instance_type            = "t2.small"
+collector_version                = "0.111.0"
+# https://docs.splunk.com/Observability/gdi/opentelemetry/install-windows.html#otel-install-windows 
+# https://github.com/signalfx/splunk-otel-collector/releases
+# https://quay.io/repository/signalfx/splunk-otel-collector?tab=tags
 
 ### Splunk Enterprise Variables ###
 splunk_ent_filename                 = "splunk-9.0.5-e9494146ae5c-linux-2.6-amd64.deb"
@@ -100,13 +104,14 @@ universalforwarder_filename         = "splunkforwarder-9.2.1-78803f08aabb-linux-
 universalforwarder_url              = "https://download.splunk.com/products/universalforwarder/releases/9.2.1/linux/splunkforwarder-9.2.1-78803f08aabb-linux-2.6-amd64.deb"
 splunk_enterprise_files_local_path  = "~/Documents/TFDemo_Splunk_Files"   # path where splunk enterprise files resides on your local machine 
 splunk_enterprise_license_filename  = "Splunk_Enterprise_NFR_FY25_2H.xml" # this file should NOT be included in the repo, and should be located in the splunk_enterprise_files_local_path location
+splunk_ent_eip                      = "nn.nn.nn.nn" - ensure this aligns with region setting above
 
 ### Splunk ITSI Variables ###
 splunk_itsi_inst_type                            = "t2.xlarge"
 splunk_itsi_version                              = "9.0.5"
-splunk_itsi_filename                             = "splunk-9.0.1-82c987350fde-linux-2.6-amd64.deb"
+splunk_itsi_filename                             = "splunk-9.0.5-e9494146ae5c-linux-2.6-amd64.deb"
 splunk_itsi_files_local_path                     = "~/Documents/TFDemo_Splunk_Files"                 # path where itsi files resides on your local machine 
-splunk_itsi_license_filename                     = "Splunk_ITSI_NFR_FY24_1H.xml"                     # this file should NOT be included in the repo, and should be located in the itsi_files_local_path location
+splunk_itsi_license_filename                     = "Splunk_ITSI_NFR_FY25_2H.xml"                     # this file should NOT be included in the repo, and should be located in the itsi_files_local_path location
 splunk_app_for_content_packs_filename            = "splunk-app-for-content-packs_190.spl"            # this file should NOT be included in the repo, and should be located in the itsi_files_local_path location
 splunk_it_service_intelligence_filename          = "splunk-it-service-intelligence_4152.spl"         # this file should NOT be included in the repo, and should be located in the itsi_files_local_path location
 splunk_synthetic_monitoring_add_on_filename      = "splunk-synthetic-monitoring-add-on_110.tgz"      # this file should NOT be included in the repo, and should be located in the itsi_files_local_path location

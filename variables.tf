@@ -94,6 +94,9 @@ variable "aws_api_gateway_deployment_retailorder_invoke_url" {
 variable "my_public_ip" {
   default = []
 }
+variable "splunk_ent_eip" {
+  default = []
+}
 
 ## EKS Variables ##
 variable "eks_cluster_name" {

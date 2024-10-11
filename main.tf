@@ -217,6 +217,7 @@ module "instances" {
   universalforwarder_filename      = var.universalforwarder_filename
   universalforwarder_url           = var.universalforwarder_url
   my_public_ip                     = "${chomp(data.http.my_public_ip.response_body)}"
+  splunk_ent_eip                   = var.splunk_ent_eip
   collector_version                = var.collector_version
 }
 

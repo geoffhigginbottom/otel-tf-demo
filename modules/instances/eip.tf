@@ -1,6 +1,6 @@
 resource "aws_eip_association" "eip_assoc" {
   instance_id   = aws_instance.splunk_ent[0].id
-  public_ip     = "13.36.136.240"
+  public_ip     = var.splunk_ent_eip
   count         = var.splunk_ent_count
 }
 
