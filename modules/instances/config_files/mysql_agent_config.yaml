@@ -87,31 +87,31 @@ receivers:
   zipkin:
     endpoint: "${SPLUNK_LISTEN_INTERFACE}:9411"
   
-## MySQL Specific Receivers
-  smartagent/mysql:
-    type: collectd/mysql
-    host: 127.0.0.1
-    port: 3306
-    databases:
-      - name:
-    username: ${MYSQL_USER}
-    password: ${MYSQL_USER_PWD}
+# ## MySQL Specific Receivers - removed as now using auto discovery
+#   smartagent/mysql:
+#     type: collectd/mysql
+#     host: 127.0.0.1
+#     port: 3306
+#     databases:
+#       - name:
+#     username: ${MYSQL_USER}
+#     password: ${MYSQL_USER_PWD}
 
-  mysql:
-    endpoint: localhost:3306
-    username: ${MYSQL_USER}
-    password: ${MYSQL_USER_PWD}
-    collection_interval: 10s
-    initial_delay: 1s
-    statement_events:
-      digest_text_limit: 120
-      time_limit: 24h
-      limit: 250
-    metrics:
-      mysql.query.slow.count:
-        enabled: true
-      mysql.query.count:
-        enabled: true
+#   mysql:
+#     endpoint: localhost:3306
+#     username: ${MYSQL_USER}
+#     password: ${MYSQL_USER_PWD}
+#     collection_interval: 10s
+#     initial_delay: 1s
+#     statement_events:
+#       digest_text_limit: 120
+#       time_limit: 24h
+#       limit: 250
+#     metrics:
+#       mysql.query.slow.count:
+#         enabled: true
+#       mysql.query.count:
+#         enabled: true
 
 processors:
   batch:
@@ -220,8 +220,8 @@ service:
       - otlp
       - signalfx
       - smartagent/signalfx-forwarder
-      - smartagent/mysql
-      - mysql
+      # - smartagent/mysql # removed as now using auto discovery
+      # - mysql # removed as now using auto discovery
       processors:
       - memory_limiter
       - batch

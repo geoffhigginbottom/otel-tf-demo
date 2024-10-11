@@ -6,10 +6,6 @@ resource "aws_instance" "mysql" {
   key_name                  = var.key_name
   vpc_security_group_ids    = [aws_security_group.instances_sg.id]
 
-  ### needed for Splunk Golden Image to enable SSH
-  ### the 'ssh connection' should use the same user
-  # user_data = file("${path.module}/scripts/userdata.sh") 
-
   tags = {
     Name = lower(join("-",[var.environment, "mysql", count.index + 1]))
     Environment = lower(var.environment)
@@ -62,9 +58,9 @@ resource "aws_instance" "mysql" {
     # Install Otel Agent
       "sudo curl -sSL https://dl.signalfx.com/splunk-otel-collector.sh > /tmp/splunk-otel-collector.sh",
       # "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --without-fluentd --collector-version ${var.collector_version}",
-      "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --discovery",
-      # "sudo mv /etc/otel/collector/agent_config.yaml /etc/otel/collector/agent_config.bak",
-      # "sudo mv /tmp/mysql_agent_config.yaml /etc/otel/collector/agent_config.yaml",
+      "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --collector-version ${var.collector_version} --discovery",
+      "sudo mv /etc/otel/collector/agent_config.yaml /etc/otel/collector/agent_config.bak",
+      "sudo mv /tmp/mysql_agent_config.yaml /etc/otel/collector/agent_config.yaml",
       "sudo chmod +x /tmp/update_splunk_otel_collector_conf_mysql.sh",
       "sudo /tmp/update_splunk_otel_collector_conf_mysql.sh $LBURL $MYSQLUSER $MYSQLPWD",
 
