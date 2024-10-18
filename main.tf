@@ -81,6 +81,10 @@ module "eks" {
   key_name              = var.key_name
   private_key_path      = var.private_key_path
   eks_cluster_name      = join("_", [var.environment, "eks_cluster"])
+  eks_access_token      = var.eks_access_token
+  eks_splunk_endpoint   = var.eks_splunk_endpoint
+  eks_hec_token         = var.eks_hec_token
+  eks_splunk_index      = var.eks_splunk_index
 }
 
 module "eks_fargate" {

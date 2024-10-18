@@ -75,13 +75,18 @@ resource "aws_instance" "eks_admin_server" {
       "aws eks update-kubeconfig --name $EKS_CLUSTER_NAME",
 
     ## Install K8S Integration using OTEL
-      "TOKEN=${var.access_token}",
+      "TOKEN=${var.eks_access_token}",
       "REALM=${var.realm}",
       "EKS_CLUSTER_NAME=${var.eks_cluster_name}",
+      "SPLUNK_ENDPOINT=${var.eks_splunk_endpoint}",
+      "HEC_TOKEN=${var.eks_hec_token}",
+      "SPLUNK_INDEX=${var.eks_splunk_index}",
+      "EKS_ACCESS_TOKEN=${var.eks_access_token}",
+
       "helm repo add splunk-otel-collector-chart https://signalfx.github.io/splunk-otel-collector-chart",
       "helm repo update",
-      "helm install --set cloudProvider='aws' --set distribution='eks' --set splunkObservability.accessToken=$TOKEN --set clusterName=$EKS_CLUSTER_NAME --set splunkObservability.realm=$REALM --set gateway.enabled='false' --set splunkObservability.profilingEnabled='true' --generate-name splunk-otel-collector-chart/splunk-otel-collector",
-      
+      "helm install --set cloudProvider='aws' --set distribution='eks' --set splunkObservability.accessToken=$EKS_ACCESS_TOKEN --set clusterName=$EKS_CLUSTER_NAME --set splunkObservability.realm=$REALM --set gateway.enabled='false' --set splunkObservability.profilingEnabled='true' --set splunkPlatform.endpoint=$SPLUNK_ENDPOINT --set splunkPlatform.token=$HEC_TOKEN --set splunkPlatform.index=$SPLUNK_INDEX --set environment=$ENVIRONMENT --generate-name splunk-otel-collector-chart/splunk-otel-collector",
+
     ## Deploy Hot Rod
       # "kubectl apply -f /home/ubuntu/deployment.yaml",
       # "sudo chmod +x /home/ubuntu/deploy_hotrod.sh",
@@ -90,7 +95,12 @@ resource "aws_instance" "eks_admin_server" {
     # Deploy Astro Shop
       "git clone https://github.com/splunk/observability-workshop",
       "helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts",
-      "helm install astro-shop-demo open-telemetry/opentelemetry-demo --values ~/observability-workshop/workshop/oteldemo/otel-demo.yaml",
+      "helm install astro-shop-demo open-telemetry/opentelemetry-demo --values /home/ubuntu/observability-workshop/workshop/oteldemo/otel-demo.yaml",
+      "curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\"",
+      "chmod +x ./kubectl",
+      "sudo mv ./kubectl /usr/local/bin/",
+      "kubectl patch svc astro-shop-demo-frontendproxy -n default -p '{\"spec\": {\"type\": \"LoadBalancer\"}}'",
+
 
     ## Write env vars to file (used for debugging)
       "echo $AWS_ACCESS_KEY_ID > /tmp/aws_access_key_id",
@@ -108,14 +118,6 @@ resource "aws_instance" "eks_admin_server" {
     ]
   }
 
-  # provisioner "remote-exec" {
-  #   when = destroy
-  #   on_failure = continue
-  #   inline = [
-  #     "sudo helm delete"
-  #   ]
-  # }
-
   connection {
     host = self.public_ip
     type = "ssh"
@@ -132,47 +134,3 @@ output "eks_admin_server_details" {
     aws_instance.eks_admin_server.*.public_ip,
   )
 }
-
-# ## Deploy the Astro Shop 
-# # Usees the Null Resource as it needs to be deleted during destroy phase as the VPC 
-# # will not delete if the Load Balancer created by the deploment is still present.
-# # Triggers are used because "Destroy-time provisioners and their connection configurations may 
-# # only reference attributes of the related resource, via 'self', 'count.index', or 'each.key'"
-
-# resource "null_resource" "astroshop" {
-#   count      = 1
-  
-#   triggers = {
-#     instance_ip_addr = aws_instance.eks_admin_server.public_ip,
-#     private_key_path = var.private_key_path
-#   }
-
-#   depends_on = [
-#     aws_eks_cluster.demo,
-#     aws_instance.eks_admin_server
-#   ]
-
-#   connection {
-#     type = "ssh"
-#     user = "ubuntu"
-#     # private_key = file(var.private_key_path)
-#     private_key = file(self.triggers.private_key_path)
-#     # host = aws_instance.eks_admin_server.public_ip
-#     host = self.triggers.instance_ip_addr
-#   }
-
-#   provisioner "remote-exec" {
-#     inline = [
-#       "git clone https://github.com/splunk/observability-workshop",
-#       "helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts",
-#       "helm install astro-shop-demo open-telemetry/opentelemetry-demo --values ~/observability-workshop/workshop/oteldemo/otel-demo.yaml",
-#     ]
-#   }
-
-#   provisioner "remote-exec" {
-#     when = destroy
-#     inline = [
-#       "helm delete my-otel-demo"
-#     ]
-#   }
-# }

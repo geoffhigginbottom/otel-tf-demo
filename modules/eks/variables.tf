@@ -49,3 +49,15 @@ variable "eks_cluster_name" {
 variable "eks_cluster_endpoint" {
   default = {}
 }
+variable "eks_access_token" {
+  default = {}
+}
+variable "eks_splunk_endpoint" {
+  default = {}
+}
+variable "eks_hec_token" {
+  default = {}
+}
+variable "eks_splunk_index" {
+  default = {}
+}
