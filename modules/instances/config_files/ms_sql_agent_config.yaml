@@ -94,6 +94,10 @@ receivers:
     userID: ${SPLUNK_SQL_USER}
     password: ${SPLUNK_SQL_USER_PWD}
     appName: sqlserver
+    extraMetrics:
+      - sqlserver_memory_clerks.size_kb.bound_trees
+      - sqlserver_performance.active_temp_tables
+
 
   smartagent/win_services:
     type: telegraf/win_services
