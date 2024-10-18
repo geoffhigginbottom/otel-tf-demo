@@ -15,7 +15,7 @@ fi
 
 # cp /etc/otel/collector/splunk-otel-collector.conf /etc/otel/collector/splunk-otel-collector.bak
 
-# echo SPLUNK_GATEWAY_URL=$LBURL >> /etc/otel/collector/splunk-otel-collector.conf
+echo SPLUNK_GATEWAY_URL=$LBURL >> /etc/otel/collector/splunk-otel-collector.conf
 # echo MYSQL_USER=$MYSQL_USER >> /etc/otel/collector/splunk-otel-collector.conf
 # echo MYSQL_USER_PWD=$MYSQL_USER_PWD >> /etc/otel/collector/splunk-otel-collector.conf
 echo SPLUNK_DISCOVERY_RECEIVERS_mysql_CONFIG_username=$MYSQL_USER >> /etc/otel/collector/splunk-otel-collector.conf
