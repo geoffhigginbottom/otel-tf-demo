@@ -36,20 +36,20 @@ receivers:
   jaeger:
     protocols:
       grpc:
-        endpoint: 0.0.0.0:14250
+        endpoint: ${SPLUNK_LISTEN_INTERFACE}:14250
       thrift_binary:
-        endpoint: 0.0.0.0:6832
+        endpoint: ${SPLUNK_LISTEN_INTERFACE}:6832
       thrift_compact:
-        endpoint: 0.0.0.0:6831
+        endpoint: ${SPLUNK_LISTEN_INTERFACE}:6831
       thrift_http:
-        endpoint: 0.0.0.0:14268
+        endpoint: ${SPLUNK_LISTEN_INTERFACE}:14268
 
   otlp:
     protocols:
       grpc:
-        endpoint: 0.0.0.0:4317
+        endpoint: ${SPLUNK_LISTEN_INTERFACE}:4317
       http:
-        endpoint: 0.0.0.0:4318
+        endpoint: ${SPLUNK_LISTEN_INTERFACE}:4318
       
   # This section is used to collect the OpenTelemetry Collector metrics
   # Even if just a Splunk APM customer, these metrics are included
@@ -71,10 +71,6 @@ receivers:
             regex: 'otelcol_processor_batch_.*'
             action: drop
   
-  smartagent/signalfx-forwarder:
-    type: signalfx-forwarder
-    listenAddress: "${SPLUNK_LISTEN_INTERFACE}:9080"
-  
   smartagent/processlist:
     type: processlist
 
@@ -86,6 +82,8 @@ receivers:
     
   zipkin:
     endpoint: "${SPLUNK_LISTEN_INTERFACE}:9411"
+  
+  nop:
   
   smartagent/win_services:
     type: telegraf/win_services
@@ -144,9 +142,48 @@ receivers:
        includeTotal: false
        measurement: "win_disk"
 
+  windowsperfcounters/memory:
+    metrics:
+      bytes.committed:
+        description: Number of bytes committed to memory
+        unit: By
+        gauge:
+    collection_interval: 10s
+    perfcounters:
+      - object: Memory
+        counters:
+          - name: Committed Bytes
+            metric: bytes.committed
+
+  windowsperfcounters/processor:
+    collection_interval: 5s
+    metrics:
+      processor.time:
+        description: CPU active and idle time
+        unit: "%"
+        gauge:
+    perfcounters:
+      - object: "Processor"
+        instances: "*"
+        counters:
+          - name: "% Processor Time"
+            metric: processor.time
+            attributes:
+              state: active
+      - object: "Processor"
+        instances: ["0", "1", "2", "3"]
+        counters:
+          - name: "% Idle Time"
+            metric: processor.time
+            attributes:
+              state: idle
+
   smartagent/ntp:
     type: ntp
     host: pool.ntp.org
+
+  smartagent/windows-iis:
+    type: windows-iis
 
 processors:
   batch:
@@ -201,6 +238,12 @@ exporters:
     sync_host_metadata: true
     correlation:
 
+  # Entities (applicable only if discovery mode is enabled)
+  otlphttp/entities:
+    logs_endpoint: "${SPLUNK_INGEST_URL}/v3/event"
+    headers:
+      "X-SF-Token": "${SPLUNK_ACCESS_TOKEN}"
+
   # Logs
   splunk_hec:
     token: "${SPLUNK_HEC_TOKEN}"
@@ -235,7 +278,6 @@ service:
       receivers:
       - jaeger
       - otlp
-      - smartagent/signalfx-forwarder
       - zipkin
       processors:
       - memory_limiter
@@ -254,12 +296,14 @@ service:
       - hostmetrics
       - otlp
       - signalfx
-      - smartagent/signalfx-forwarder
       - smartagent/win_services
       - smartagent/procstat-docker
       - smartagent/procstat-otel
       - smartagent/telegraf/win_perf_counters
       - smartagent/ntp
+      - smartagent/windows-iis
+      - windowsperfcounters/memory
+      - windowsperfcounters/processor
       processors:
       - memory_limiter
       - batch
@@ -291,7 +335,18 @@ service:
       - resourcedetection
       exporters:
       - signalfx
-    
+
+    logs/entities:
+      # Receivers are dynamically added if discovery mode is enabled
+      receivers: 
+      - nop
+      processors:
+      - memory_limiter
+      - batch
+      - resourcedetection
+      exporters: 
+      - otlphttp/entities
+
     logs:
       receivers:
       - otlp
