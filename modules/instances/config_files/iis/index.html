@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A simple web page hosted on an IIS Server running in AWS</title>
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdn.signalfx.com/o11y-gdi-rum/v0.19.1/splunk-otel-web.js" crossorigin="anonymous"></script>
+    <script>
+        SplunkRum.init({
+            realm: "us1",
+            rumAccessToken: "2RNfwMUQA-3ydJA5JW1jAw",
+            applicationName: "IIS_Demo",
+            deploymentEnvironment: "demo"
+        });
+    </script>
+
+    <script src="https://cdn.signalfx.com/o11y-gdi-rum/v0.19.1/splunk-otel-web-session-recorder.js" crossorigin="anonymous"></script>
+    <script>
+    SplunkSessionRecorder.init({
+        app: "IIS_Demo",
+        realm: "us1",
+        rumAccessToken: "2RNfwMUQA-3ydJA5JW1jAw"
+    });
+    </script> 
+</head>
+<body>
+    <header>
+        <h1>Welcome to My Demo IIS Website</h1>
+        <nav>
+            <a href="index.html" id="homeLink">Home</a>
+            <a href="contact.html" id="contactLink">Contact</a>
+        </nav>
+    </header>
+    <main>
+        <p>This is a simple web page hosted on an IIS Server running in AWS</p>
+    </main>
+</body>
+</html>

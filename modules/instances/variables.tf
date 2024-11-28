@@ -2,6 +2,12 @@
 variable "region" {
   default = {}
 }
+variable "aws_access_key_id" {
+  default = []
+}
+variable "aws_secret_access_key" {
+  default = []
+}
 variable "vpc_id" {
   default = []
 }
@@ -158,6 +164,9 @@ variable "universalforwarder_filename" {
   default = {}
 }
 variable "universalforwarder_url" {
+  default = {}
+}
+variable "universalforwarder_url_windows" {
   default = {}
 }
 variable "splunk_enterprise_files_local_path" {

@@ -131,7 +131,7 @@ variable "ecs_app_port" {
 }
 variable "ecs_az_count" {
   description = "Number of AZs to cover in a given region"
-  default     = "3"
+  default     = "2"
 }
 variable "ecs_health_check_path" {
   description = "Path used by ALB for Health Checks"
@@ -193,6 +193,8 @@ data "aws_ami" "ms-sql-server" {
 }
 
 ## Windows Server AMI ##
+## List available amis by runnging the following:
+## aws ec2 describe-images --owners 801119661308 --filters "Name=platform,Values=windows" "Name=name,Values=*English*"
 data "aws_ami" "windows-server" {
   most_recent = true
   owners      = ["801119661308"]
@@ -200,7 +202,8 @@ data "aws_ami" "windows-server" {
   filter {
     name   = "name"
     # values = ["Windows_Server-2019-English-Full-ContainersLatest-*"]
-    values = ["Windows_Server-2022-English-Full-*"]
+    # values = ["Windows_Server-2022-English-Full-*"]
+    values = ["Windows_Server-2022-English-Full-Base-*"]
   }
 
   filter {
@@ -423,6 +426,9 @@ variable "universalforwarder_filename" {
   default = {}
 }
 variable "universalforwarder_url" {
+  default = {}
+}
+variable "universalforwarder_url_windows" {
   default = {}
 }
 variable "splunk_enterprise_files_local_path" {

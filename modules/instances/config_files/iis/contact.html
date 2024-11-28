@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us</title>
+    <link rel="stylesheet" href="style.css">
+
+    <script src="https://cdn.signalfx.com/o11y-gdi-rum/v0.19.1/splunk-otel-web.js" crossorigin="anonymous"></script>
+    <script>
+        SplunkRum.init({
+            realm: "us1",
+            rumAccessToken: "2RNfwMUQA-3ydJA5JW1jAw",
+            applicationName: "IIS_Demo",
+            deploymentEnvironment: "demo"
+        });
+    </script>
+
+    <script src="https://cdn.signalfx.com/o11y-gdi-rum/v0.19.1/splunk-otel-web-session-recorder.js" crossorigin="anonymous"></script>
+    <script>
+    SplunkSessionRecorder.init({
+        app: "IIS_Demo",
+        realm: "us1",
+        rumAccessToken: "2RNfwMUQA-3ydJA5JW1jAw"
+    });
+    </script> 
+</head>
+<body>
+    <header>
+        <h1>Contact Us</h1>
+        <nav>
+            <a href="index.html" id="homeLink">Home</a>
+            <a href="contact.html" id="contactLink">Contact</a>
+        </nav>
+    </header>
+    <main>
+        <h2>We'd love to hear from you!</h2>
+        
+        <!-- Contact Form -->
+        <form id="contactForm" onsubmit="submitForm(event)">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required>
+
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+
+            <label for="message">Message:</label>
+            <textarea id="message" name="message" rows="4" required></textarea>
+
+            <button type="submit" id="submitButton">Submit</button>
+        </form>
+
+        <!-- Thank You Message -->
+        <div id="thankYouMessage" style="display: none;">
+            <p>Thank you for your message! We'll get back to you soon.</p>
+        </div>
+    </main>
+
+    <script>
+        function submitForm(event) {
+            event.preventDefault(); // Prevent actual form submission
+
+            // Hide the form and show the thank you message
+            document.getElementById('contactForm').style.display = 'none';
+            document.getElementById('thankYouMessage').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
