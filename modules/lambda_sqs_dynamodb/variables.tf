@@ -53,3 +53,6 @@ variable "region_wrapper_python" {
 variable "ami" {
   default = {}
 }
+variable "my_public_ip" {
+  default = []
+}
