@@ -25,7 +25,7 @@ resource "aws_lambda_function" "lamdba_sqs_dynamodb" {
   role          = aws_iam_role.lambda_sqs_dynamodb_role.arn
   handler       = "lamdba_sqs_dynamodb_function.lambda_handler"
   layers        = [var.region_wrapper_python]
-  runtime       = "python3.7"
+  runtime       = "python3.8"
   timeout       = var.function_timeout
 
   environment {
