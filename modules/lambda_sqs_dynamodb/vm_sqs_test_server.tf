@@ -24,15 +24,15 @@ resource "aws_instance" "sqs_test_server" {
     destination = "/tmp/generate_aws_config.sh"
   }
 
-  provisioner "file" {
-    source      = "${path.module}/scripts/install_sfx_agent.sh"
-    destination = "/tmp/install_sfx_agent.sh"
-  }
+  # provisioner "file" {
+  #   source      = "${path.module}/scripts/install_sfx_agent.sh"
+  #   destination = "/tmp/install_sfx_agent.sh"
+  # }
 
-  provisioner "file" {
-    source      = "${path.module}/scripts/update_sfx_environment.sh"
-    destination = "/tmp/update_sfx_environment.sh"
-  }
+  # provisioner "file" {
+  #   source      = "${path.module}/scripts/update_sfx_environment.sh"
+  #   destination = "/tmp/update_sfx_environment.sh"
+  # }
 
 # remote-exec
   provisioner "remote-exec" {
@@ -45,16 +45,20 @@ resource "aws_instance" "sqs_test_server" {
       "sudo apt-get update",
       "sudo apt-get upgrade -y",
 
-    # Install SignalFx
-      "TOKEN=${var.access_token}",
-      "REALM=${var.realm}",
-      "HOSTNAME=${self.tags.Name}",
-      "AGENTVERSION=${var.smart_agent_version}",
-      "sudo chmod +x /tmp/install_sfx_agent.sh",
-      "sudo /tmp/install_sfx_agent.sh $TOKEN $REALM $AGENTVERSION",
-      "sudo chmod +x /tmp/update_sfx_environment.sh",
-      "sudo /tmp/update_sfx_environment.sh $ENVIRONMENT",
+    # # Install SignalFx
+    #   "TOKEN=${var.access_token}",
+    #   "REALM=${var.realm}",
+    #   "HOSTNAME=${self.tags.Name}",
+    #   "AGENTVERSION=${var.smart_agent_version}",
+    #   "sudo chmod +x /tmp/install_sfx_agent.sh",
+    #   "sudo /tmp/install_sfx_agent.sh $TOKEN $REALM $AGENTVERSION",
+    #   "sudo chmod +x /tmp/update_sfx_environment.sh",
+    #   "sudo /tmp/update_sfx_environment.sh $ENVIRONMENT",
  
+    ## Install Otel Agent
+      "sudo curl -sSL https://dl.signalfx.com/splunk-otel-collector.sh > /tmp/splunk-otel-collector.sh",
+      "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --without-fluentd",
+
     ## Setup testing env
       "sudo apt install python3 -y",
       "sudo apt-get update",
