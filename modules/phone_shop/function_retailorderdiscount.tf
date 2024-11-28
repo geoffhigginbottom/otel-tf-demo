@@ -25,7 +25,7 @@ resource "aws_lambda_function" "retailorderdiscount" {
   role          = aws_iam_role.lambda_role.arn
   handler       = "retailorderdiscount_index.handler"
   layers        = [var.region_wrapper_nodejs]
-  runtime       = "nodejs12.x"
+  runtime       = "nodejs20.x"
   timeout       = var.function_timeout
 
   environment {
