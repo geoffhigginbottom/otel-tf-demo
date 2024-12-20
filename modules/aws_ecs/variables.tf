@@ -18,11 +18,6 @@ variable "ecs_vpc_name" {
   default = "ecs_vpc"
 }
 
-variable "ecs_agent_url" {
-  description = "Path to the agent file to be used for ecs"
-  default     = {}  
-}
-
 variable "ecs_app_port" {
   description = "Port exposed by the docker image to redirect traffic to"
   default     = {}
