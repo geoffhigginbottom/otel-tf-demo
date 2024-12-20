@@ -184,10 +184,10 @@ service:
   pipelines:
     traces:
       receivers:
-      - jaeger
+      # - jaeger
       - otlp
       - smartagent/signalfx-forwarder
-      - zipkin
+      # - zipkin
       processors:
       - memory_limiter
       - batch
