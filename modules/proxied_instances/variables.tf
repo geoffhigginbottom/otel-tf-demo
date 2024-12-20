@@ -67,15 +67,6 @@ variable "proxied_windows_server_ids" {
 variable "windows_proxied_server_agent_url" {
   default = {}
 }
-variable "windows_fluentd_url" {
-  default = {}
-}
-variable "windows_tdagent_conf_url" {
-  default = {}
-}
-variable "windows_eventlog_conf_url" {
-  default = {}
-}
 variable "proxy_server_count" {
   default = {}
 }
