@@ -82,13 +82,7 @@ realm                            = "<REALM>"
 environment                      = "<ENVIRONMENT>"
 notification_email               = "<EMAIL>"
 smart_agent_version              = "" # Optional - If left blank, latest will be installed
-ecs_agent_url                    = "https://raw.githubusercontent.com/geoffhigginbottom/sfx-tf-demo/master/modules/aws_ecs/agent_fargate.yaml"
-ms_sql_agent_url                 = "https://raw.githubusercontent.com/geoffhigginbottom/sfx-tf-demo/master/modules/instances/config_files/ms_sql_agent_config.yaml"
-windows_server_agent_url         = "https://raw.githubusercontent.com/geoffhigginbottom/sfx-tf-demo/master/modules/instances/config_files/windows_server_agent_config.yaml"
 windows_proxied_server_agent_url = "https://raw.githubusercontent.com/geoffhigginbottom/sfx-tf-demo/master/modules/proxied_instances/config_files/windows_server_agent_config.yaml"
-windows_fluentd_url              = "https://s3.amazonaws.com/packages.treasuredata.com/4/windows/td-agent-4.4.1-x64.msi" #https://docs.fluentd.org/installation/install-by-msi#td-agent-v4 https://td-agent-package-browser.herokuapp.com/4/windows
-windows_tdagent_conf_url         = "https://raw.githubusercontent.com/geoffhigginbottom/sfx-tf-demo/master/modules/proxied_instances/config_files/td-agent.conf"
-windows_eventlog_conf_url        = "https://raw.githubusercontent.com/geoffhigginbottom/sfx-tf-demo/master/modules/proxied_instances/config_files/eventlog.conf"
 
 ### Collector Variables ###
 collector_version                = "0.111.0"
