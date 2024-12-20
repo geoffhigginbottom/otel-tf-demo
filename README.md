@@ -193,7 +193,7 @@ Settings used by Splunk IM/APM for authentication, notifications and APM Environ
 
 Optionally you can specify a version for the smart_agent, but if left blank the latest will be used, which is the recommended option, however as OTEL is replacing the SmartAgent this setting will soon be retired.
 
-The collector_version is currently only used by the Proxied Instances module as it leverages an offline installation method which requires the version number to be specified, all other modules that use OTEL will use the latest by default.
+The collector_version is currently only used by the Proxied Instances module as it leverages an offline installation method which requires the version number to be specified, all other modules that use OTEL will use the latest by default. - this has now changed and some instances honour the version, all soon will...
 
 ```yaml
 ### Splunk IM/APM Variables ###
@@ -203,10 +203,7 @@ realm                    = "<REALM>"
 environment              = "<ENVIRONMENT>"
 notification_email       = "<EMAIL>"
 smart_agent_version      = "" # Optional - If left blank, latest will be installed - example value would be "5.7.1-1"
-ecs_agent_url            = "https://raw.githubusercontent.com/geoffhigginbottom/sfx-tf-demo/master/modules/aws_ecs/agent_fargate.yaml"
-ms_sql_agent_url         = "https://raw.githubusercontent.com/geoffhigginbottom/sfx-tf-demo/Master/modules/instances/config_files/ms_sql_agent_config.yaml"
-windows_server_agent_url = "https://raw.githubusercontent.com/geoffhigginbottom/sfx-tf-demo/Master/modules/instances/config_files/windows_server_agent_config.yaml"
-collector_version        = "0.40.0"
+collector_version        = "nn.nnn.nn"
 ```
 
 ### Gateway Variables
