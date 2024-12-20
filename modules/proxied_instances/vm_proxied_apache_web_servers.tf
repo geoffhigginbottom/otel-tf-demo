@@ -49,7 +49,7 @@ resource "aws_instance" "proxied_apache_web" {
       "sudo curl -sSL https://dl.signalfx.com/splunk-otel-collector.sh > /tmp/splunk-otel-collector.sh",
       "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent",
       "sudo mv /etc/otel/collector/agent_config.yaml /etc/otel/collector/agent_config.bak",
-      "sudo mv /tmp/apache_web_agent_config.yaml /etc/otel/collector/agent_config.yaml",
+      "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml",
       "sudo chown root:root /tmp/service-proxy.conf",
       "sudo mv /tmp/service-proxy.conf /etc/systemd/system/splunk-otel-collector.service.d/service-proxy.conf",
       "sudo sed -i '$ a Environment=\"HTTP_PROXY=http://${aws_instance.proxy_server[0].private_ip}:8080\"' /etc/systemd/system/splunk-otel-collector.service.d/service-proxy.conf",
