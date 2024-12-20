@@ -4,6 +4,15 @@ resource "random_string" "lo_connect_password" {
   # override_special = "@£$"
 }
 
+## Prevent deployment of both Splunk Ent and Splunk Cloud
+resource "null_resource" "validate_scenario" {
+  count = var.splunk_cloud_enabled && var.splunk_ent_count == "1" ? 1 : 0
+
+  provisioner "local-exec" {
+    command = "echo 'Invalid configuration: splunk_cloud_enabled cannot be true when splunk_ent_count is 1.' && exit 1"
+  }
+}
+
 resource "aws_instance" "splunk_ent" {
   count                     = var.splunk_ent_count
   ami                       = var.ami
@@ -13,15 +22,12 @@ resource "aws_instance" "splunk_ent" {
     volume_size = 32
     volume_type = "gp2"
   }
+  private_ip                = var.splunk_private_ip
   key_name                  = var.key_name
   vpc_security_group_ids    = [
     aws_security_group.instances_sg.id,
     aws_security_group.splunk_ent_sg.id,
   ]
-
-  ### needed for Splunk Golden Image to enable SSH
-  ### the 'ssh connection' should use the same user
-  # user_data = file("${path.module}/scripts/userdata.sh")
 
   tags = {
     Name = lower(join("-",[var.environment, "splunk-enterprise", count.index + 1]))
@@ -42,7 +48,7 @@ resource "aws_instance" "splunk_ent" {
 
     provisioner "file" {
     source      = "${path.module}/config_files/splunkent_agent_config.yaml"
-    destination = "/tmp/splunkent_agent_config.yaml"
+    destination = "/tmp/agent_config.yaml"
   }
 
   provisioner "file" {
@@ -105,7 +111,7 @@ resource "aws_instance" "splunk_ent" {
       "sudo chmod +x /tmp/update_splunk_otel_collector.sh",
       "sudo /tmp/update_splunk_otel_collector.sh $LBURL",
       "sudo mv /etc/otel/collector/agent_config.yaml /etc/otel/collector/agent_config.bak",
-      "sudo mv /tmp/splunkent_agent_config.yaml /etc/otel/collector/agent_config.yaml",
+      "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml",
       "sudo systemctl restart splunk-otel-collector",
     ]
   }
