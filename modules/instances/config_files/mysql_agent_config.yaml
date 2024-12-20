@@ -13,7 +13,7 @@ extensions:
     collectd:
       configDir: "${SPLUNK_COLLECTD_DIR}"
   zpages:
-    endpoint: 0.0.0.0:55679
+    endpoint: "${SPLUNK_LISTEN_INTERFACE}:55679"
 
 receivers:
   hostmetrics:
@@ -70,11 +70,7 @@ receivers:
           - source_labels: [ __name__ ]
             regex: 'otelcol_processor_batch_.*'
             action: drop
-  
-  smartagent/signalfx-forwarder:
-    type: signalfx-forwarder
-    listenAddress: "${SPLUNK_LISTEN_INTERFACE}:9080"
-  
+
   smartagent/processlist:
     type: processlist
   
@@ -198,10 +194,9 @@ service:
   pipelines:
     traces:
       receivers:
-      - jaeger
+      # - jaeger
       - otlp
-      - smartagent/signalfx-forwarder
-      - zipkin
+      # - zipkin
       processors:
       - memory_limiter
       - batch
@@ -219,7 +214,6 @@ service:
       - hostmetrics
       - otlp
       - signalfx
-      - smartagent/signalfx-forwarder
       # - smartagent/mysql # removed as now using auto discovery
       # - mysql # removed as now using auto discovery
       processors:
