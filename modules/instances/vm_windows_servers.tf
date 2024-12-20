@@ -6,16 +6,30 @@ resource "aws_instance" "windows_server" {
   subnet_id                 = "${var.public_subnet_ids[ count.index % length(var.public_subnet_ids) ]}"
   key_name                  = var.key_name
   vpc_security_group_ids    = [aws_security_group.instances_sg.id]
+  iam_instance_profile      = aws_iam_instance_profile.ec2_instance_profile.name
+  depends_on   = [
+    # null_resource.sync_windows_server_agent_config,
+    null_resource.sync_config_files
+    ]
 
   user_data = <<EOF
   <powershell>
-  $logPath = "C:\Users\Administrator\user_data_log.txt"
+  $logPath = "C:\Users\Administrator\Documents\user_data_log.txt"
 
   Get-LocalUser -Name "Administrator" | Set-LocalUser -Password (ConvertTo-SecureString -AsPlainText "${var.windows_server_administrator_pwd}" -Force)
 
   # Install AWS CLI (for accessing secure S3 Buckets)
   msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi /qn
-  Start-Sleep -Seconds 30  # Wait for the AWS CLI to finish installing
+  # Start-Sleep -Seconds 30  # Wait for the AWS CLI to finish installing
+
+  # Install IIS
+  Install-WindowsFeature Web-Server -IncludeManagementTools
+
+  # Download IIS Files
+  $env:Path += ";C:\Program Files\Amazon\AWSCLIV2"
+  aws s3 cp s3://eu-west-3-tfdemo-files/config_files/iis/index.html C:\inetpub\wwwroot\index.html
+  aws s3 cp s3://eu-west-3-tfdemo-files/config_files/iis/contact.html C:\inetpub\wwwroot\contact.html
+  aws s3 cp s3://eu-west-3-tfdemo-files/config_files/iis/style.css C:\inetpub\wwwroot\style.css
 
   # Install OTel Agent
   & {Set-ExecutionPolicy Bypass -Scope Process -Force;
@@ -23,10 +37,11 @@ resource "aws_instance" "windows_server" {
   $params = @{access_token = "${var.access_token}";
   realm = "${var.realm}";
   mode = "agent"};
+  collector_version = "${var.collector_version}";
   with_dotnet_instrumentation = "0";
   deployment_env = "${var.environment}";
   Invoke-Command -ScriptBlock ([scriptblock]::Create(". {$script} $(&{$args} @params)"))}
-  
+
   $registryPath = "HKLM:\SYSTEM\CurrentControlSet\Services\splunk-otel-collector"
   $valueName = "Environment"
   $newValue = @(
@@ -51,43 +66,56 @@ resource "aws_instance" "windows_server" {
       Write-Host "Registry path '$registryPath' does not exist."
   }
 
-  # Invoke-WebRequest -Uri ${var.windows_server_agent_url} -OutFile "C:\ProgramData\Splunk\OpenTelemetry Collector\agent_config.yaml"
-  # Stop-Service splunk-otel-collector
-  # Start-Service splunk-otel-collector
+  # Download custom agent_config.yaml file
+  $env:Path += ";C:\Program Files\Amazon\AWSCLIV2"
+  Move-Item -Path "C:\ProgramData\Splunk\OpenTelemetry Collector\agent_config.yaml" -Destination "C:\ProgramData\Splunk\OpenTelemetry Collector\agent_config.bak"
+  aws s3 cp s3://eu-west-3-tfdemo-files/config_files/windows_server_agent_config.yaml "C:\ProgramData\Splunk\OpenTelemetry Collector\agent_config.yaml"
+
+  Stop-Service splunk-otel-collector
+  Start-Service splunk-otel-collector
 
   Set-ItemProperty -Path 'HKLM:\Software\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}' -name IsInstalled -Value 0
   Set-ItemProperty -Path 'HKLM:\Software\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}' -name IsInstalled -Value 0
 
-  # Install IIS
-  Install-WindowsFeature Web-Server -IncludeManagementTools
+  # Install Splunk UF for Splunk Enterprise
+  if (${var.splunk_ent_count} -eq 1) {
+    # Asynchronously download the MSI
+    Start-Job {
+        Invoke-WebRequest -Uri ${var.universalforwarder_url_windows} -OutFile "C:\Users\Administrator\Documents\splunkforwarder.msi"
+    }
 
-  # Install Splunk UF
-  Invoke-WebRequest -Uri https://download.splunk.com/products/universalforwarder/releases/9.3.1/windows/splunkforwarder-9.3.1-0b8d769cb912-x64-release.msi -OutFile "C:\splunkforwarder.msi"
-  Start-Process "msiexec.exe" -ArgumentList "/i C:\splunkforwarder.msi AGREETOLICENSE=Yes WINEVENTLOG_SEC_ENABLE=1 WINEVENTLOG_SYS_ENABLE=1 SPLUNKUSERNAME=SplunkAdmin SPLUNKPASSWORD=Ch@ng3d! INSTALLDIR=`"C:\Program Files\SplunkUniversalForwarder`" /qn" -NoNewWindow -Wait
+    # Wait for the job to complete
+    $job = Get-Job | Where-Object {$_.State -eq 'Running'}
+    Wait-Job $job
 
-  # Download Splunk Cloud Credentials Package (AWS CLI install should have completed by now)
-  $env:PATH = [System.Environment]::GetEnvironmentVariable("PATH", "Machine")
-  $env:AWS_ACCESS_KEY_ID="${var.aws_access_key_id}"
-  $env:AWS_SECRET_ACCESS_KEY="${var.aws_secret_access_key}"
-  $env:AWS_DEFAULT_REGION="${var.region}"
-  aws s3 cp s3://tfdemo-files/splunkclouduf.spl C:\splunkclouduf.spl
+    Start-Process "msiexec.exe" -ArgumentList "/i ""C:\Users\Administrator\Documents\splunkforwarder.msi"" RECEIVING_INDEXER=${var.splunk_private_ip}:9997 AGREETOLICENSE=Yes WINEVENTLOG_SEC_ENABLE=1 WINEVENTLOG_SYS_ENABLE=1 SPLUNKUSERNAME=SplunkAdmin SPLUNKPASSWORD=${random_string.splunk_password.result} INSTALLDIR=""C:\Program Files\SplunkUniversalForwarder"" /qn" -NoNewWindow -Wait
+  }
 
-  # Download custom agent_config.yaml file
-  aws s3 cp s3://tfdemo-files/windows_server_agent_config.yaml C:\windows_server_agent_config.yaml
-  Move-Item -Path "C:\ProgramData\Splunk\OpenTelemetry Collector\agent_config.yaml" -Destination "C:\ProgramData\Splunk\OpenTelemetry Collector\agent_config.bak"
-  Move-Item -Path "C:\windows_server_agent_config.yaml" -Destination "C:\ProgramData\Splunk\OpenTelemetry Collector\agent_config.yaml"
-  Stop-Service splunk-otel-collector
-  Start-Service splunk-otel-collector
+  # Install Splunk UF for Splunk Cloud
+  if ("${var.splunk_cloud_enabled}" -eq "true") {
+  # Asynchronously download the MSI
+    Start-Job {
+        Invoke-WebRequest -Uri ${var.universalforwarder_url_windows} -OutFile "C:\Users\Administrator\Documents\splunkforwarder.msi"
+    }
 
-  # Download IIS Files
-  aws s3 cp s3://tfdemo-files/iis/index.html C:\inetpub\wwwroot\index.html
-  aws s3 cp s3://tfdemo-files/iis/contact.html C:\inetpub\wwwroot\contact.html
-  aws s3 cp s3://tfdemo-files/iis/style.css C:\inetpub\wwwroot\style.css
+    # Wait for the job to complete
+    $job = Get-Job | Where-Object {$_.State -eq 'Running'}
+    Wait-Job $job
+
+    Start-Process "msiexec.exe" -ArgumentList "/i ""C:\Users\Administrator\Documents\splunkforwarder.msi"" AGREETOLICENSE=Yes WINEVENTLOG_SEC_ENABLE=1 WINEVENTLOG_SYS_ENABLE=1 SPLUNKUSERNAME=SplunkAdmin SPLUNKPASSWORD=${random_string.splunk_password.result} INSTALLDIR=""C:\Program Files\SplunkUniversalForwarder"" /qn" -NoNewWindow -Wait
+  }
+
+  # Download SplunkCloud Auth File
+  if ("${var.splunk_cloud_enabled}" -eq "true") {
+    aws s3 cp s3://eu-west-3-tfdemo-files/config_files/splunkclouduf.spl C:\Users\Administrator\Documents\splunkclouduf.spl
+  }
 
   # Install SplunCloud Credentials Package
-  Set-Location "C:\Program Files\SplunkUniversalForwarder\bin"
-  & .\splunk.exe install app "C:\splunkclouduf.spl" -auth "SplunkAdmin:Ch@ng3d!"
-  & .\splunk.exe restart
+  if ("${var.splunk_cloud_enabled}" -eq "true") {
+    Set-Location "C:\Program Files\SplunkUniversalForwarder\bin"
+    & .\splunk.exe install app "C:\Users\Administrator\Documents\splunkclouduf.spl" -auth "SplunkAdmin:${random_string.splunk_password.result}"
+    & .\splunk.exe restart
+  }
   
   "User data script completed." | Out-File -FilePath $logPath -Append
   </powershell>
