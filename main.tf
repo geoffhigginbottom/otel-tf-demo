@@ -52,7 +52,6 @@ module "aws_ecs" {
   access_token          = var.access_token
   realm                 = var.realm
   environment           = var.environment
-  ecs_agent_url         = var.ecs_agent_url
   ecs_app_port          = var.ecs_app_port
   ecs_health_check_path = var.ecs_health_check_path
   ecs_app_image         = var.ecs_app_image
@@ -135,6 +134,7 @@ module "lambda_sqs_dynamodb" {
   instance_type         = var.instance_type
   public_subnet_ids     = module.vpc.public_subnet_ids
   ami                   = data.aws_ami.latest-ubuntu.id
+  my_public_ip          = "${chomp(data.http.my_public_ip.response_body)}"
 }
 
 module "proxied_instances" {
@@ -158,9 +158,6 @@ module "proxied_instances" {
   proxied_windows_server_ids       = var.proxied_windows_server_ids
   windows_server_administrator_pwd = var.windows_server_administrator_pwd
   windows_proxied_server_agent_url = var.windows_proxied_server_agent_url
-  windows_fluentd_url              = var.windows_fluentd_url
-  windows_tdagent_conf_url         = var.windows_tdagent_conf_url
-  windows_eventlog_conf_url        = var.windows_eventlog_conf_url
   windows_server_instance_type     = var.windows_server_instance_type
   windows_server_ami               = data.aws_ami.windows-server.id
   collector_version                = var.collector_version
@@ -200,17 +197,17 @@ module "instances" {
   ms_sql_user                      = var.ms_sql_user
   ms_sql_user_pwd                  = var.ms_sql_user_pwd
   ms_sql_administrator_pwd         = var.ms_sql_administrator_pwd
-  ms_sql_agent_url                 = var.ms_sql_agent_url
   ms_sql_instance_type             = var.ms_sql_instance_type
   ms_sql_ami                       = data.aws_ami.ms-sql-server.id
   windows_server_count             = var.windows_server_count
   windows_server_ids               = var.windows_server_ids
-  windows_server_agent_url         = var.windows_server_agent_url
   windows_server_administrator_pwd = var.windows_server_administrator_pwd
   windows_server_instance_type     = var.windows_server_instance_type
   windows_server_ami               = data.aws_ami.windows-server.id
   apache_web_count                 = var.apache_web_count
   apache_web_ids                   = var.apache_web_ids
+  splunk_cloud_enabled             = var.splunk_cloud_enabled
+  splunk_cloud_hec_token           = var.splunk_cloud_hec_token
   splunk_ent_count                 = var.splunk_ent_count
   splunk_ent_ids                   = var.splunk_ent_ids
   splunk_ent_version               = var.splunk_ent_version
@@ -220,9 +217,13 @@ module "instances" {
   splunk_ent_inst_type             = var.splunk_ent_inst_type
   universalforwarder_filename      = var.universalforwarder_filename
   universalforwarder_url           = var.universalforwarder_url
+  universalforwarder_url_windows   = var.universalforwarder_url_windows
   my_public_ip                     = "${chomp(data.http.my_public_ip.response_body)}"
   splunk_ent_eip                   = var.splunk_ent_eip
+  splunk_private_ip                = var.splunk_private_ip
   collector_version                = var.collector_version
+  aws_access_key_id                = var.aws_access_key_id
+  aws_secret_access_key            = var.aws_secret_access_key
 }
 
 module "itsi_o11y_cp" {
@@ -277,7 +278,8 @@ output "ECS_ALB_hostname" {value = var.ecs_cluster_enabled ? module.aws_ecs.*.ec
 
 ### Splunk Enterprise Outputs ###
 # output "Splunk_Enterprise_Server" {value = var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_details : null}
-output "splunk_password" {value = var.splunk_ent_count > 0 ? module.instances.*.splunk_password : null}
+# output "splunk_password" {value = var.splunk_ent_count > 0 ? module.instances.*.splunk_password : null}
+output "splunk_password" {value = (var.splunk_ent_count > 0 || var.splunk_cloud_enabled == true) ? module.instances.*.splunk_password : null}
 output "lo_connect_password" {value = var.splunk_ent_count > 0 ? module.instances.*.lo_connect_password : null}
 output "splunk_enterprise_private_ip" {value = var.splunk_ent_count > 0 ? module.instances.*.splunk_enterprise_private_ip : null}
 output "splunk_url" {value = var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_urls : null}
