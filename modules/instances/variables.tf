@@ -53,6 +53,9 @@ variable "my_public_ip" {
 variable "splunk_ent_eip" {
   default = []
 }
+variable "splunk_private_ip" {
+  default = []
+}
 
 ### SignalFX Variables ###
 variable "access_token" {
@@ -115,9 +118,6 @@ variable "ms_sql_user" {
 variable "ms_sql_user_pwd" {
   default = []
 }
-variable "ms_sql_agent_url" {
-  default = []
-}
 variable "ms_sql_administrator_pwd" {
   default = []
 }
@@ -125,9 +125,6 @@ variable "windows_server_count" {
   default = {}
 }
 variable "windows_server_ids" {
-  default = []
-}
-variable "windows_server_agent_url" {
   default = []
 }
 variable "windows_server_administrator_pwd" {
@@ -145,6 +142,13 @@ variable "branch" {
 
 
 ### Splunk Enterprise Variables ###
+variable "splunk_cloud_enabled" {
+  type    = bool
+  default = false
+}
+variable "splunk_cloud_hec_token" {
+  default = {}
+}
 variable "splunk_ent_count" {
   default = {}
 }
