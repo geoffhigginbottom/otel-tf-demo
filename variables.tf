@@ -77,16 +77,8 @@ variable "mysql_instance_type" {
 variable "ms_sql_instance_type" {
   default = []
 }
-variable "ms_sql_agent_url" {
-  description = "Path to the agent file to be used for MS SQL Servers"
-  default     = {}
-}
 variable "windows_server_instance_type" {
   default = []
-}
-variable "windows_server_agent_url" {
-  description = "Path to the agent file to be used for Windows Servers"
-  default     = {}
 }
 variable "aws_api_gateway_deployment_retailorder_invoke_url" {
   default = {}
@@ -95,6 +87,9 @@ variable "my_public_ip" {
   default = []
 }
 variable "splunk_ent_eip" {
+  default = []
+}
+variable "splunk_private_ip" {
   default = []
 }
 
@@ -121,10 +116,6 @@ variable "eks_fargate_cluster_name" {
 }
 
 ## AWS_ECS Variables ##
-variable "ecs_agent_url" {
-  description = "Path to the agent file to be used for ecs"
-  default     = {}
-}
 variable "ecs_app_port" {
   description = "Port exposed by the docker image to redirect traffic to"
   default     = 8080
@@ -270,6 +261,13 @@ variable "apache_web_count" {
 variable "apache_web_ids" {
   default = []
 }
+variable "splunk_cloud_enabled" {
+  type    = bool
+  default = false
+}
+variable "splunk_cloud_hec_token" {
+  default = {}
+}
 variable "splunk_ent_count" {
   default = {}
 }
@@ -392,15 +390,6 @@ variable "otelcol_version" {
   default = {}
 }
 variable "windows_msi_url" {
-  default = {}
-}
-variable "windows_fluentd_url" {
-  default = {}
-}
-variable "windows_tdagent_conf_url" {
-  default = {}
-}
-variable "windows_eventlog_conf_url" {
   default = {}
 }
 variable "windows_proxied_server_agent_url" {
