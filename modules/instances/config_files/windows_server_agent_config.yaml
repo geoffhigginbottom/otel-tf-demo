@@ -10,8 +10,8 @@ extensions:
       endpoint: "${SPLUNK_GATEWAY_URL}"
   smartagent:
     bundleDir: "${SPLUNK_BUNDLE_DIR}"
-    collectd:
-      configDir: "${SPLUNK_COLLECTD_DIR}"
+    # collectd:
+      # configDir: "${SPLUNK_COLLECTD_DIR}"
   zpages:
     endpoint: "${SPLUNK_LISTEN_INTERFACE}:55679"
 
@@ -82,9 +82,9 @@ receivers:
     
   zipkin:
     endpoint: "${SPLUNK_LISTEN_INTERFACE}:9411"
-  
+
   nop:
-  
+
   smartagent/win_services:
     type: telegraf/win_services
     intervalSeconds: 1
@@ -125,15 +125,15 @@ receivers:
   #      includeTotal: true
   #      measurement: "win_cpu"
 
-    #  - objectName: "PhysicalDisk"
-    #    instances:
-    #     - "*"
-    #    counters:
-    #     - "% Disk Read Time"
-    #     - "% Disk Write Time"
-    #     - "% Idle Time"
-    #    includeTotal: false
-    #    measurement: "win_disk"
+  #    - objectName: "PhysicalDisk"
+  #      instances:
+  #       - "*"
+  #      counters:
+  #       - "% Disk Read Time"
+  #       - "% Disk Write Time"
+  #       - "% Idle Time"
+  #      includeTotal: false
+  #      measurement: "win_disk"
 
 # Replaced SmartAgent with OTel Perfomn Receivers
 # https://docs.splunk.com/observability/en/gdi/opentelemetry/components/windowsperfcounters-receiver.html#windows-performance-counters-receiver
@@ -273,9 +273,9 @@ service:
   pipelines:
     traces:
       receivers:
-      - jaeger
+      # - jaeger
       - otlp
-      - zipkin
+      # - zipkin
       processors:
       - memory_limiter
       - batch
@@ -295,7 +295,6 @@ service:
       - signalfx
       - smartagent/win_services
       - smartagent/procstat-otel
-      - smartagent/telegraf/win_perf_counters
       - smartagent/ntp
       - smartagent/windows-iis
       - windowsperfcounters/memory
