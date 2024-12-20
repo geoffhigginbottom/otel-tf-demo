@@ -14,7 +14,6 @@ data "template_file" "hotrod" {
     region         = var.region
     access_token   = var.access_token
     realm          = var.realm
-    agent_url      = var.ecs_agent_url
     environment    = var.environment
   }
 }
