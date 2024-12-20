@@ -10,8 +10,8 @@ extensions:
       endpoint: "${SPLUNK_GATEWAY_URL}"
   smartagent:
     bundleDir: "${SPLUNK_BUNDLE_DIR}"
-    collectd:
-      configDir: "${SPLUNK_COLLECTD_DIR}"
+    # collectd:
+      # configDir: "${SPLUNK_COLLECTD_DIR}"
   zpages:
     endpoint: "${SPLUNK_LISTEN_INTERFACE}:55679"
 
@@ -101,6 +101,7 @@ receivers:
     type: telegraf/win_services
     intervalSeconds: 1
     serviceNames:
+      - Dnscache
       - Dhcp
       - LanmanServer
       - LanmanWorkstation
@@ -128,33 +129,35 @@ receivers:
     pattern: MSSQLSERVER
     WinService: MSSQLSERVER
 
-  smartagent/telegraf/win_perf_counters:
-    type: telegraf/win_perf_counters
-    printValid: true
-    counterRefreshInterval: 10
-    objects:
-     - objectName: "Processor"
-       instances:
-        - "*"
-       counters:
-        - "% Idle Time"
-        - "% Interrupt Time"
-        - "% Privileged Time"
-        - "% User Time"
-        - "% Processor Time"
-       includeTotal: true
-       measurement: "win_cpu"
+  # smartagent/telegraf/win_perf_counters:
+  #   type: telegraf/win_perf_counters
+  #   printValid: true
+  #   counterRefreshInterval: 10
+  #   objects:
+  #    - objectName: "Processor"
+  #      instances:
+  #       - "*"
+  #      counters:
+  #       - "% Idle Time"
+  #       - "% Interrupt Time"
+  #       - "% Privileged Time"
+  #       - "% User Time"
+  #       - "% Processor Time"
+  #      includeTotal: true
+  #      measurement: "win_cpu"
 
-     - objectName: "PhysicalDisk"
-       instances:
-        - "*"
-       counters:
-        - "% Disk Read Time"
-        - "% Disk Write Time"
-        - "% Idle Time"
-       includeTotal: false
-       measurement: "win_disk"
+  #    - objectName: "PhysicalDisk"
+  #      instances:
+  #       - "*"
+  #      counters:
+  #       - "% Disk Read Time"
+  #       - "% Disk Write Time"
+  #       - "% Idle Time"
+  #      includeTotal: false
+  #      measurement: "win_disk"
 
+# Replaced SmartAgent with OTel Perfomn Receivers
+# https://docs.splunk.com/observability/en/gdi/opentelemetry/components/windowsperfcounters-receiver.html#windows-performance-counters-receiver
   windowsperfcounters/memory:
     metrics:
       bytes.committed:
@@ -190,6 +193,7 @@ receivers:
             metric: processor.time
             attributes:
               state: idle
+
   smartagent/ntp:
     type: ntp
     host: pool.ntp.org
@@ -287,9 +291,9 @@ service:
   pipelines:
     traces:
       receivers:
-      - jaeger
+      # - jaeger
       - otlp
-      - zipkin
+      # - zipkin
       processors:
       - memory_limiter
       - batch
@@ -307,12 +311,10 @@ service:
       - hostmetrics
       - otlp
       - signalfx
-      - smartagent/signalfx-forwarder
       - smartagent/sqlserver
       - smartagent/win_services
       - smartagent/procstat-otel
       - smartagent/procstat-mssqlserver
-      - smartagent/telegraf/win_perf_counters
       - smartagent/ntp
       - windowsperfcounters/memory
       - windowsperfcounters/processor
