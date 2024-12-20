@@ -11,8 +11,6 @@ else
   printf "LB URL Variable Detected...\n"
 fi
 
-#sed -i -e 's+intervalSeconds.*+intervalSeconds: 1+g' /etc/signalfx/agent.yaml
-
 cp /etc/otel/collector/splunk-otel-collector.conf /etc/otel/collector/splunk-otel-collector.bak
 
 echo SPLUNK_GATEWAY_URL=$LBURL >> /etc/otel/collector/splunk-otel-collector.conf
