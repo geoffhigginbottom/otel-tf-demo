@@ -15,10 +15,6 @@ resource "aws_instance" "haproxy" {
   key_name                  = var.key_name
   vpc_security_group_ids    = [aws_security_group.instances_sg.id]
 
-  ### needed for Splunk Golden Image to enable SSH
-  ### the 'ssh connection' should use the same user
-  # user_data = file("${path.module}/scripts/userdata.sh")
-
   tags = {
     Name = lower(join("-",[var.environment, "haproxy", count.index + 1]))
     Environment = lower(var.environment)
@@ -38,12 +34,22 @@ resource "aws_instance" "haproxy" {
 
   provisioner "file" {
     source      = "${path.module}/config_files/haproxy_agent_config.yaml"
-    destination = "/tmp/haproxy_agent_config.yaml"
+    destination = "/tmp/agent_config.yaml"
   }
 
   provisioner "file" {
     source      = "${path.module}/scripts/install_splunk_universal_forwarder_haproxy.sh"
-    destination = "/tmp/install_splunk_universal_forwarder_haproxy.sh"
+    destination = "/tmp/install_splunk_universal_forwarder.sh"
+  }
+
+  provisioner "file" {
+    source      = "${path.module}/scripts/install_splunk_universal_forwarder_haproxy_splunk_cloud.sh"
+    destination = "/tmp/install_splunk_universal_forwarder_splunk_cloud.sh"
+  }
+
+  provisioner "file" {
+    source      = "${path.module}/config_files/splunkclouduf.spl"
+    destination = "/tmp/splunkclouduf.spl"
   }
 
   provisioner "remote-exec" {
@@ -69,28 +75,54 @@ resource "aws_instance" "haproxy" {
     
     ## Install Otel Agent
       "sudo curl -sSL https://dl.signalfx.com/splunk-otel-collector.sh > /tmp/splunk-otel-collector.sh",
-      "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent",
+      "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --collector-version ${var.collector_version} --discovery",
       "sudo chmod +x /tmp/update_splunk_otel_collector.sh",
       "sudo /tmp/update_splunk_otel_collector.sh $LBURL",
       "sudo mv /etc/otel/collector/agent_config.yaml /etc/otel/collector/agent_config.bak",
-      "sudo mv /tmp/haproxy_agent_config.yaml /etc/otel/collector/agent_config.yaml",
+      "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml",
+      "sudo chown splunk-otel-collector:splunk-otel-collector -R /media/data/logs",
       "sudo systemctl restart splunk-otel-collector",
-    
-    ## Generate Vars
-      var.splunk_ent_count == "1" ? "UNIVERSAL_FORWARDER_FILENAME=${var.universalforwarder_filename}" : "echo skipping because Splunk Ent is not deployed",
-      var.splunk_ent_count == "1" ? "UNIVERSAL_FORWARDER_URL=${var.universalforwarder_url}" : "echo skipping because Splunk Ent is not deployed",
-      var.splunk_ent_count == "1" ? "PASSWORD=${random_string.splunk_password.result}" : "echo skipping because Splunk Ent is not deployed",
-      var.splunk_ent_count == "1" ? "SPLUNK_IP=${aws_instance.splunk_ent.0.private_ip}" : "echo skipping because Splunk Ent is not deployed",
+    ## If splunk_ent_count = 0 then set a default value to prevent terraform errors
+      "SPLUNK_IP=${length(aws_instance.splunk_ent) > 0 ? aws_instance.splunk_ent[0].private_ip : "127.0.0.1"}",
 
-    ## Write env vars to file (used for debugging)
-      var.splunk_ent_count == "1" ? "echo $UNIVERSAL_FORWARDER_FILENAME > /tmp/UNIVERSAL_FORWARDER_FILENAME" : "echo skipping because Splunk Ent is not deployed",
-      var.splunk_ent_count == "1" ? "echo $UNIVERSAL_FORWARDER_URL > /tmp/UNIVERSAL_FORWARDER_URL" : "echo skipping because Splunk Ent is not deployed",
-      var.splunk_ent_count == "1" ? "echo $PASSWORD > /tmp/UNIVERSAL_FORWARDER_PASSWORD" : "echo skipping because Splunk Ent is not deployed",
-      var.splunk_ent_count == "1" ? "echo $SPLUNK_IP > /tmp/SPLUNK_IP" : "echo skipping because Splunk Ent is not deployed",
+    ## Deloy UF for Splunk Ent, but only if splunk_ent_count = 1
+      <<EOT
+      if [ ${var.splunk_ent_count} -eq 1 ]; then
+        sudo chmod +x /tmp/install_splunk_universal_forwarder.sh
+        UNIVERSAL_FORWARDER_FILENAME=${var.universalforwarder_filename}
+        UNIVERSAL_FORWARDER_URL=${var.universalforwarder_url}
+        PASSWORD=${random_string.splunk_password.result}
+        /tmp/install_splunk_universal_forwarder.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_URL $PASSWORD $SPLUNK_IP
 
-    ## Install Splunk Universal Forwarder
-      "sudo chmod +x /tmp/install_splunk_universal_forwarder.sh",
-      var.splunk_ent_count == "1" ? "/tmp/install_splunk_universal_forwarder_haproxy.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_URL $PASSWORD $SPLUNK_IP" : "echo skipping",
+        ## Write env vars to file (used for debugging)
+        echo $UNIVERSAL_FORWARDER_FILENAME > /tmp/UNIVERSAL_FORWARDER_FILENAME
+        echo $UNIVERSAL_FORWARDER_URL > /tmp/UNIVERSAL_FORWARDER_URL
+        echo $PASSWORD > /tmp/UNIVERSAL_FORWARDER_PASSWORD
+        echo $SPLUNK_IP > /tmp/SPLUNK_IP
+      else
+        echo "Skipping as splunk_ent_count is 0"
+      fi
+      EOT
+      ,
+
+    ## Deloy UF for Splunk Cloud, but only if splunk_cloud_enabled = true
+      <<EOT
+      if [ "${var.splunk_cloud_enabled}" = "true" ]; then
+        sudo chmod +x /tmp/install_splunk_universal_forwarder_splunk_cloud.sh
+        UNIVERSAL_FORWARDER_FILENAME=${var.universalforwarder_filename}
+        UNIVERSAL_FORWARDER_URL=${var.universalforwarder_url}
+        PASSWORD=${random_string.splunk_password.result}
+        /tmp/install_splunk_universal_forwarder_splunk_cloud.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_URL $PASSWORD
+
+        ## Write env vars to file (used for debugging)
+        echo $UNIVERSAL_FORWARDER_FILENAME > /tmp/UNIVERSAL_FORWARDER_FILENAME
+        echo $UNIVERSAL_FORWARDER_URL > /tmp/UNIVERSAL_FORWARDER_URL
+        echo $PASSWORD > /tmp/UNIVERSAL_FORWARDER_PASSWORD
+      else
+        echo "Skipping as splunk_cloud_enabled is false"
+      fi
+      EOT
+      ,
     ]
   }
 
