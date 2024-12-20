@@ -265,9 +265,9 @@ service:
   pipelines:
     traces:
       receivers:
-      - jaeger
+      # - jaeger
       - otlp
-      - zipkin
+      # - zipkin
       processors:
       - memory_limiter
       - batch
