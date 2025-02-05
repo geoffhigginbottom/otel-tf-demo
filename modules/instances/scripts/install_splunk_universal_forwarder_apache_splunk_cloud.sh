@@ -4,6 +4,7 @@
 UNIVERSAL_FORWARDER_FILENAME=$1
 UNIVERSAL_FORWARDER_URL=$2
 PASSWORD=$3
+HOSTNAME=$4
 
 wget -O $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_URL
 sudo dpkg -i $UNIVERSAL_FORWARDER_FILENAME
@@ -32,4 +33,8 @@ sudo /opt/splunkforwarder/bin/splunk add monitor /var/log/syslog -auth admin:$PA
 sudo /opt/splunkforwarder/bin/splunk add monitor /var/log/apache2 -auth admin:$PASSWORD           # adds to /opt/splunkforwarder/etc/apps/search/local/inputs.conf
 
 sudo /opt/splunkforwarder/bin/splunk install app /tmp/splunkclouduf.spl -auth admin:$PASSWORD
+
+sudo touch /opt/splunkforwarder/etc/system/local/inputs.conf
+echo -e "[default]\n_meta = host.name::$HOSTNAME" | sudo tee /opt/splunkforwarder/etc/system/local/inputs.conf > /dev/null
+
 sudo /opt/splunkforwarder/bin/splunk restart
