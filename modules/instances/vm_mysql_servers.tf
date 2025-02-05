@@ -72,14 +72,11 @@ resource "aws_instance" "mysql" {
 
       "sudo mv /etc/otel/collector/agent_config.yaml /etc/otel/collector/agent_config.bak",
       "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml",
-      "sudo chmod +x /tmp/update_splunk_otel_collector_conf_mysql.sh",
-      "sudo /tmp/update_splunk_otel_collector_conf_mysql.sh $LBURL $MYSQLUSER $MYSQLPWD",
+      "sudo chmod +x /tmp/update_splunk_otel_collector_conf.sh",
+      "sudo /tmp/update_splunk_otel_collector_conf.sh $LBURL $MYSQLUSER $MYSQLPWD",
 
-    # ## If splunk_ent_count = 0 then set a default value to prevent terraform errors
-    #   "SPLUNK_IP=${length(aws_instance.splunk_ent) > 0 ? aws_instance.splunk_ent[0].private_ip : "127.0.0.1"}",
-
-    ## Splunk Ent Private IP now set as a var, sp above lines no longer needed
-      "SPLUNK_IP=${var.splunk_private_ip}",
+    ## If splunk_ent_count = 0 then set a default value to prevent terraform errors
+      # "SPLUNK_IP=${length(aws_instance.splunk_ent) > 0 ? aws_instance.splunk_ent[0].private_ip : "127.0.0.1"}",
 
     ## Deloy UF for Splunk Ent, but only if splunk_ent_count = 1
       <<EOT
@@ -88,13 +85,16 @@ resource "aws_instance" "mysql" {
         UNIVERSAL_FORWARDER_FILENAME=${var.universalforwarder_filename}
         UNIVERSAL_FORWARDER_URL=${var.universalforwarder_url}
         PASSWORD=${random_string.splunk_password.result}
-        /tmp/install_splunk_universal_forwarder.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_URL $PASSWORD $SPLUNK_IP
+        SPLUNK_IP=${var.splunk_private_ip}
+        PRIVATE_DNS=${self.private_dns}
+        /tmp/install_splunk_universal_forwarder.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_URL $PASSWORD $SPLUNK_IP $PRIVATE_DNS
 
         ## Write env vars to file (used for debugging)
         echo $UNIVERSAL_FORWARDER_FILENAME > /tmp/UNIVERSAL_FORWARDER_FILENAME
         echo $UNIVERSAL_FORWARDER_URL > /tmp/UNIVERSAL_FORWARDER_URL
         echo $PASSWORD > /tmp/UNIVERSAL_FORWARDER_PASSWORD
         echo $SPLUNK_IP > /tmp/SPLUNK_IP
+        echo $PRIVATE_DNS > /tmp/PRIVATE_DNS
       else
         echo "Skipping as splunk_ent_count is 0"
       fi
@@ -108,12 +108,14 @@ resource "aws_instance" "mysql" {
         UNIVERSAL_FORWARDER_FILENAME=${var.universalforwarder_filename}
         UNIVERSAL_FORWARDER_URL=${var.universalforwarder_url}
         PASSWORD=${random_string.splunk_password.result}
-        /tmp/install_splunk_universal_forwarder_splunk_cloud.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_URL $PASSWORD
+        PRIVATE_DNS=${self.private_dns}
+        /tmp/install_splunk_universal_forwarder_splunk_cloud.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_URL $PASSWORD $PRIVATE_DNS
 
         ## Write env vars to file (used for debugging)
         echo $UNIVERSAL_FORWARDER_FILENAME > /tmp/UNIVERSAL_FORWARDER_FILENAME
         echo $UNIVERSAL_FORWARDER_URL > /tmp/UNIVERSAL_FORWARDER_URL
         echo $PASSWORD > /tmp/UNIVERSAL_FORWARDER_PASSWORD
+        echo $PRIVATE_DNS > /tmp/PRIVATE_DNS
       else
         echo "Skipping as splunk_cloud_enabled is false"
       fi
