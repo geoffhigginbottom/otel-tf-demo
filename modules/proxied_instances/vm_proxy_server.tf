@@ -2,12 +2,20 @@ resource "aws_instance" "proxy_server" {
   count                     = var.proxy_server_count
   ami                       = var.ami
   instance_type             = var.instance_type
-  subnet_id                 = element(var.public_subnet_ids, count.index)
+  # subnet_id                 = element(var.public_subnet_ids, count.index)
+  subnet_id                 = "${var.public_subnet_ids[ count.index % length(var.public_subnet_ids) ]}"
   key_name                  = var.key_name
   vpc_security_group_ids    = [aws_security_group.proxy_server.id]
 
+  # tags = {
+  #   Name = lower(join("-",[var.environment,element(var.proxy_server_ids, count.index)]))
+  # }
+
   tags = {
-    Name = lower(join("-",[var.environment,element(var.proxy_server_ids, count.index)]))
+    Name = lower(join("-",[var.environment, "proxy-server", count.index + 1]))
+    Environment = lower(var.environment)
+    splunkit_environment_type = "non-prd"
+    splunkit_data_classification = "public"
   }
  
   provisioner "file" {

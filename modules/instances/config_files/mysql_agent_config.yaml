@@ -33,17 +33,6 @@ receivers:
       # System processes metrics, disabled by default
       # process:
 
-  jaeger:
-    protocols:
-      grpc:
-        endpoint: "${SPLUNK_LISTEN_INTERFACE}:14250"
-      thrift_binary:
-        endpoint: "${SPLUNK_LISTEN_INTERFACE}:6832"
-      thrift_compact:
-        endpoint: "${SPLUNK_LISTEN_INTERFACE}:6831"
-      thrift_http:
-        endpoint: "${SPLUNK_LISTEN_INTERFACE}:14268"
-
   otlp:
     protocols:
       grpc:
@@ -59,7 +48,7 @@ receivers:
       - job_name: 'otel-collector'
         scrape_interval: 10s
         static_configs:
-        - targets: ["${SPLUNK_LISTEN_INTERFACE}:8888"]
+        - targets: ["0.0.0.0:8888"]
         metric_relabel_configs:
           - source_labels: [ __name__ ]
             regex: 'otelcol_rpc_.*'
@@ -80,8 +69,7 @@ receivers:
     # default = false
     #access_token_passthrough: true
   
-  zipkin:
-    endpoint: "${SPLUNK_LISTEN_INTERFACE}:9411"
+  nop:
   
 # ## MySQL Specific Receivers - removed as now using auto discovery
 #   smartagent/mysql:
@@ -111,6 +99,9 @@ receivers:
 
 processors:
   batch:
+    metadata_keys:
+      - X-SF-Token
+  
   # Enabling the memory_limiter is strongly recommended for every pipeline.
   # Configuration is based on the amount of memory allocated to the collector.
   # For more information about memory limiter, see
@@ -123,34 +114,35 @@ processors:
   # Detector order is important: the `system` detector goes last so it can't preclude cloud detectors from setting host/os info.
   # Resource detection processor is configured to override all host and cloud attributes because instrumentation
   # libraries can send wrong values from container environments.
-  # https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/resourcedetectionprocessor#ordering
+  # https://docs.splunk.com/Observability/gdi/opentelemetry/components/resourcedetection-processor.html#ordering-considerations
   resourcedetection:
     detectors: [gcp, ecs, ec2, azure, system]
     override: true
 
-  # Optional: The following processor can be used to add a default "deployment.environment" attribute to the logs and 
+  # Optional: The following processor can be used to add a default "deployment.environment" attribute to the logs and
   # traces when it's not populated by instrumentation libraries.
-  # If enabled, make sure to enable this processor in the pipeline below.
+  # If enabled, make sure to enable this processor in a pipeline.
+  # For more information, see https://docs.splunk.com/Observability/gdi/opentelemetry/components/resource-processor.html
   #resource/add_environment:
     #attributes:
       #- action: insert
         #value: staging/production/...
         #key: deployment.environment
 
-exporters:
-  # Send to gateway
-  otlphttp:
-    endpoint: http://${SPLUNK_GATEWAY_URL}:4318
-  otlp:
-    endpoint: "${SPLUNK_GATEWAY_URL}:4317"
-    tls:
-      insecure: true
+  # The following processor is used to add "otelcol.service.mode" attribute to the internal metrics
+  resource/add_mode:
+    attributes:
+      - action: insert
+        value: "agent"
+        key: otelcol.service.mode
 
+exporters:
   # Traces
-  sapm:
-    access_token: "${SPLUNK_ACCESS_TOKEN}"
-    endpoint: "${SPLUNK_TRACE_URL}"
-  
+  otlphttp:
+    traces_endpoint: "${SPLUNK_INGEST_URL}/v2/trace/otlp"
+    headers:
+      "X-SF-Token": "${SPLUNK_ACCESS_TOKEN}"
+
   # Metrics + Events
   signalfx:
     access_token: "${SPLUNK_ACCESS_TOKEN}"
@@ -161,7 +153,13 @@ exporters:
     ingest_url: http://${SPLUNK_GATEWAY_URL}:9943
     sync_host_metadata: true
     correlation:
-  
+
+  # Entities (applicable only if discovery mode is enabled)
+  otlphttp/entities:
+    logs_endpoint: "${SPLUNK_INGEST_URL}/v3/event"
+    headers:
+      "X-SF-Token": "${SPLUNK_ACCESS_TOKEN}"
+
   # Logs
   splunk_hec:
     token: "${SPLUNK_HEC_TOKEN}"
@@ -169,13 +167,21 @@ exporters:
     source: "otel"
     sourcetype: "otel"
     profiling_data_enabled: false
-  
+
   # Profiling
   splunk_hec/profiling:
     token: "${SPLUNK_ACCESS_TOKEN}"
     endpoint: "${SPLUNK_INGEST_URL}/v1/log"
     log_data_enabled: false
-  
+
+  # Send to gateway
+  otlphttp/gateway:
+    endpoint: http://${SPLUNK_GATEWAY_URL}:4318
+  otlp/gateway:
+    endpoint: "${SPLUNK_GATEWAY_URL}:4317"
+    tls:
+      insecure: true
+
   # Debug
   debug:
     verbosity: detailed
@@ -188,25 +194,23 @@ service:
   extensions:
   - health_check
   - http_forwarder
-  #- zpages
+  - zpages
   - smartagent
 
   pipelines:
     traces:
       receivers:
-      # - jaeger
       - otlp
-      # - zipkin
       processors:
       - memory_limiter
       - batch
       - resourcedetection
       #- resource/add_environment
       exporters:
-      # - sapm
+      # - otlphttp
       # - signalfx
       # Use instead when sending to gateway
-      - otlphttp
+      - otlphttp/gateway
       - signalfx
 
     metrics:
@@ -214,6 +218,7 @@ service:
       - hostmetrics
       - otlp
       - signalfx
+      # MySql Specific Receivers
       # - smartagent/mysql # removed as now using auto discovery
       # - mysql # removed as now using auto discovery
       processors:
@@ -223,7 +228,7 @@ service:
       exporters:
       # - signalfx
       # Use instead when sending to gateway
-      - otlphttp
+      - otlphttp/gateway
 
     metrics/internal:
       receivers:
@@ -232,6 +237,7 @@ service:
       - memory_limiter
       - batch
       - resourcedetection
+      - resource/add_mode
       # When sending to gateway, at least one metrics pipeline needs
       # to use signalfx exporter so host metadata gets emitted
       exporters:
@@ -248,6 +254,17 @@ service:
       exporters:
       - signalfx
     
+    logs/entities:
+      # Receivers are dynamically added if discovery mode is enabled
+      receivers:
+      - nop
+      processors:
+      - memory_limiter
+      - batch
+      - resourcedetection
+      exporters:
+      - otlphttp/entities
+
     logs:
       receivers:
       - otlp
@@ -260,4 +277,4 @@ service:
       # - splunk_hec
       # - splunk_hec/profiling
       # Use instead when sending to gateway
-      - otlphttp
+      - otlphttp/gateway

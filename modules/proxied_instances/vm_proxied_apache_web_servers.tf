@@ -2,12 +2,20 @@ resource "aws_instance" "proxied_apache_web" {
   count                     = var.proxied_apache_web_count
   ami                       = var.ami
   instance_type             = var.instance_type
-  subnet_id                 = element(var.public_subnet_ids, count.index)
+  # subnet_id                 = element(var.public_subnet_ids, count.index)
+  subnet_id                 = "${var.public_subnet_ids[ count.index % length(var.public_subnet_ids) ]}"
   key_name                  = var.key_name
   vpc_security_group_ids    = [aws_security_group.proxied_instances_sg.id]
 
+  # tags = {
+  #   Name = lower(join("-",[var.environment,element(var.proxied_apache_web_ids, count.index)]))
+  # }
+
   tags = {
-    Name = lower(join("-",[var.environment,element(var.proxied_apache_web_ids, count.index)]))
+    Name = lower(join("-",[var.environment, "proxied-apache", count.index + 1]))
+    Environment = lower(var.environment)
+    splunkit_environment_type = "non-prd"
+    splunkit_data_classification = "public"
   }
  
   provisioner "file" {
@@ -17,7 +25,7 @@ resource "aws_instance" "proxied_apache_web" {
 
   provisioner "file" {
     source      = "${path.module}/config_files/apache_web_agent_config.yaml"
-    destination = "/tmp/apache_web_agent_config.yaml"
+    destination = "/tmp/agent_config.yaml"
   }
 
   provisioner "file" {
@@ -47,7 +55,7 @@ resource "aws_instance" "proxied_apache_web" {
 
     ## Install Otel Agent
       "sudo curl -sSL https://dl.signalfx.com/splunk-otel-collector.sh > /tmp/splunk-otel-collector.sh",
-      "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent",
+      "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --collector-version ${var.collector_version} --discovery",
       "sudo mv /etc/otel/collector/agent_config.yaml /etc/otel/collector/agent_config.bak",
       "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml",
       "sudo chown root:root /tmp/service-proxy.conf",
