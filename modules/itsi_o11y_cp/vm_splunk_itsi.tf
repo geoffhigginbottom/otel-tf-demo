@@ -19,7 +19,10 @@ resource "aws_instance" "splunk_itsi" {
   ]
 
   tags = {
-    Name = lower(join("-",[var.environment,element(var.splunk_itsi_ids, count.index)]))
+    Name = lower(join("-",[var.environment, "itsi", count.index + 1]))
+    Environment = lower(var.environment)
+    splunkit_environment_type = "non-prd"
+    splunkit_data_classification = "public"
   }
 
   provisioner "file" {
