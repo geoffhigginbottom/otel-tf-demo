@@ -210,20 +210,11 @@ data "aws_ami" "windows-server" {
 variable "gateway_count" {
   default = {}
 }
-variable "gateway_ids" {
-  default = []
-}
 variable "haproxy_count" {
   default = {}
 }
-variable "haproxy_ids" {
-  default = []
-}
 variable "mysql_count" {
   default = {}
-}
-variable "mysql_ids" {
-  default = []
 }
 variable "mysql_user" {
   default = []
@@ -234,32 +225,20 @@ variable "mysql_user_pwd" {
 variable "ms_sql_count" {
   default = {}
 }
-variable "ms_sql_ids" {
-  default = []
-}
 variable "ms_sql_user" {
   default = []
 }
 variable "ms_sql_user_pwd" {
   default = []
 }
-variable "ms_sql_administrator_pwd" {
-  default = []
-}
-variable "windows_server_count" {
+variable "iis_server_count" {
   default = {}
-}
-variable "windows_server_ids" {
-  default = []
 }
 variable "windows_server_administrator_pwd" {
   default = []
 }
 variable "apache_web_count" {
   default = {}
-}
-variable "apache_web_ids" {
-  default = []
 }
 variable "splunk_cloud_enabled" {
   type    = bool
@@ -271,40 +250,18 @@ variable "splunk_cloud_hec_token" {
 variable "splunk_ent_count" {
   default = {}
 }
-variable "splunk_ent_ids" {
-  default = []
-}
 variable "proxied_apache_web_count" {
   default = {}
-}
-variable "proxied_apache_web_ids" {
-  default = []
 }
 variable "proxied_windows_server_count" {
   default = {}
 }
-variable "proxied_windows_server_ids" {
-  default = []
-}
 variable "proxy_server_count" {
   default = {}
-}
-variable "proxy_server_ids" {
-  default = []
 }
 variable "splunk_itsi_count" {
   default = {}
 }
-variable "splunk_itsi_ids" {
-  default = []
-}
-# variable "xxx _count" {
-#   default = {}
-# }
-# variable "xxx _ids" {
-#   type = list(string)
-#   default = []
-# }
 
 variable "region" {
   description = "Select region (1:eu-west-1, 2:eu-west-3, 3:eu-central-1, 4:us-east-1, 5:us-east-2, 6:us-west-1, 7:us-west-2, 8:ap-southeast-1, 9:ap-southeast-2, 10:sa-east-1 )"

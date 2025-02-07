@@ -7,10 +7,6 @@ resource "aws_instance" "proxied_apache_web" {
   key_name                  = var.key_name
   vpc_security_group_ids    = [aws_security_group.proxied_instances_sg.id]
 
-  # tags = {
-  #   Name = lower(join("-",[var.environment,element(var.proxied_apache_web_ids, count.index)]))
-  # }
-
   tags = {
     Name = lower(join("-",[var.environment, "proxied-apache", count.index + 1]))
     Environment = lower(var.environment)

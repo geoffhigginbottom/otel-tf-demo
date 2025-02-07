@@ -63,7 +63,10 @@ resource "aws_instance" "proxied_windows_server" {
   EOF
 
   tags = {
-    Name = lower(join("-",[var.environment,element(var.proxied_windows_server_ids, count.index)]))
+    Name = lower(join("-",[var.environment, "prox-win", count.index + 1]))
+    Environment = lower(var.environment)
+    splunkit_environment_type = "non-prd"
+    splunkit_data_classification = "public"
   }
 }
 

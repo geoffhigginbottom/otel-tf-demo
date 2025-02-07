@@ -153,16 +153,13 @@ module "proxied_instances" {
   instance_type                    = var.instance_type
   ami                              = data.aws_ami.latest-ubuntu.id
   proxied_apache_web_count         = var.proxied_apache_web_count
-  proxied_apache_web_ids           = var.proxied_apache_web_ids
   proxied_windows_server_count     = var.proxied_windows_server_count
-  proxied_windows_server_ids       = var.proxied_windows_server_ids
   windows_server_administrator_pwd = var.windows_server_administrator_pwd
   windows_proxied_server_agent_url = var.windows_proxied_server_agent_url
   windows_server_instance_type     = var.windows_server_instance_type
   windows_server_ami               = data.aws_ami.windows-server.id
   collector_version                = var.collector_version
   proxy_server_count               = var.proxy_server_count
-  proxy_server_ids                 = var.proxy_server_ids
   my_public_ip                     = "${chomp(data.http.my_public_ip.response_body)}"
 }
 
@@ -185,31 +182,23 @@ module "instances" {
   gateway_instance_type            = var.gateway_instance_type
   ami                              = data.aws_ami.latest-ubuntu.id
   gateway_count                    = var.gateway_count
-  gateway_ids                      = var.gateway_ids
   haproxy_count                    = var.haproxy_count
-  haproxy_ids                      = var.haproxy_ids
   mysql_count                      = var.mysql_count
-  mysql_ids                        = var.mysql_ids
   mysql_user                       = var.ms_sql_user
   mysql_user_pwd                   = var.ms_sql_user_pwd
   ms_sql_count                     = var.ms_sql_count
-  ms_sql_ids                       = var.ms_sql_ids
   ms_sql_user                      = var.ms_sql_user
   ms_sql_user_pwd                  = var.ms_sql_user_pwd
-  ms_sql_administrator_pwd         = var.ms_sql_administrator_pwd
   ms_sql_instance_type             = var.ms_sql_instance_type
   ms_sql_ami                       = data.aws_ami.ms-sql-server.id
-  windows_server_count             = var.windows_server_count
-  windows_server_ids               = var.windows_server_ids
+  iis_server_count                 = var.iis_server_count
   windows_server_administrator_pwd = var.windows_server_administrator_pwd
   windows_server_instance_type     = var.windows_server_instance_type
   windows_server_ami               = data.aws_ami.windows-server.id
   apache_web_count                 = var.apache_web_count
-  apache_web_ids                   = var.apache_web_ids
   splunk_cloud_enabled             = var.splunk_cloud_enabled
   splunk_cloud_hec_token           = var.splunk_cloud_hec_token
   splunk_ent_count                 = var.splunk_ent_count
-  splunk_ent_ids                   = var.splunk_ent_ids
   splunk_ent_version               = var.splunk_ent_version
   splunk_ent_filename              = var.splunk_ent_filename
   splunk_enterprise_files_local_path = var.splunk_enterprise_files_local_path
@@ -242,7 +231,6 @@ module "itsi_o11y_cp" {
   instance_type                                    = var.instance_type
   ami                                              = data.aws_ami.latest-ubuntu.id
   splunk_itsi_count                                = var.splunk_itsi_count
-  splunk_itsi_ids                                  = var.splunk_itsi_ids
   splunk_itsi_inst_type                            = var.splunk_itsi_inst_type
   splunk_itsi_version                              = var.splunk_itsi_version
   splunk_itsi_filename                             = var.splunk_itsi_filename
@@ -260,7 +248,7 @@ output "HAProxy_Servers" {value = var.haproxy_count > 0 ? module.instances.*.hap
 output "MySQL_Servers" {value = var.mysql_count > 0 ? module.instances.*.mysql_details : null}
 output "MS_SQL_Servers" {value = var.ms_sql_count > 0 ? module.instances.*.ms_sql_details : null}
 output "Apache_Web_Servers" {value = var.apache_web_count > 0 ? module.instances.*.apache_web_details : null}
-output "Windows_Servers" {value = var.windows_server_count > 0 ? module.instances.*.windows_server_details : null}
+output "IIS_Servers" {value = var.iis_server_count > 0 ? module.instances.*.iis_server_details : null}
 
 output "collector_lb_dns" {value = var.instances_enabled ? module.instances.*.gateway_lb_int_dns : null}
 output "SQS_Test_Server" {value = var.lambda_sqs_dynamodb_enabled ? module.lambda_sqs_dynamodb.*.sqs_test_server_details : null}

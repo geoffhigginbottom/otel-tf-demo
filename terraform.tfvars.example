@@ -24,35 +24,17 @@ apache_web_count = "0"
 haproxy_count = "0"
 mysql_count = "0" #uses var.collector_version
 ms_sql_count = "0"
-windows_server_count = "0"
+iis_server_count = "0"
 splunk_ent_count = "0"
 
 ## Proxied Instances Quantities ##
 proxy_server_count = "1" # min 0 : max = 1 as only one is required, used as a yes/no parameter
-proxy_server_ids = [
-  "proxy-server"
-]
-
 proxied_apache_web_count = "1" # min 0 : max = subnet_count
-proxied_apache_web_ids = [
-  "proxied-apache_1",
-  "proxied-apache_2",
-  "proxied-apache_3"
-]
-
 proxied_windows_server_count = "1" # min 0 : max = subnet_count
-proxied_windows_server_ids = [
-  "proxied-windows1",
-  "proxied-windows2",
-  "proxied-windows3"
-  ]
 
 ## ITSI Quantities ##
 
 splunk_itsi_count = "1" # min 0 : max = 1 as only one is required, used as a yes/no parameter
-splunk_itsi_ids = [
-  "splunk-itsi"
-  ]
 
 ### AWS Variables ###
 #region = "<REGION>" - ensue this aligns with EIP setting below
@@ -114,7 +96,6 @@ splunk_infrastructure_monitoring_add_on_filename = "splunk-infrastructure-monito
 ### MS SQL Server Variables ###
 ms_sql_user              = "signalfxagent"
 ms_sql_user_pwd          = "<STRONG_PWD>"
-ms_sql_administrator_pwd = "<STRONG_PWD>"
 ms_sql_instance_type     = "t3.xlarge"
 
 ### Windows Server Variables ###

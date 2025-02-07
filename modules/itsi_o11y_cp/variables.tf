@@ -51,9 +51,6 @@ variable "environment" {
 variable "splunk_itsi_count" {
   default = {}
 }
-variable "splunk_itsi_ids" {
-  default = []
-}
 variable "splunk_itsi_filename" {
   default = {}
 }
