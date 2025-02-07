@@ -58,80 +58,25 @@ dashboards_enabled          = false
 detectors_enabled           = false
 
 ## Instance Quantities ##
+
 gateway_count = "2" # min 1 : max = subnet_count - there should always be at least one as Target Groups require one
-gateway_ids = [
-  "gateway1",
-  "gateway2",
-  "gateway3"
-  ]
-
-haproxy_count = "1" # min 0 : max = subnet_count
-haproxy_ids = [
-  "haproxy1",
-  "haproxy2",
-  "haproxy3"
-  ]
-
-mysql_count = "1" # min 0 : max = subnet_count
-mysql_ids = [
-  "mysql1",
-  "mysql2",
-  "mysql3"
-  ]
-
-ms_sql_count = "1" # min 0 : max = subnet_count
-ms_sql_ids = [
-  "ms_sql1",
-  "ms_sql2",
-  "ms_sql3"
-  ]
-
-windows_server_count = "1" # min 0 : max = subnet_count
-windows_server_ids = [
-  "windows1",
-  "windows2",
-  "windows3"
-  ]
-
-apache_web_count = "1" # min 0 : max = subnet_count
-apache_web_ids = [
-  "apache1",
-  "apache2",
-  "apache3"
-  ]
-
+haproxy_count = "1"
+mysql_count = "1"
+ms_sql_count = "1"
+iis_server_count = "1"
+apache_web_count = "1"
 splunk_ent_count = "1" # min 0 : max = 1 as only one is required, used as a yes/no parameter
-splunk_ent_ids = [
-  "splunk-ent"
-  ]
 
 ## Proxied Instances Quantities ##
 
 proxy_server_count = "1" # min 0 : max = 1 as only one is required, used as a yes/no parameter
-proxy_server_ids = [
-  "proxy-server"
-  ]
-
-proxied_apache_web_count = "1" # min 0 : max = subnet_count
-proxied_apache_web_ids = [
-  "proxied-apache_1",
-  "proxied-apache_2",
-  "proxied-apache_3"
-  ]
-
-proxied_windows_server_count = "1" # min 0 : max = subnet_count
-proxied_windows_server_ids = [
-  "proxied-windows1",
-  "proxied-windows2",
-  "proxied-windows3"
-  ]
+proxied_apache_web_count = "1"
+proxied_windows_server_count = "1"
 
 ## ITSI Quantities ##
 
 splunk_itsi_count = "1" # min 0 : max = 1 as only one is required, used as a yes/no parameter
-splunk_itsi_ids = [
-  "splunk-itsi"
-  ]
+
 ```
 
 ### AWS Variables
@@ -252,7 +197,6 @@ The Microsoft SQL Server Instance requires Windows and SQL Admin Passwords to be
 ### MS SQL Server Variables ###
 ms_sql_user                   = "signalfxagent"
 ms_sql_user_pwd               = "<STRONG_PWD>"
-ms_sql_administrator_pwd      = "<STRONG_PWD>"
 ms_sql_instance_type          = "t3.xlarge"
 ```
 
