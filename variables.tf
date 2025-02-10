@@ -358,7 +358,12 @@ variable "collector_version" {
 variable "detector_promoting_tags_id" {
   default = {}
 }
+
+
 ### Splunk Enterprise Variables ###
+variable "splunk_admin_pwd" {
+  default = {}
+}
 variable "splunk_ent_filename" {
   default = {}
 }
@@ -383,9 +388,6 @@ variable "splunk_enterprise_files_local_path" {
 variable "splunk_enterprise_license_filename" {
   default = {}
 }
-# variable "splunk_password" {
-#   default = {}
-# }
 
 ### Splunk ITSI Variables ###
 variable "splunk_itsi_filename" {

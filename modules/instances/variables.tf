@@ -121,6 +121,9 @@ variable "branch" {
 
 
 ### Splunk Enterprise Variables ###
+variable "splunk_admin_pwd" {
+  default = {}
+}
 variable "splunk_cloud_enabled" {
   type    = bool
   default = false
@@ -155,6 +158,3 @@ variable "splunk_enterprise_files_local_path" {
 variable "splunk_enterprise_license_filename" {
   default = {}
 }
-# variable "splunk_password" {
-#   default = {}
-# }

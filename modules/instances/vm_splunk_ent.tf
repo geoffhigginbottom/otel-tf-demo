@@ -75,8 +75,7 @@ resource "aws_instance" "splunk_ent" {
       "LBURL=${aws_lb.gateway-lb.dns_name}",
       
     ## Create Splunk Ent Vars
-      "SPLUNK_PASSWORD=${random_string.splunk_password.result}",
-      # "SPLUNK_PASSWORD=${var.splunk_password}",
+      "SPLUNK_PASSWORD=${var.splunk_admin_pwd}",
       "LO_CONNECT_PASSWORD=${random_string.lo_connect_password.result}",
       "SPLUNK_ENT_VERSION=${var.splunk_ent_version}",
       "SPLUNK_FILENAME=${var.splunk_ent_filename}",
@@ -126,30 +125,12 @@ resource "aws_instance" "splunk_ent" {
   }
 }
 
-# output "splunk_ent_details" {
-#   value =  formatlist(
-#     "%s, %s", 
-#     aws_instance.splunk_ent.*.tags.Name,
-#     aws_instance.splunk_ent.*.public_ip,
-#   )
-# }
-
-# output "splunk_ent_urls" {
-#   value =  formatlist(
-#     "%s%s:%s", 
-#     "http://",
-#     aws_instance.splunk_ent.*.public_ip,
-#     "8000",
-#   )
-# }
-
-# output "splunk_password" {
-#   value = random_string.splunk_password.result
-#   # value = var.splunk_password
-# }
-
 output "lo_connect_password" {
   value = random_string.lo_connect_password.result
+}
+
+output "splunk_password" {
+  value = var.splunk_admin_pwd
 }
 
 output "splunk_enterprise_private_ip" {

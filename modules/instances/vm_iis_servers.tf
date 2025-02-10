@@ -22,7 +22,7 @@ resource "aws_instance" "iis_server" {
     windows_server_administrator_pwd  = var.windows_server_administrator_pwd
     splunk_private_ip                 = var.splunk_private_ip
     splunk_cloud_enabled              = var.splunk_cloud_enabled
-    splunk_password                   = random_string.splunk_password.result
+    splunk_password                   = var.splunk_admin_pwd
     gateway_lb_dns_name               = aws_lb.gateway-lb.dns_name
   })
 

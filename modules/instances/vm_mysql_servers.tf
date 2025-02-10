@@ -84,7 +84,7 @@ resource "aws_instance" "mysql" {
         sudo chmod +x /tmp/install_splunk_universal_forwarder.sh
         UNIVERSAL_FORWARDER_FILENAME=${var.universalforwarder_filename}
         UNIVERSAL_FORWARDER_URL=${var.universalforwarder_url}
-        PASSWORD=${random_string.splunk_password.result}
+        PASSWORD=${var.splunk_admin_pwd}
         SPLUNK_IP=${var.splunk_private_ip}
         PRIVATE_DNS=${self.private_dns}
         /tmp/install_splunk_universal_forwarder.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_URL $PASSWORD $SPLUNK_IP $PRIVATE_DNS
@@ -107,7 +107,7 @@ resource "aws_instance" "mysql" {
         sudo chmod +x /tmp/install_splunk_universal_forwarder_splunk_cloud.sh
         UNIVERSAL_FORWARDER_FILENAME=${var.universalforwarder_filename}
         UNIVERSAL_FORWARDER_URL=${var.universalforwarder_url}
-        PASSWORD=${random_string.splunk_password.result}
+        PASSWORD=${var.splunk_admin_pwd}
         PRIVATE_DNS=${self.private_dns}
         /tmp/install_splunk_universal_forwarder_splunk_cloud.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_URL $PASSWORD $PRIVATE_DNS
 
