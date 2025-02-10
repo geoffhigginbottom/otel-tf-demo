@@ -198,6 +198,7 @@ module "instances" {
   apache_web_count                 = var.apache_web_count
   splunk_cloud_enabled             = var.splunk_cloud_enabled
   splunk_cloud_hec_token           = var.splunk_cloud_hec_token
+  splunk_admin_pwd                 = var.splunk_admin_pwd
   splunk_ent_count                 = var.splunk_ent_count
   splunk_ent_version               = var.splunk_ent_version
   splunk_ent_filename              = var.splunk_ent_filename
@@ -265,8 +266,6 @@ output "Phone_Shop_Server" {value = var.phone_shop_enabled ? module.phone_shop.*
 output "ECS_ALB_hostname" {value = var.ecs_cluster_enabled ? module.aws_ecs.*.ecs_alb_hostname : null}
 
 ### Splunk Enterprise Outputs ###
-# output "Splunk_Enterprise_Server" {value = var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_details : null}
-# output "splunk_password" {value = var.splunk_ent_count > 0 ? module.instances.*.splunk_password : null}
 output "splunk_password" {value = (var.splunk_ent_count > 0 || var.splunk_cloud_enabled == true) ? module.instances.*.splunk_password : null}
 output "lo_connect_password" {value = var.splunk_ent_count > 0 ? module.instances.*.lo_connect_password : null}
 output "splunk_enterprise_private_ip" {value = var.splunk_ent_count > 0 ? module.instances.*.splunk_enterprise_private_ip : null}
