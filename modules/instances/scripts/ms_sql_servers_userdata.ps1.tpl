@@ -34,16 +34,69 @@ $fqdn = "$hostname.$domain"
 # Write the fqdn to a file for verification
 Set-Content -Path "C:\fqdn.txt" -Value $fqdn
 
-# Install OTel Agent
-& {Set-ExecutionPolicy Bypass -Scope Process -Force;
-$script = ((New-Object System.Net.WebClient).DownloadString('https://dl.signalfx.com/splunk-otel-collector.ps1'));
-$params = @{access_token = "${access_token}";
-realm = "${realm}";
-mode = "agent";
-collector_version = "${collector_version}";
-with_dotnet_instrumentation = "0";
-deployment_env = "${environment}"};
-Invoke-Command -ScriptBlock ([scriptblock]::Create(". {$script} $(&{$args} @params)"))}
+# # Install OTel Agent
+# & {Set-ExecutionPolicy Bypass -Scope Process -Force;
+# $script = ((New-Object System.Net.WebClient).DownloadString('https://dl.signalfx.com/splunk-otel-collector.ps1'));
+# $params = @{access_token = "${access_token}";
+# realm = "${realm}";
+# mode = "agent";
+# collector_version = "${collector_version}";
+# with_dotnet_instrumentation = "0";
+# deployment_env = "${environment}"};
+# Invoke-Command -ScriptBlock ([scriptblock]::Create(". {$script} $(&{$args} @params)"))}
+
+# Install OTel Agent with error handling and retries
+$attempt = 0
+$maxAttempts = 5
+$success = $false
+
+# Wait until no other MSI processes are running
+while ((Get-Process msiexec -ErrorAction SilentlyContinue)) {
+    Write-Host "Another installation is in progress. Waiting..."
+    Start-Sleep -Seconds 10
+}
+
+# Proceed with installation
+$msiPath = "C:\Users\Administrator\AppData\Local\Temp\Splunk\OpenTelemetry Collector\splunk-otel-collector-${collector_version}-amd64.msi"
+$logPath = "C:\otel_install.log"
+
+# Run the MSI installer with logging enabled
+Start-Process msiexec.exe -ArgumentList "/i `"$msiPath`" /qn /L*V `"$logPath`"" -NoNewWindow -Wait
+
+
+while ($attempt -lt $maxAttempts -and -not $success) {
+    try {
+        Write-Host "Attempting to download and install the Splunk OTel Collector (Attempt $($attempt + 1) of $maxAttempts)..."
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        $script = ((New-Object System.Net.WebClient).DownloadString('https://dl.signalfx.com/splunk-otel-collector.ps1'))
+        $params = @{
+            access_token = "${access_token}"
+            realm = "${realm}"
+            mode = "agent"
+            collector_version = "${collector_version}"
+            with_dotnet_instrumentation = "0"
+            deployment_env = "${environment}"
+        }
+        Invoke-Command -ScriptBlock ([scriptblock]::Create(". {$script} $(&{$args} @params)"))
+
+        # Check if installation was successful
+        if (Get-Service -Name "splunk-otel-collector" -ErrorAction SilentlyContinue) {
+            Write-Host "Splunk OTel Collector installed successfully."
+            $success = $true
+        } else {
+            Write-Host "Splunk OTel Collector installation failed, retrying..."
+        }
+    } catch {
+        Write-Host "Error during installation: $_.Exception.Message"
+    }
+    $attempt++
+    Start-Sleep -Seconds 15  # Wait before retrying
+}
+
+if (-not $success) {
+    Write-Host "Failed to install Splunk OTel Collector after $maxAttempts attempts."
+    exit 1
+}
 
 $registryPath = "HKLM:\SYSTEM\CurrentControlSet\Services\splunk-otel-collector"
 $valueName = "Environment"
