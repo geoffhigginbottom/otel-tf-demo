@@ -35,6 +35,7 @@ override.tf.json
 variables.tfvars
 terraform.tfvars
 splunkclouduf.spl
+/non_public_files/
 
 retail*
 lambda.zip
