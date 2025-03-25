@@ -35,10 +35,10 @@ resource "aws_instance" "gateway" {
       "sudo ./aws/install",
 
       ## Sync Required Files
-      "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/gateway_config.yaml /tmp/gateway_config.yaml",
+      "aws s3 cp s3://${var.s3_bucket_name}/config_files/gateway_config.yaml /tmp/gateway_config.yaml",
 
-      # "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/xxx /tmp/xxx",
-      # "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/xxx /tmp/xxx",
+      # "aws s3 cp s3://${var.s3_bucket_name}/scripts/xxx /tmp/xxx",
+      # "aws s3 cp s3://${var.s3_bucket_name}/config_files/xxx /tmp/xxx",
 
 
     ## Install Otel Agent     

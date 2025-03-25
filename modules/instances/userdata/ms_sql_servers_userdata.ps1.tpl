@@ -127,7 +127,7 @@ if (Test-Path $registryPath) {
 # Download custom agent_config.yaml file
 $env:Path += ";C:\Program Files\Amazon\AWSCLIV2"
 Move-Item -Path "C:\ProgramData\Splunk\OpenTelemetry Collector\agent_config.yaml" -Destination "C:\ProgramData\Splunk\OpenTelemetry Collector\agent_config.bak"
-aws s3 cp s3://eu-west-3-tfdemo-files/config_files/ms_sql_agent_config.yaml "C:\ProgramData\Splunk\OpenTelemetry Collector\agent_config.yaml"
+aws s3 cp s3://${s3_bucket_name}/config_files/ms_sql_agent_config.yaml "C:\ProgramData\Splunk\OpenTelemetry Collector\agent_config.yaml"
 
 Stop-Service splunk-otel-collector
 Start-Service splunk-otel-collector
@@ -193,7 +193,7 @@ Set-Content -Path $filePath -Value $fileContent -Encoding UTF8
 
 # Download SplunkCloud Auth File
 if ("${splunk_cloud_enabled}" -eq "true") {
-  aws s3 cp s3://eu-west-3-tfdemo-files/non_public_files/splunkclouduf.spl C:\Users\Administrator\Documents\splunkclouduf.spl
+  aws s3 cp s3://${s3_bucket_name}/non_public_files/splunkclouduf.spl C:\Users\Administrator\Documents\splunkclouduf.spl
 }
 
 # Install SplunCloud Credentials Package

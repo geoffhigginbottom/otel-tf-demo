@@ -38,7 +38,7 @@ resource "aws_instance" "proxy_server" {
       "sudo ./aws/install",
 
     ## Sync Required Files
-    "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/squid.conf /tmp/squid.conf",
+    "aws s3 cp s3://${var.s3_bucket_name}/config_files/squid.conf /tmp/squid.conf",
 
     ## Install Proxy Server
       "sudo apt-get install squid -y",

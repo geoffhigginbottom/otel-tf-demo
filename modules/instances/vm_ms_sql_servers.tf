@@ -12,6 +12,7 @@ resource "aws_instance" "ms_sql" {
     hostname                          = lower(join("-", ["ms-sql", count.index + 1]))
     access_token                      = var.access_token
     realm                             = var.realm
+    s3_bucket_name                    = var.s3_bucket_name
     collector_version                 = var.collector_version
     environment                       = var.environment
     splunk_ent_count                  = var.splunk_ent_count

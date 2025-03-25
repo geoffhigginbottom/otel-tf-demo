@@ -59,6 +59,9 @@ variable "splunk_private_ip" {
 variable "ec2_instance_profile_name" {
   type = string
 }
+variable "s3_bucket_name" {
+    default = []
+  }
 
 ### SignalFX Variables ###
 variable "access_token" {

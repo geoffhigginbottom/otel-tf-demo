@@ -52,22 +52,22 @@ resource "aws_instance" "splunk_ent" {
       "sudo ./aws/install",
 
     ## Sync Non Public Files from S3
-      # "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/xxx /tmp/xxx",
-      # "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/xxx /tmp/xxx",
-      # "aws s3 cp s3://eu-west-3-tfdemo-files/non_public_files/${} /tmp/${}",
+      # "aws s3 cp s3://${var.s3_bucket_name}/scripts/xxx /tmp/xxx",
+      # "aws s3 cp s3://${var.s3_bucket_name}/config_files/xxx /tmp/xxx",
+      # "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/${} /tmp/${}",
 
-      "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/install_splunk_enterprise.sh /tmp/install_splunk_enterprise.sh",
-      "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/certs.sh /tmp/certs.sh",
-      "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/update_splunk_otel_collector.sh /tmp/update_splunk_otel_collector.sh",
+      "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_splunk_enterprise.sh /tmp/install_splunk_enterprise.sh",
+      "aws s3 cp s3://${var.s3_bucket_name}/scripts/certs.sh /tmp/certs.sh",
+      "aws s3 cp s3://${var.s3_bucket_name}/scripts/update_splunk_otel_collector.sh /tmp/update_splunk_otel_collector.sh",
 
-      "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/splunkent_agent_config.yaml /tmp/agent_config.yaml",
-      "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/inputs.conf /tmp/inputs.conf",
+      "aws s3 cp s3://${var.s3_bucket_name}/config_files/splunkent_agent_config.yaml /tmp/agent_config.yaml",
+      "aws s3 cp s3://${var.s3_bucket_name}/config_files/inputs.conf /tmp/inputs.conf",
 
-      "aws s3 cp s3://eu-west-3-tfdemo-files/non_public_files/${var.splunk_enterprise_license_filename} /tmp/${var.splunk_enterprise_license_filename}",
-      "aws s3 cp s3://eu-west-3-tfdemo-files/non_public_files/${var.splunk_itsi_license_filename} /tmp/${var.splunk_itsi_license_filename}",
-      "aws s3 cp s3://eu-west-3-tfdemo-files/non_public_files/${var.splunk_app_for_content_packs_filename} /tmp/${var.splunk_app_for_content_packs_filename}",
-      "aws s3 cp s3://eu-west-3-tfdemo-files/non_public_files/${var.splunk_it_service_intelligence_filename} /tmp/${var.splunk_it_service_intelligence_filename}",
-      "aws s3 cp s3://eu-west-3-tfdemo-files/non_public_files/${var.splunk_infrastructure_monitoring_add_on_filename} /tmp/${var.splunk_infrastructure_monitoring_add_on_filename}",
+      "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/${var.splunk_enterprise_license_filename} /tmp/${var.splunk_enterprise_license_filename}",
+      "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/${var.splunk_itsi_license_filename} /tmp/${var.splunk_itsi_license_filename}",
+      "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/${var.splunk_app_for_content_packs_filename} /tmp/${var.splunk_app_for_content_packs_filename}",
+      "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/${var.splunk_it_service_intelligence_filename} /tmp/${var.splunk_it_service_intelligence_filename}",
+      "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/${var.splunk_infrastructure_monitoring_add_on_filename} /tmp/${var.splunk_infrastructure_monitoring_add_on_filename}",
 
     ## Create Splunk Ent Vars
       "TOKEN=${var.access_token}",

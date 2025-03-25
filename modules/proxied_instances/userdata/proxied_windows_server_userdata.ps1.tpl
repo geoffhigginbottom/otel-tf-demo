@@ -67,7 +67,7 @@ Move-Item -Path "C:\ProgramData\Splunk\OpenTelemetry Collector\agent_config.yaml
 $env:HTTPS_PROXY = "http://${proxy_server_private_ip}:8080"
 $env:HTTP_PROXY = "http://${proxy_server_private_ip}:8080"
 $env:NO_PROXY = "169.254.169.254"
-aws s3 cp s3://eu-west-3-tfdemo-files/config_files/proxied_windows_server_agent_config.yaml "C:\ProgramData\Splunk\OpenTelemetry Collector\agent_config.yaml"
+aws s3 cp s3://${s3_bucket_name}/config_files/proxied_windows_server_agent_config.yaml "C:\ProgramData\Splunk\OpenTelemetry Collector\agent_config.yaml"
 
 Stop-Service splunk-otel-collector
 Start-Service splunk-otel-collector

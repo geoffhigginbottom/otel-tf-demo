@@ -44,17 +44,17 @@ resource "aws_instance" "apache_web" {
       "sudo ./aws/install",
 
       ## Sync Required Files
-      "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/update_splunk_otel_collector.sh /tmp/update_splunk_otel_collector.sh",
-      "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/install_apache_web_server.sh /tmp/install_apache_web_server.sh",
-      "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/install_splunk_universal_forwarder_apache.sh /tmp/install_splunk_universal_forwarder.sh",
-      "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/install_splunk_universal_forwarder_apache_splunk_cloud.sh /tmp/install_splunk_universal_forwarder_splunk_cloud.sh",
+      "aws s3 cp s3://${var.s3_bucket_name}/scripts/update_splunk_otel_collector.sh /tmp/update_splunk_otel_collector.sh",
+      "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_apache_web_server.sh /tmp/install_apache_web_server.sh",
+      "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_splunk_universal_forwarder_apache.sh /tmp/install_splunk_universal_forwarder.sh",
+      "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_splunk_universal_forwarder_apache_splunk_cloud.sh /tmp/install_splunk_universal_forwarder_splunk_cloud.sh",
       
-      "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/apache_web_agent_config.yaml /tmp/agent_config.yaml",
+      "aws s3 cp s3://${var.s3_bucket_name}/config_files/apache_web_agent_config.yaml /tmp/agent_config.yaml",
       
-      "aws s3 cp s3://eu-west-3-tfdemo-files/non_public_files/splunkclouduf.spl /tmp/splunkclouduf.spl",
+      "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/splunkclouduf.spl /tmp/splunkclouduf.spl",
 
-      # "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/xxx /tmp/xxx",
-      # "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/xxx /tmp/xxx",
+      # "aws s3 cp s3://${var.s3_bucket_name}/scripts/xxx /tmp/xxx",
+      # "aws s3 cp s3://${var.s3_bucket_name}/config_files/xxx /tmp/xxx",
 
       "TOKEN=${var.access_token}",
       "REALM=${var.realm}",

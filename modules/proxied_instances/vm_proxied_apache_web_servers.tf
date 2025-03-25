@@ -58,12 +58,12 @@ resource "aws_instance" "proxied_apache_web" {
       "sudo ./aws/install",
 
       ## Sync Required Files
-      "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/install_apache_web_server.sh /tmp/install_apache_web_server.sh",
-      "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/proxied_apache_web_agent_config.yaml /tmp/agent_config.yaml",
-      "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/service-proxy.conf /tmp/service-proxy.conf",
+      "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_apache_web_server.sh /tmp/install_apache_web_server.sh",
+      "aws s3 cp s3://${var.s3_bucket_name}/config_files/proxied_apache_web_agent_config.yaml /tmp/agent_config.yaml",
+      "aws s3 cp s3://${var.s3_bucket_name}/config_files/service-proxy.conf /tmp/service-proxy.conf",
     
-      # "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/xxx /tmp/xxx",
-      # "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/xxx /tmp/xxx",
+      # "aws s3 cp s3://${var.s3_bucket_name}/scripts/xxx /tmp/xxx",
+      # "aws s3 cp s3://${var.s3_bucket_name}/config_files/xxx /tmp/xxx",
 
       "TOKEN=${var.access_token}",
       "REALM=${var.realm}",

@@ -12,6 +12,7 @@ resource "aws_instance" "proxied_windows_server" {
     hostname                          = lower(join("-", ["prox-win", count.index + 1]))
     access_token                      = var.access_token
     realm                             = var.realm
+    s3_bucket_name                    = var.s3_bucket_name
     collector_version                 = var.collector_version
     environment                       = var.environment
     windows_server_administrator_pwd  = var.windows_server_administrator_pwd

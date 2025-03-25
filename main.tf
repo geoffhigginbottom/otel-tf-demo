@@ -49,7 +49,6 @@ module "s3" {
   source                    = "./modules/s3"
   s3_bucket_name            = var.s3_bucket_name
   environment               = var.environment
-  # ec2_instance_profile_name = aws_iam_instance_profile.ec2_instance_profile.name
 }
 
 module "aws_ecs" {
@@ -159,6 +158,7 @@ module "proxied_instances" {
   instance_type                    = var.instance_type
   ami                              = data.aws_ami.latest-ubuntu.id
   ec2_instance_profile_name        = module.s3.ec2_instance_profile_name
+  s3_bucket_name                   = var.s3_bucket_name
   proxied_apache_web_count         = var.proxied_apache_web_count
   proxied_windows_server_count     = var.proxied_windows_server_count
   windows_server_administrator_pwd = var.windows_server_administrator_pwd
@@ -207,6 +207,7 @@ module "instances" {
   windows_server_ami                                = data.aws_ami.windows-server.id
   apache_web_count                                  = var.apache_web_count
   ec2_instance_profile_name                         = module.s3.ec2_instance_profile_name
+  s3_bucket_name                                    = var.s3_bucket_name
   
   splunk_cloud_enabled                              = var.splunk_cloud_enabled
   splunk_admin_pwd                                  = var.splunk_admin_pwd
