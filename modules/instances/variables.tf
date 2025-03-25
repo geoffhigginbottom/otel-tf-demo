@@ -56,6 +56,9 @@ variable "splunk_ent_eip" {
 variable "splunk_private_ip" {
   default = []
 }
+variable "ec2_instance_profile_name" {
+  type = string
+}
 
 ### SignalFX Variables ###
 variable "access_token" {
@@ -67,9 +70,9 @@ variable "api_url" {
 variable "realm" {
   default = []
 }
-variable "smart_agent_version" {
-  default = []
-}
+# variable "smart_agent_version" {
+#   default = []
+# }
 variable "otelcol_version" {
   default = []
 }
@@ -126,10 +129,6 @@ variable "splunk_admin_pwd" {
 }
 variable "splunk_cloud_enabled" {
   type    = bool
-  default = false
-}
-variable "splunk_cloud_hec_token" {
-  default = {}
 }
 variable "splunk_ent_count" {
   default = {}
@@ -146,15 +145,53 @@ variable "splunk_ent_inst_type" {
 variable "universalforwarder_filename" {
   default = {}
 }
-variable "universalforwarder_url" {
+variable "universalforwarder_version" {
   default = {}
 }
 variable "universalforwarder_url_windows" {
   default = {}
 }
-variable "splunk_enterprise_files_local_path" {
-  default = {}
-}
 variable "splunk_enterprise_license_filename" {
   default = {}
+}
+variable "add_itsi_splunk_enterprise" {
+  type = bool
+  default = false
+}
+
+### Splunk ITSI Variables ###
+variable "splunk_itsi_license_filename" {
+  default = {}
+}
+variable "splunk_app_for_content_packs_filename" {
+  default = {}
+}
+variable "splunk_it_service_intelligence_filename" {
+  default = {}
+}
+variable "splunk_infrastructure_monitoring_add_on_filename" {
+  default = {}
+}
+
+### Certificate Vars ###
+variable "certpath" {
+  default = []
+}
+variable "passphrase" {
+  default = []
+}
+variable "fqdn" {
+  default = []
+}
+variable "country" {
+  default = []
+}
+variable "state" {
+  default = []
+}
+variable "location" {
+  default = []
+}
+variable "org" {
+  default = []
 }

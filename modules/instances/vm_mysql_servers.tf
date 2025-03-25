@@ -5,7 +5,7 @@ resource "aws_instance" "mysql" {
   subnet_id                 = "${var.public_subnet_ids[ count.index % length(var.public_subnet_ids) ]}"
   key_name                  = var.key_name
   vpc_security_group_ids    = [aws_security_group.instances_sg.id]
-  iam_instance_profile      = aws_iam_instance_profile.ec2_instance_profile.name
+  iam_instance_profile      = var.ec2_instance_profile_name
 
   tags = {
     Name = lower(join("-",[var.environment, "mysql", count.index + 1]))
@@ -14,42 +14,32 @@ resource "aws_instance" "mysql" {
     splunkit_data_classification = "public"
   }
 
-  provisioner "file" {
-    source      = "${path.module}/scripts/install_mysql.sh"
-    destination = "/tmp/install_mysql.sh"
-  }
-
-  provisioner "file" {
-    source      = "${path.module}/scripts/update_splunk_otel_collector_conf_mysql.sh"
-    destination = "/tmp/update_splunk_otel_collector_conf.sh"
-  }
-
-  provisioner "file" {
-    source      = "${path.module}/config_files/mysql_agent_config.yaml"
-    destination = "/tmp/agent_config.yaml"
-  }
-
-  provisioner "file" {
-    source      = "${path.module}/scripts/install_splunk_universal_forwarder_mysql.sh"
-    destination = "/tmp/install_splunk_universal_forwarder.sh"
-  }
-
-  provisioner "file" {
-    source      = "${path.module}/scripts/install_splunk_universal_forwarder_mysql_splunk_cloud.sh"
-    destination = "/tmp/install_splunk_universal_forwarder_splunk_cloud.sh"
-  }
-
-  provisioner "file" {
-    source      = "${path.module}/config_files/splunkclouduf.spl"
-    destination = "/tmp/splunkclouduf.spl"
-  }
-
   provisioner "remote-exec" {
     inline = [
+      ## Set Hostname
       "sudo sed -i 's/127.0.0.1.*/127.0.0.1 ${self.tags.Name}.local ${self.tags.Name} localhost/' /etc/hosts",
       "sudo hostnamectl set-hostname ${self.tags.Name}",
       "sudo apt-get update",
       "sudo apt-get upgrade -y",
+
+      ## Install AWS CLI
+      "curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip",
+      "sudo apt install unzip -y",
+      "unzip awscliv2.zip",
+      "sudo ./aws/install",
+
+      ## Sync Required Files
+      "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/update_splunk_otel_collector_mysql.sh /tmp/update_splunk_otel_collector.sh",
+      "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/install_mysql.sh /tmp/install_mysql.sh",
+      "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/install_splunk_universal_forwarder_mysql.sh /tmp/install_splunk_universal_forwarder.sh",
+      "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/install_splunk_universal_forwarder_mysql_splunk_cloud.sh /tmp/install_splunk_universal_forwarder_splunk_cloud.sh",
+      
+      "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/mysql_agent_config.yaml /tmp/agent_config.yaml",
+      
+      "aws s3 cp s3://eu-west-3-tfdemo-files/non_public_files/splunkclouduf.spl /tmp/splunkclouduf.spl",
+
+      # "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/xxx /tmp/xxx",
+      # "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/xxx /tmp/xxx",
 
       "TOKEN=${var.access_token}",
       "REALM=${var.realm}",
@@ -72,8 +62,9 @@ resource "aws_instance" "mysql" {
 
       "sudo mv /etc/otel/collector/agent_config.yaml /etc/otel/collector/agent_config.bak",
       "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml",
-      "sudo chmod +x /tmp/update_splunk_otel_collector_conf.sh",
-      "sudo /tmp/update_splunk_otel_collector_conf.sh $LBURL $MYSQLUSER $MYSQLPWD",
+      "sudo chown splunk-otel-collector:splunk-otel-collector agent_config.yaml",
+      "sudo chmod +x /tmp/update_splunk_otel_collector.sh",
+      "sudo /tmp/update_splunk_otel_collector.sh $LBURL $MYSQLUSER $MYSQLPWD",
 
     ## If splunk_ent_count = 0 then set a default value to prevent terraform errors
       # "SPLUNK_IP=${length(aws_instance.splunk_ent) > 0 ? aws_instance.splunk_ent[0].private_ip : "127.0.0.1"}",
@@ -83,15 +74,15 @@ resource "aws_instance" "mysql" {
       if [ ${var.splunk_ent_count} -eq 1 ]; then
         sudo chmod +x /tmp/install_splunk_universal_forwarder.sh
         UNIVERSAL_FORWARDER_FILENAME=${var.universalforwarder_filename}
-        UNIVERSAL_FORWARDER_URL=${var.universalforwarder_url}
+        UNIVERSAL_FORWARDER_VERSION=${var.universalforwarder_version}
         PASSWORD=${var.splunk_admin_pwd}
         SPLUNK_IP=${var.splunk_private_ip}
         PRIVATE_DNS=${self.private_dns}
-        /tmp/install_splunk_universal_forwarder.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_URL $PASSWORD $SPLUNK_IP $PRIVATE_DNS
+        /tmp/install_splunk_universal_forwarder.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_VERSION $PASSWORD $SPLUNK_IP $PRIVATE_DNS
 
         ## Write env vars to file (used for debugging)
         echo $UNIVERSAL_FORWARDER_FILENAME > /tmp/UNIVERSAL_FORWARDER_FILENAME
-        echo $UNIVERSAL_FORWARDER_URL > /tmp/UNIVERSAL_FORWARDER_URL
+        echo $UNIVERSAL_FORWARDER_VERSION > /tmp/UNIVERSAL_FORWARDER_VERSION
         echo $PASSWORD > /tmp/UNIVERSAL_FORWARDER_PASSWORD
         echo $SPLUNK_IP > /tmp/SPLUNK_IP
         echo $PRIVATE_DNS > /tmp/PRIVATE_DNS
@@ -106,14 +97,14 @@ resource "aws_instance" "mysql" {
       if [ "${var.splunk_cloud_enabled}" = "true" ]; then
         sudo chmod +x /tmp/install_splunk_universal_forwarder_splunk_cloud.sh
         UNIVERSAL_FORWARDER_FILENAME=${var.universalforwarder_filename}
-        UNIVERSAL_FORWARDER_URL=${var.universalforwarder_url}
+        UNIVERSAL_FORWARDER_VERSION=${var.universalforwarder_version},
         PASSWORD=${var.splunk_admin_pwd}
         PRIVATE_DNS=${self.private_dns}
-        /tmp/install_splunk_universal_forwarder_splunk_cloud.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_URL $PASSWORD $PRIVATE_DNS
+        /tmp/install_splunk_universal_forwarder_splunk_cloud.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_VERSION $PASSWORD $PRIVATE_DNS
 
         ## Write env vars to file (used for debugging)
         echo $UNIVERSAL_FORWARDER_FILENAME > /tmp/UNIVERSAL_FORWARDER_FILENAME
-        echo $UNIVERSAL_FORWARDER_URL > /tmp/UNIVERSAL_FORWARDER_URL
+        echo $UNIVERSAL_FORWARDER_VERSION > /tmp/UNIVERSAL_FORWARDER_VERSION
         echo $PASSWORD > /tmp/UNIVERSAL_FORWARDER_PASSWORD
         echo $PRIVATE_DNS > /tmp/PRIVATE_DNS
       else

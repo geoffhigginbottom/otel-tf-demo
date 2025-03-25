@@ -56,14 +56,6 @@ resource "signalfx_dashboard" "mydashboard0" {
         column = 9
     }
 
-    # chart {
-    #     chart_id = signalfx_single_value_chart.nginx_servers0.id
-    #     width = 3
-    #     height = 1
-    #     row = 3
-    #     column = 9
-    # }
-
 ### Row 6 ###
     chart {
         chart_id = signalfx_time_chart.disk_space_xvda10.id
@@ -122,13 +114,11 @@ resource "signalfx_dashboard" "mydashboard0" {
         column = 6
     }
 
-
-
-    # chart {
-    #     chart_id = signalfx_single_value_chart.active_smartgateways0.id
-    #     width = 3
-    #     height = 1
-    #     row = 9
-    #     column = 9
-    # }
+    chart {
+        chart_id = signalfx_single_value_chart.active_gateways.id
+        width = 3
+        height = 1
+        row = 9
+        column = 9
+    }
 }

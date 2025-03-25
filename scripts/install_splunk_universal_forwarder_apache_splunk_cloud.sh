@@ -2,12 +2,39 @@
 # Version 2.0
 
 UNIVERSAL_FORWARDER_FILENAME=$1
-UNIVERSAL_FORWARDER_URL=$2
+VERSION=$2
 PASSWORD=$3
 HOSTNAME=$4
 
-wget -O $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_URL
-sudo dpkg -i $UNIVERSAL_FORWARDER_FILENAME
+DOWNLOAD_URL="https://download.splunk.com/products/universalforwarder/releases/$VERSION/linux/$UNIVERSAL_FORWARDER_FILENAME"
+DOWNLOAD_PATH="/tmp/$UNIVERSAL_FORWARDER_FILENAME"
+DOWNLOAD_MAX_RETRIES=5
+DOWNLOAD_RETRY_COUNT=0
+DOWNLOAD_SLEEP_TIME=10
+
+download_file() {
+    while [ $DOWNLOAD_RETRY_COUNT -lt $DOWNLOAD_MAX_RETRIES ]; do
+        echo "Downloading Splunk Universal Forwarder (Attempt $((DOWNLOAD_RETRY_COUNT + 1))/$DOWNLOAD_MAX_RETRIES)..."
+        wget -O "$DOWNLOAD_PATH" "$DOWNLOAD_URL"
+
+        if [ $? -eq 0 ] && [ -f "$DOWNLOAD_PATH" ]; then
+            echo "Download successful!"
+            return 0
+        fi
+
+        echo "Download failed. Retrying in $DOWNLOAD_SLEEP_TIME seconds..."
+        ((DOWNLOAD_RETRY_COUNT++))
+        sleep $DOWNLOAD_SLEEP_TIME
+    done
+
+    echo "Error: Download failed after $DOWNLOAD_MAX_RETRIES attempts."
+    exit 1
+}
+
+# Start the download process
+download_file
+
+sudo dpkg -i /tmp/$UNIVERSAL_FORWARDER_FILENAME
 sudo /opt/splunkforwarder/bin/splunk cmd splunkd rest --noauth POST /services/authentication/users "name=admin&password=$PASSWORD&roles=admin"
 sudo /opt/splunkforwarder/bin/splunk start --accept-license
 sudo /opt/splunkforwarder/bin/splunk stop

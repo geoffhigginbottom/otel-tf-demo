@@ -35,6 +35,9 @@ variable "windows_server_administrator_pwd" {
 variable "my_public_ip" {
   default = []
 }
+variable "ec2_instance_profile_name" {
+  type = string
+}
 
 ### SignalFX Variables ###
 variable "access_token" {

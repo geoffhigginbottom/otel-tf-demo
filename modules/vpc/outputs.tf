@@ -9,3 +9,7 @@ output "private_subnet_ids" {
 output "public_subnet_ids" {
     value = aws_subnet.public_subnets.*.id
 }
+
+output "route_table_ids" {
+    value = aws_route.main_vpc_route.route_table_id
+}

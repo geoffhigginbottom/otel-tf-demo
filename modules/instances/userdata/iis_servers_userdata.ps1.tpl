@@ -134,7 +134,7 @@ Set-Content -Path $filePath -Value $fileContent -Encoding UTF8
 
 # Download SplunkCloud Auth File
 if ("${splunk_cloud_enabled}" -eq "true") {
-  aws s3 cp s3://eu-west-3-tfdemo-files/config_files/splunkclouduf.spl C:\Users\Administrator\Documents\splunkclouduf.spl
+  aws s3 cp s3://eu-west-3-tfdemo-files/non_public_files/splunkclouduf.spl C:\Users\Administrator\Documents\splunkclouduf.spl
 }
 
 # Install SplunCloud Credentials Package

@@ -166,37 +166,12 @@ gateway_instance_type   = "t2.small"
 
 ##### S3
 
-S3 is used to store a number of files that are used by the instances, so create an S3 bucket and then enter its name here.
+S3 is used to store a number of files that are used by the instances, you should have created the bucket and populated it with the required files during the initial setup steps above, enter the name of the bucket here.
 
 ```yaml
 ## S3 ##
 s3_bucket_name          = "<BUCKET_NAME>"
 ```
-
-There are three folders that get synchronized into this bucket at run time (there is no need to manually create these in the bucket):
-
-- config_files
-- scripts
-- non_public_files
-
-The contents of config_files and scripts are included in the repo, but the non_public_files folder will need to be created in the root of your local repo and populated before your 1st run of terraform.  The non_public_files folder stores files that are not publicly available so you will need to download these from splunkbase / sharepoint and place them in the non_public_files folder.  This folder does not get stored in github.
-
-The following files need to be added from Spunk Base (these will need updating on a regular basis):
-
-- [Splunk Infrastructure Monitoring Add-on](https://splunkbase.splunk.com/app/5247)
-- [Splunk IT Service Intelligence](https://splunkbase.splunk.com/app/1841)
-- [Splunk Add-On for OpenTelemetry Collector](https://splunkbase.splunk.com/app/7125)
-- [Splunk Add-on for Unix and Linux](https://splunkbase.splunk.com/app/833)
-- [Splunk App for Content Packs](https://splunkbase.splunk.com/app/5391)
-
-The following License Files need to be added (update based on current date window):
-
-- Splunk_Enterprise_NFR_1H_2025.xml
-- Splunk_ITSI_NFR_1H_2025.xml
-
-A SplunkCloud Universal Forwarder Auth File will be needed when deploying instances with the optional Splunk Cloud Integration enabled.
-
-- splunkclouduf.spl
 
 #### SOC Variables
 
@@ -224,7 +199,7 @@ collector_version        = "nn.nnn.nn"
 
 #### Splunk Enterprise Variables
 
-The instances module can also deploy a Splunk Enterprise VM, and if it is deployed, then instances automatically deploy a Universal Forwarder as well.  Note that Splunk Enterprise should not be deployed if splunk_cloud_enabled is set to true as they will conflict.  You will need to update the versions of Splunk Enterprise and Universal Forwarder install files based on the version you wish to deploy.  
+The instances module can also deploy a Splunk Enterprise VM, and if it is deployed, then instances automatically deploy a Universal Forwarder as well.  Note that Splunk Enterprise should not be deployed if "splunk_cloud_enabled" is set to true as they will conflict.  You will need to update the versions of Splunk Enterprise and Universal Forwarder install files based on the version you wish to deploy.  
 
 Note that if also deploying ITSI, ensure the Splunk Enterprise Version is compatible as ITSI often lags the latest Splunk Enterprise release.
 
@@ -232,7 +207,7 @@ The "splunk_ent_eip" value should be for an EIP in the region that you are using
 
 The "splunk_private_ip" is set here to enable the auto deployment of Universal Forwarders, if changed it needs to be from the "vpc_cidr_block" setting above.
 
-The "splunk_enterprise_license_filename" and all the ITSI files should be added to the non_public_files folder which gets synced with S3.
+The "splunk_enterprise_license_filename" and all the ITSI files should be added to the "non_public_files" folder which gets synced with S3.
 
 ```yaml
 ### Splunk Enterprise Variables ###
@@ -300,23 +275,24 @@ Details about each module can be found below
 
 ### Instances
 
-This module deploys some example EC2 Instances, with Splunk IM Monitors matching their role, as well as Otel Collectors. Each instance is deployed with an otel collector running in agent mode to enable Infrastructure Monitoring and is configured to send all metrics via the cluster of Otel Collectors, fronted by an AWS Load Balancer.
+This module deploys some example ec2 Instances, with OTel Collectors and optionally Universal Forwarders if Splunk Enterprise or Splunk Cloud is also deployed. Each instance is deployed with an OTel collector running in agent mode to enable Infrastructure Monitoring and is configured to send all metrics via the cluster of OTel Collectors running in Gateway Mode, fronted by an AWS Load Balancer.
 
 The following EC2 Instances can be deployed:
 
 - Gateways
+- Apache
 - HAProxy
 - MySQL
 - Microsoft SQL Server
-- Microsoft Windows Server
-- Apache
+- Microsoft IIS Server
 - Splunk Enterprise
+- ITSI (added to Splunk Enterprise)
 
-Each Instance has Infrastructure Monitoring 'receivers' configured to match the services running on them.  The configuration for each monitor is deployed via its own specific agent_config.yaml file.
+Each Instance has OTel 'receivers' configured to match the services running on them, or uses Auto Discovery.  The configuration for each receiver is deployed via its own specific agent_config.yaml file.
 
 ### Proxied Instances
 
-This module deploys some sample instances which are deployed with no internet access, and are forced to use an inline-proxy for sending their metrics back to the splunk endpoints.  This introduces a number of challenges which are addressed in this module.
+This module deploys some sample instances which are deployed with no direct internet access, and are forced to use an inline-proxy for sending their metrics back to the splunk endpoints.  This introduces a number of challenges which are addressed in this module.
 
 ### Phone Shop
 

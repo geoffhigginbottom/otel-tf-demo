@@ -14,12 +14,22 @@ output "splunk_ent_details" {
   )
 }
 
-output "splunk_ent_urls" {
+output "splunk_ent_url" {
   value =  formatlist(
     "%s%s:%s", 
     "http://",
     # aws_instance.splunk_ent.*.public_ip,
     aws_eip_association.eip_assoc.*.public_ip,
+    "8000",
+  )
+}
+
+output "splunk_ent_url_fqdn" {
+  value =  formatlist(
+    "%s%s:%s", 
+    "http://",
+    # aws_instance.splunk_ent.*.public_ip,
+    var.fqdn,
     "8000",
   )
 }

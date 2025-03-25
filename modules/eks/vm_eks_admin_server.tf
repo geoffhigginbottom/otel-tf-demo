@@ -16,10 +16,10 @@ resource "aws_instance" "eks_admin_server" {
     destination = "/tmp/generate_aws_config.sh"
   }
 
-  provisioner "file" {
-    source      = "${path.module}/scripts/generate_values.sh"
-    destination = "/tmp/generate_values.sh"
-  }
+  # provisioner "file" {
+  #   source      = "${path.module}/scripts/generate_values.sh"
+  #   destination = "/tmp/generate_values.sh"
+  # }
 
   provisioner "file" {
     source      = "${path.module}/scripts/install_eks_tools.sh"
@@ -62,8 +62,8 @@ resource "aws_instance" "eks_admin_server" {
     ## Install EKS Tools
       "sudo chmod +x /tmp/install_eks_tools.sh",
       "/tmp/install_eks_tools.sh",
-      "ENVIRONMENT=${var.environment}",
-      "sudo chmod +x /tmp/generate_values.sh",
+      # "ENVIRONMENT=${var.environment}",
+      # "sudo chmod +x /tmp/generate_values.sh",
       # "/tmp/generate_values.sh $ENVIRONMENT", #is this still needed as hotrod has been removed
 
     ## Setup eksutils
@@ -82,7 +82,7 @@ resource "aws_instance" "eks_admin_server" {
       "HEC_TOKEN=${var.eks_hec_token}",
       "SPLUNK_INDEX=${var.eks_splunk_index}",
       "EKS_ACCESS_TOKEN=${var.eks_access_token}",
-
+      "ENVIRONMENT=${var.environment}",
       "helm repo add splunk-otel-collector-chart https://signalfx.github.io/splunk-otel-collector-chart",
       "helm repo update",
       "helm install --set cloudProvider='aws' --set distribution='eks' --set splunkObservability.accessToken=$EKS_ACCESS_TOKEN --set clusterName=$EKS_CLUSTER_NAME --set splunkObservability.realm=$REALM --set gateway.enabled='false' --set splunkObservability.profilingEnabled='true' --set splunkPlatform.endpoint=$SPLUNK_ENDPOINT --set splunkPlatform.token=$HEC_TOKEN --set splunkPlatform.index=$SPLUNK_INDEX --set environment=$ENVIRONMENT --generate-name splunk-otel-collector-chart/splunk-otel-collector",
@@ -92,14 +92,26 @@ resource "aws_instance" "eks_admin_server" {
       # "sudo chmod +x /home/ubuntu/deploy_hotrod.sh",
       # "sudo chmod +x /home/ubuntu/delete_hotrod.sh",
       
+    # # Deploy Astro Shop
+    #   "git clone https://github.com/splunk/observability-workshop",
+    #   "helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts",
+    #   "helm install astro-shop-demo open-telemetry/opentelemetry-demo --values /home/ubuntu/observability-workshop/workshop/oteldemo/otel-demo.yaml",
+    #   "curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\"",
+    #   "chmod +x ./kubectl",
+    #   "sudo mv ./kubectl /usr/local/bin/",
+    #   "kubectl patch svc astro-shop-demo-frontendproxy -n default -p '{\"spec\": {\"type\": \"LoadBalancer\"}}'",
+
     # Deploy Astro Shop
       "git clone https://github.com/splunk/observability-workshop",
       "helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts",
-      "helm install astro-shop-demo open-telemetry/opentelemetry-demo --values /home/ubuntu/observability-workshop/workshop/oteldemo/otel-demo.yaml",
+      # "helm install astro-shop-demo open-telemetry/opentelemetry-demo --values /home/ubuntu/observability-workshop/workshop/oteldemo/otel-demo.yaml",
+      # "helm install astro-shop-demo open-telemetry/opentelemetry-demo --values /home/ubuntu/observability-workshop/workshop/apm/otel-demo.yaml",
+      "helm install astro-shop-demo open-telemetry/opentelemetry-demo",
       "curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\"",
       "chmod +x ./kubectl",
       "sudo mv ./kubectl /usr/local/bin/",
-      "kubectl patch svc astro-shop-demo-frontendproxy -n default -p '{\"spec\": {\"type\": \"LoadBalancer\"}}'",
+      "kubectl patch svc frontendproxy -n default -p '{\"spec\": {\"type\": \"LoadBalancer\"}}'",
+      # "kubectl patch svc frontendproxy -n default -p '{"spec": {"type": "LoadBalancer"}}'", # version for console testing
 
 
     ## Write env vars to file (used for debugging)

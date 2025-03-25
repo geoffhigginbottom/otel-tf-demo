@@ -8,9 +8,9 @@ variable "environment" {
 variable "realm" {
   default = []
 }
-variable "smart_agent_version" {
-  default = []
-}
+# variable "smart_agent_version" {
+#   default = []
+# }
 
 ### AWS Variables ###
 variable "region" {
@@ -24,6 +24,12 @@ variable "aws_secret_access_key" {
 }
 variable "instance_type" {
   default = []
+}
+variable "eks_instance_type" {
+  default = {}
+}
+variable "eks_ami_type" {
+  default = {}
 }
 variable "ami" {
   default = {}

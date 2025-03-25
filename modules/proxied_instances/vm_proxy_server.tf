@@ -6,6 +6,7 @@ resource "aws_instance" "proxy_server" {
   subnet_id                 = "${var.public_subnet_ids[ count.index % length(var.public_subnet_ids) ]}"
   key_name                  = var.key_name
   vpc_security_group_ids    = [aws_security_group.proxy_server.id]
+  iam_instance_profile      = var.ec2_instance_profile_name
 
   tags = {
     Name = lower(join("-",[var.environment, "proxy-server", count.index + 1]))
@@ -14,10 +15,10 @@ resource "aws_instance" "proxy_server" {
     splunkit_data_classification = "public"
   }
  
-  provisioner "file" {
-    source      = "${path.module}/config_files/squid.conf"
-    destination = "/tmp/squid.conf"
-  }
+  # provisioner "file" {
+  #   source      = "${path.module}/config_files/squid.conf"
+  #   destination = "/tmp/squid.conf"
+  # }
 
   provisioner "remote-exec" {
     inline = [
@@ -29,7 +30,16 @@ resource "aws_instance" "proxy_server" {
       "sudo apt-get update",
       "sudo apt-get update",
       "sudo apt-get upgrade -y",
-  
+
+    ## Install AWS CLI
+      "curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip",
+      "sudo apt install unzip -y",
+      "unzip awscliv2.zip",
+      "sudo ./aws/install",
+
+    ## Sync Required Files
+    "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/squid.conf /tmp/squid.conf",
+
     ## Install Proxy Server
       "sudo apt-get install squid -y",
       "sudo mv /etc/squid/squid.conf /etc/squid/squid.bak",
@@ -38,7 +48,7 @@ resource "aws_instance" "proxy_server" {
 
     ## Install Otel Agent
       "sudo curl -sSL https://dl.signalfx.com/splunk-otel-collector.sh > /tmp/splunk-otel-collector.sh",
-      "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent",
+      "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --collector-version ${var.collector_version} --discovery",
     ]
   }
 

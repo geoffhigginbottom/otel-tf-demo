@@ -6,12 +6,9 @@ resource "aws_instance" "iis_server" {
   subnet_id                 = "${var.public_subnet_ids[ count.index % length(var.public_subnet_ids) ]}"
   key_name                  = var.key_name
   vpc_security_group_ids    = [aws_security_group.instances_sg.id]
-  iam_instance_profile      = aws_iam_instance_profile.ec2_instance_profile.name
-  depends_on   = [
-    null_resource.sync_config_files
-    ]
+  iam_instance_profile      = var.ec2_instance_profile_name
 
-  user_data = templatefile("${path.module}/scripts/iis_servers_userdata.ps1.tpl", {
+  user_data = templatefile("${path.module}/userdata/iis_servers_userdata.ps1.tpl", {
     hostname                          = lower(join("-", ["iis", count.index + 1]))
     access_token                      = var.access_token
     realm                             = var.realm

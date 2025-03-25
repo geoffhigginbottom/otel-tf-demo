@@ -62,11 +62,11 @@ resource "aws_instance" "phone_shop_server" {
       "sudo apt-get upgrade -y",
 
     # Install SignalFx
-      "TOKEN=${var.access_token}",
-      "REALM=${var.realm}",
-      "HOSTNAME=${self.tags.Name}",
-      "AGENTVERSION=${var.smart_agent_version}",
-      "ENVIRONMENT=${var.environment}",
+      # "TOKEN=${var.access_token}",
+      # "REALM=${var.realm}",
+      # "HOSTNAME=${self.tags.Name}",
+      # "AGENTVERSION=${var.smart_agent_version}",
+      # "ENVIRONMENT=${var.environment}",
 
       "sudo chmod +x /tmp/install_sfx_agent.sh",
       "sudo /tmp/install_sfx_agent.sh $TOKEN $REALM $AGENTVERSION",

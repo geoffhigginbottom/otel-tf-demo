@@ -29,9 +29,9 @@ variable "environment" {
 variable "realm" {
   default = []
 }
-variable "smart_agent_version" {
-  default = []
-}
+# variable "smart_agent_version" {
+#   default = []
+# }
 
 
 ### AWS Variables ###

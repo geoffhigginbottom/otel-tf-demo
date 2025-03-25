@@ -15,18 +15,7 @@ extensions:
   zpages:
     endpoint: "${SPLUNK_LISTEN_INTERFACE}:55679"
 
-  ## Testing for Apache Auto-Discovery - appears it is not required
-  # host_observer:
-
 receivers:
-  ## Testing for Apache Auto-Discovery - appears it is not required
-  # receiver_creator:
-  #   watch_observers: [host_observer]
-  #   receivers:
-  #     apache:
-  #       # rule: type == "port" && port matches "80"
-  #       rule: type == "port" && port == "80" && transport == "TCP"
-
   hostmetrics:
     collection_interval: 1s
     scrapers:
@@ -194,13 +183,12 @@ service:
       error_output_paths: [/media/data/logs/otel/collector.log]
     metrics:
       address: "${SPLUNK_LISTEN_INTERFACE}:8888"
-  
+
   extensions:
   - health_check
   - http_forwarder
   - zpages
   - smartagent
-  # - host_observer ## Testing for Apache Auto-Discovery - appears it is not required
 
   pipelines:
     traces:

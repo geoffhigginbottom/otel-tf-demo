@@ -2,10 +2,19 @@ resource "aws_instance" "proxied_apache_web" {
   count                     = var.proxied_apache_web_count
   ami                       = var.ami
   instance_type             = var.instance_type
-  # subnet_id                 = element(var.public_subnet_ids, count.index)
   subnet_id                 = "${var.public_subnet_ids[ count.index % length(var.public_subnet_ids) ]}"
+  # root_block_device {
+  #   volume_size = 16
+  #   volume_type = "gp2"
+  # }
+  # ebs_block_device {
+  #   device_name = "/dev/xvdg"
+  #   volume_size = 8
+  #   volume_type = "gp2"
+  # }
   key_name                  = var.key_name
   vpc_security_group_ids    = [aws_security_group.proxied_instances_sg.id]
+  iam_instance_profile      = var.ec2_instance_profile_name
 
   tags = {
     Name = lower(join("-",[var.environment, "proxied-apache", count.index + 1]))
@@ -13,25 +22,15 @@ resource "aws_instance" "proxied_apache_web" {
     splunkit_environment_type = "non-prd"
     splunkit_data_classification = "public"
   }
- 
-  provisioner "file" {
-    source      = "${path.module}/scripts/install_apache_web_server.sh"
-    destination = "/tmp/install_apache_web_server.sh"
-  }
-
-  provisioner "file" {
-    source      = "${path.module}/config_files/apache_web_agent_config.yaml"
-    destination = "/tmp/agent_config.yaml"
-  }
-
-  provisioner "file" {
-    source      = "${path.module}/config_files/service-proxy.conf"
-    destination = "/tmp/service-proxy.conf"
-  }
 
   provisioner "remote-exec" {
     inline = [
-    ## Update Env Vars - Set Proxy
+    ## Set Proxy in Current Session
+      "export http_proxy=http://${aws_instance.proxy_server[0].private_ip}:8080",
+      "export https_proxy=http://${aws_instance.proxy_server[0].private_ip}:8080",
+      "export no_proxy=169.254.169.254",
+    
+    ## Persist Proxy Settings
       "sudo sed -i '$ a http_proxy=http://${aws_instance.proxy_server[0].private_ip}:8080/' /etc/environment",
       "sudo sed -i '$ a https_proxy=http://${aws_instance.proxy_server[0].private_ip}:8080/' /etc/environment",
       "sudo sed -i '$ a no_proxy=169.254.169.254' /etc/environment",
@@ -44,7 +43,32 @@ resource "aws_instance" "proxied_apache_web" {
       "sudo apt-get update",
       "sudo apt-get update",
       "sudo apt-get upgrade -y",
-   
+
+      # "sudo mkdir /media/data",
+      # "sudo echo 'type=83' | sudo sfdisk /dev/xvdg",
+      # "sudo mkfs.ext4 /dev/xvdg1",
+      # "sudo mount /dev/xvdg1 /media/data",
+      # "sudo mkdir /media/data/logs",
+      # "sudo mkdir /media/data/logs/otel",
+
+      ## Install AWS CLI
+      "curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip",
+      "sudo apt install unzip -y",
+      "unzip awscliv2.zip",
+      "sudo ./aws/install",
+
+      ## Sync Required Files
+      "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/install_apache_web_server.sh /tmp/install_apache_web_server.sh",
+      "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/proxied_apache_web_agent_config.yaml /tmp/agent_config.yaml",
+      "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/service-proxy.conf /tmp/service-proxy.conf",
+    
+      # "aws s3 cp s3://eu-west-3-tfdemo-files/scripts/xxx /tmp/xxx",
+      # "aws s3 cp s3://eu-west-3-tfdemo-files/config_files/xxx /tmp/xxx",
+
+      "TOKEN=${var.access_token}",
+      "REALM=${var.realm}",
+      "HOSTNAME=${self.tags.Name}",
+
     ## Install Apache
       "sudo chmod +x /tmp/install_apache_web_server.sh",
       "sudo /tmp/install_apache_web_server.sh",
@@ -54,6 +78,7 @@ resource "aws_instance" "proxied_apache_web" {
       "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --collector-version ${var.collector_version} --discovery",
       "sudo mv /etc/otel/collector/agent_config.yaml /etc/otel/collector/agent_config.bak",
       "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml",
+      "sudo chown splunk-otel-collector:splunk-otel-collector agent_config.yaml",
       "sudo chown root:root /tmp/service-proxy.conf",
       "sudo mv /tmp/service-proxy.conf /etc/systemd/system/splunk-otel-collector.service.d/service-proxy.conf",
       "sudo sed -i '$ a Environment=\"HTTP_PROXY=http://${aws_instance.proxy_server[0].private_ip}:8080\"' /etc/systemd/system/splunk-otel-collector.service.d/service-proxy.conf",

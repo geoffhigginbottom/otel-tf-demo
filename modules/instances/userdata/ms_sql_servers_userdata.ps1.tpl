@@ -15,7 +15,7 @@ $s.Settings.LoginMode = [Microsoft.SqlServer.Management.SMO.ServerLoginMode] 'Mi
 $s.Alter()
 Restart-Service -Name MSSQLSERVER -f
 
-Invoke-Sqlcmd -Query "CREATE LOGIN [signalfxagent] WITH PASSWORD = '${ms_sql_user_pwd}';" -ServerInstance localhost
+Invoke-Sqlcmd -Query "CREATE LOGIN '${ms_sql_user}' WITH PASSWORD = '${ms_sql_user_pwd}';" -ServerInstance localhost
 Invoke-Sqlcmd -Query "GRANT VIEW SERVER STATE TO [${ms_sql_user}];" -ServerInstance localhost
 Invoke-Sqlcmd -Query "GRANT VIEW ANY DEFINITION TO [${ms_sql_user}];" -ServerInstance localhost
 
@@ -193,7 +193,7 @@ Set-Content -Path $filePath -Value $fileContent -Encoding UTF8
 
 # Download SplunkCloud Auth File
 if ("${splunk_cloud_enabled}" -eq "true") {
-  aws s3 cp s3://eu-west-3-tfdemo-files/config_files/splunkclouduf.spl C:\Users\Administrator\Documents\splunkclouduf.spl
+  aws s3 cp s3://eu-west-3-tfdemo-files/non_public_files/splunkclouduf.spl C:\Users\Administrator\Documents\splunkclouduf.spl
 }
 
 # Install SplunCloud Credentials Package

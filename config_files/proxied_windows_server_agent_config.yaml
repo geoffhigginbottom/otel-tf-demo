@@ -10,21 +10,12 @@ extensions:
       # endpoint: "${SPLUNK_GATEWAY_URL}"
   smartagent:
     bundleDir: "${SPLUNK_BUNDLE_DIR}"
-    collectd:
-      configDir: "${SPLUNK_COLLECTD_DIR}"
+    # collectd:
+      # configDir: "${SPLUNK_COLLECTD_DIR}"
   zpages:
     endpoint: "${SPLUNK_LISTEN_INTERFACE}:55679"
 
-  host_observer:
-
 receivers:
-  receiver_creator:
-    watch_observers: [host_observer]
-    receivers:
-      apache:
-        # rule: type == "port" && port matches "80"
-        rule: type == "port" && port == "80" && transport == "TCP"
-
   hostmetrics:
     collection_interval: 1s
     scrapers:
@@ -48,7 +39,7 @@ receivers:
         endpoint: "${SPLUNK_LISTEN_INTERFACE}:4317"
       http:
         endpoint: "${SPLUNK_LISTEN_INTERFACE}:4318"
-  
+
   # This section is used to collect the OpenTelemetry Collector metrics
   # Even if just a Splunk APM customer, these metrics are included
   prometheus/internal:
@@ -77,26 +68,113 @@ receivers:
     # Whether to preserve incoming access token and use instead of exporter token
     # default = false
     #access_token_passthrough: true
-  
+
   nop:
 
-  # Apache Specific Receivers
-  smartagent/apache:
-    type: collectd/apache
-    host: localhost
-    port: 80
-    url: "http://{{.Host}}:{{.Port}}/server-status?auto"
-  
-  smartagent/processes:
-    type: collectd/processes
-    processes:
-      - apache2
+  smartagent/win_services:
+    type: telegraf/win_services
+    intervalSeconds: 1
+    serviceNames:
+      - Dnscache
+      - Dhcp
+      - LanmanServer
+      - LanmanWorkstation
+      - SessionEnv
+      - EventLog
+      - lmhosts
+      - PlugPlay
+      - RpcEptMapper
+      - MSDTC
+      - SamSs
+
+  smartagent/procstat-docker:
+    type: telegraf/procstat
+    intervalSeconds: 1
+    exe: dockerd.exe
+    pattern: docker
+    WinService: docker
+
+  smartagent/procstat-otel:
+    type: telegraf/procstat
+    intervalSeconds: 1
+    exe: otelcol.exe
+    pattern: otel
+    WinService: splunk-otel-collector
+
+  # smartagent/telegraf/win_perf_counters:
+  #   type: telegraf/win_perf_counters
+  #   printValid: true
+  #   counterRefreshInterval: 10
+  #   objects:
+  #    - objectName: "Processor"
+  #      instances:
+  #       - "*"
+  #      counters:
+  #       - "% Idle Time"
+  #       - "% Interrupt Time"
+  #       - "% Privileged Time"
+  #       - "% User Time"
+  #       - "% Processor Time"
+  #      includeTotal: true
+  #      measurement: "win_cpu"
+
+  #    - objectName: "PhysicalDisk"
+  #      instances:
+  #       - "*"
+  #      counters:
+  #       - "% Disk Read Time"
+  #       - "% Disk Write Time"
+  #       - "% Idle Time"
+  #      includeTotal: false
+  #      measurement: "win_disk"
+
+# Replaced SmartAgent with OTel Perfomn Receivers
+# https://docs.splunk.com/observability/en/gdi/opentelemetry/components/windowsperfcounters-receiver.html#windows-performance-counters-receiver
+  windowsperfcounters/memory:
+    metrics:
+      bytes.committed:
+        description: Number of bytes committed to memory
+        unit: By
+        gauge:
+    collection_interval: 10s
+    perfcounters:
+      - object: Memory
+        counters:
+          - name: Committed Bytes
+            metric: bytes.committed
+
+  windowsperfcounters/processor:
+    collection_interval: 5s
+    metrics:
+      processor.time:
+        description: CPU active and idle time
+        unit: "%"
+        gauge:
+    perfcounters:
+      - object: "Processor"
+        instances: "*"
+        counters:
+          - name: "% Processor Time"
+            metric: processor.time
+            attributes:
+              state: active
+      - object: "Processor"
+        instances: ["0", "1", "2", "3"]
+        counters:
+          - name: "% Idle Time"
+            metric: processor.time
+            attributes:
+              state: idle
+
+  smartagent/ntp:
+    type: ntp
+    host: pool.ntp.org
 
 processors:
   batch:
     metadata_keys:
       - X-SF-Token
-  
+
   # Enabling the memory_limiter is strongly recommended for every pipeline.
   # Configuration is based on the amount of memory allocated to the collector.
   # For more information about memory limiter, see
@@ -109,20 +187,21 @@ processors:
   # Detector order is important: the `system` detector goes last so it can't preclude cloud detectors from setting host/os info.
   # Resource detection processor is configured to override all host and cloud attributes because instrumentation
   # libraries can send wrong values from container environments.
-  # https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/processor/resourcedetectionprocessor#ordering
+  # https://docs.splunk.com/Observability/gdi/opentelemetry/components/resourcedetection-processor.html#ordering-considerations
   resourcedetection:
     detectors: [gcp, ecs, ec2, azure, system]
     override: true
 
-  # Optional: The following processor can be used to add a default "deployment.environment" attribute to the logs and 
+  # Optional: The following processor can be used to add a default "deployment.environment" attribute to the logs and
   # traces when it's not populated by instrumentation libraries.
-  # If enabled, make sure to enable this processor in the pipeline below.
+  # If enabled, make sure to enable this processor in a pipeline.
+  # For more information, see https://docs.splunk.com/Observability/gdi/opentelemetry/components/resource-processor.html
   #resource/add_environment:
     #attributes:
       #- action: insert
         #value: staging/production/...
         #key: deployment.environment
-  
+
   # The following processor is used to add "otelcol.service.mode" attribute to the internal metrics
   resource/add_mode:
     attributes:
@@ -136,24 +215,24 @@ exporters:
     traces_endpoint: "${SPLUNK_INGEST_URL}/v2/trace/otlp"
     headers:
       "X-SF-Token": "${SPLUNK_ACCESS_TOKEN}"
-  
+
   # Metrics + Events
   signalfx:
     access_token: "${SPLUNK_ACCESS_TOKEN}"
     api_url: "${SPLUNK_API_URL}"
     ingest_url: "${SPLUNK_INGEST_URL}"
     # Use instead when sending to gateway
-    #api_url: http://${SPLUNK_GATEWAY_URL}:6060
-    #ingest_url: http://${SPLUNK_GATEWAY_URL}:9943
+    # api_url: http://${SPLUNK_GATEWAY_URL}:6060
+    # ingest_url: http://${SPLUNK_GATEWAY_URL}:9943
     sync_host_metadata: true
     correlation:
-  
+
   # Entities (applicable only if discovery mode is enabled)
   otlphttp/entities:
     logs_endpoint: "${SPLUNK_INGEST_URL}/v3/event"
     headers:
       "X-SF-Token": "${SPLUNK_ACCESS_TOKEN}"
-  
+
   # Logs
   splunk_hec:
     token: "${SPLUNK_HEC_TOKEN}"
@@ -161,13 +240,13 @@ exporters:
     source: "otel"
     sourcetype: "otel"
     profiling_data_enabled: false
-  
+
   # Profiling
   splunk_hec/profiling:
     token: "${SPLUNK_ACCESS_TOKEN}"
     endpoint: "${SPLUNK_INGEST_URL}/v1/log"
     log_data_enabled: false
-  
+
   # Send to gateway
   otlphttp/gateway:
     endpoint: http://${SPLUNK_GATEWAY_URL}:4318
@@ -175,19 +254,22 @@ exporters:
     endpoint: "${SPLUNK_GATEWAY_URL}:4317"
     tls:
       insecure: true
-  
+
   # Debug
   debug:
     verbosity: detailed
 
 service:
+  telemetry:
+    metrics:
+      address: "${SPLUNK_LISTEN_INTERFACE}:8888"
+
   extensions:
   - health_check
   - http_forwarder
   - zpages
   - smartagent
-  - host_observer
-  
+
   pipelines:
     traces:
       receivers:
@@ -203,24 +285,25 @@ service:
       # Use instead when sending to gateway
       # - otlphttp/gateway
       # - signalfx
-    
+
     metrics:
       receivers:
       - hostmetrics
       - otlp
       - signalfx
-      # Apache Specific Receivers
-      # - smartagent/apache
-      # - smartagent/processes
+      - smartagent/win_services
+      - smartagent/procstat-docker
+      - smartagent/procstat-otel
+      - smartagent/ntp
+      - windowsperfcounters/memory
+      - windowsperfcounters/processor
       processors:
       - memory_limiter
       - batch
       - resourcedetection
       exporters:
       - signalfx
-      # Use instead when sending to gateway
-      # - otlphttp/gateway
-    
+
     metrics/internal:
       receivers:
       - prometheus/internal
@@ -244,7 +327,7 @@ service:
       - resourcedetection
       exporters:
       - signalfx
-    
+
     logs/entities:
       # Receivers are dynamically added if discovery mode is enabled
       receivers:
@@ -267,5 +350,3 @@ service:
       exporters:
       - splunk_hec
       - splunk_hec/profiling
-      # Use instead when sending to gateway
-      # - otlp/gateway

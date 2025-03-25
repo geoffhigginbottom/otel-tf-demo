@@ -1,5 +1,4 @@
 resource "aws_iam_policy" "s3_access_policy" {
-#   name        = "S3AccessPolicy"
   name        = join("-", [var.environment, "S3AccessPolicy"])
   description = "Policy to allow access to S3 bucket"
   
@@ -14,8 +13,8 @@ resource "aws_iam_policy" "s3_access_policy" {
           "s3:ListBucket"
         ],
         Resource = [
-          "arn:aws:s3:::eu-west-3-tfdemo-files",
-          "arn:aws:s3:::eu-west-3-tfdemo-files/*"
+          "arn:aws:s3:::${var.s3_bucket_name}",
+          "arn:aws:s3:::${var.s3_bucket_name}/*"
         ]
       }
     ]

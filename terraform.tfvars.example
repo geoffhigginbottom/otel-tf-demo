@@ -13,7 +13,7 @@ phone_shop_enabled          = false
 lambda_sqs_dynamodb_enabled = false
 dashboards_enabled          = false
 detectors_enabled           = false
-splunk_cloud_enabled        = false # Do not deploy Splunk Enterprise as well as Splunk Cloud - also ensure latest splunkclouduf.spl has been addeed to instance/config_files folder
+splunk_cloud_enabled        = false # Do not deploy Splunk Enterprise as well as Splunk Cloud - also ensure latest splunkclouduf.spl has been added to non_public_files folder
 
 ########## DO NOT USE ############
 eks_fargate_cluster_enabled = false # Not Working Yet
@@ -21,22 +21,21 @@ eks_fargate_cluster_enabled = false # Not Working Yet
 
 ## Instance Quantities ##
 gateway_count = "1"
-apache_web_count = "0"
-haproxy_count = "0"
-mysql_count = "0" # uses var.collector_version & auto discovery
-ms_sql_count = "0"
-iis_server_count = "0"
-splunk_ent_count = "0"
+apache_web_count = "0" # uses var.collector_version & auto discovery - files from S3
+haproxy_count = "0" # uses var.collector_version - files from S3
+mysql_count = "0" # uses var.collector_version & auto discovery - files from S3
+ms_sql_count = "0" # uses var.collector_version - files from S3
+iis_server_count = "0" # uses var.collector_version - files from S3
+splunk_ent_count = "0" # If also deploying ITSI ensure the versions are compatible - files from S3
+add_itsi_splunk_enterprise = false # Install ITSI on Splunk Enterprise - Should be FALSE if using Splunk Cloud
 
 ## Proxied Instances Quantities ##
-proxy_server_count = "1" # min 0 : max = 1 as only one is required, used as a yes/no parameter
+proxy_server_count = "1" # only one is required, used as a yes/no parameter
 proxied_apache_web_count = "0"
 proxied_windows_server_count = "0"
 
-## ITSI Quantities ##
-splunk_itsi_count = "1" # min 0 : max = 1 as only one is required, used as a yes/no parameter
-
 ### AWS Variables ###
+## Region Settings ##
 #region = "<REGION>" - ensue this aligns with EIP setting below
 
 ## VPC Settings ##
@@ -53,18 +52,19 @@ aws_secret_access_key   = "<SECRET_ACCESS_KEY>>"
 instance_type           = "t2.large"
 gateway_instance_type   = "t2.small"
 
+## S3 ##
+s3_bucket_name          = "<BUCKET NAME>"
+
 ### SOC Variables ###
 soc_integration_id      = "<ID>"
 soc_routing_key         = "<ROUTING_KEY>"
 
 ### Splunk IM/APM Variables ###
 access_token                     = "<ACCESS_TOKEN>"
-splunk_cloud_hec_token           = "<HEC_TOKEN>>" # Required if splunk_cloud_enabled is set to true
 api_url                          = "https://api.<REALM>.signalfx.com"
 realm                            = "<REALM>"
 environment                      = "<ENVIRONMENT>"
 notification_email               = "<EMAIL>"
-windows_proxied_server_agent_url = "https://raw.githubusercontent.com/geoffhigginbottom/sfx-tf-demo/master/modules/proxied_instances/config_files/windows_server_agent_config.yaml"
 
 ### Collector Variables ###
 collector_version                = "0.118.0" # only used by some instances currently
@@ -75,27 +75,30 @@ collector_version                = "0.118.0" # only used by some instances curre
 
 ### Splunk Enterprise Variables ###
 splunk_admin_pwd                    = "<STRONG_PASSWORD>"
-splunk_ent_filename                 = "splunk-9.4.0-6b4ebe426ca6-linux-amd64.deb"
-splunk_ent_version                  = "9.4.0"
+splunk_ent_filename                 = "splunk-9.3.3-75595d8f83ef-linux-2.6-amd64.deb"
+splunk_ent_version                  = "9.3.3"
 splunk_ent_inst_type                = "t2.2xlarge"
-universalforwarder_filename         = "splunkforwarder-9.4.0-6b4ebe426ca6-linux-amd64.deb"
-universalforwarder_url              = "https://download.splunk.com/products/universalforwarder/releases/9.4.0/linux/splunkforwarder-9.4.0-6b4ebe426ca6-linux-amd64.deb"
-universalforwarder_url_windows      = "https://download.splunk.com/products/universalforwarder/releases/9.4.0/windows/splunkforwarder-9.4.0-6b4ebe426ca6-windows-x64.msi"
-splunk_enterprise_files_local_path  = "~/Documents/TFDemo_Splunk_Files"   # path where splunk enterprise files resides on your local machine 
-splunk_enterprise_license_filename  = "Splunk_Enterprise_NFR_1H_2025.xml" # this file should NOT be included in the repo, and should be located in the splunk_enterprise_files_local_path location
+universalforwarder_filename         = "splunkforwarder-9.3.3-75595d8f83ef-linux-2.6-amd64.deb"
+universalforwarder_version          = "9.3.3"
+universalforwarder_url_windows      = "https://download.splunk.com/products/universalforwarder/releases/9.3.3/windows/splunkforwarder-9.3.3-75595d8f83ef-x64-release.msi"
+splunk_enterprise_license_filename  = "Splunk_Enterprise_NFR_1H_2025.xml" # should be added to the non_public_files folder which gets synced with S3
 splunk_ent_eip                      = "nn.nn.nn.nn" - ensure this aligns with region setting above
 splunk_private_ip                   = "172.32.2.10"
 
+### Certificate Vars ###
+certpath    = "/opt/splunk/etc/auth/sloccerts"
+passphrase  = "xxxxxxxx"
+fqdn        = "xxx.xxx.co.uk"
+country     = "GB"
+state       = "London"
+location    = "London"
+org         = "ACME"
+
 ### Splunk ITSI Variables ###
-splunk_itsi_inst_type                            = "t2.xlarge"
-splunk_itsi_version                              = "9.4.0"
-splunk_itsi_filename                             = "splunk-9.4.0-6b4ebe426ca6-linux-amd64.deb"
-splunk_itsi_files_local_path                     = "~/Documents/TFDemo_Splunk_Files"                 # path where itsi files resides on your local machine 
-splunk_itsi_license_filename                     = "Splunk_ITSI_NFR_1H_2025.xml"                     # this file should NOT be included in the repo, and should be located in the itsi_files_local_path location
-splunk_app_for_content_packs_filename            = "splunk-app-for-content-packs_190.spl"            # this file should NOT be included in the repo, and should be located in the itsi_files_local_path location
-splunk_it_service_intelligence_filename          = "splunk-it-service-intelligence_4152.spl"         # this file should NOT be included in the repo, and should be located in the itsi_files_local_path location
-splunk_synthetic_monitoring_add_on_filename      = "splunk-synthetic-monitoring-add-on_110.tgz"      # this file should NOT be included in the repo, and should be located in the itsi_files_local_path location
-splunk_infrastructure_monitoring_add_on_filename = "splunk-infrastructure-monitoring-add-on_122.tgz" # this file should NOT be included in the repo, and should be located in the itsi_files_local_path location
+splunk_itsi_license_filename                     = "Splunk_ITSI_NFR_1H_2025.xml"                     # this file should be located in the non_public_files folder
+splunk_app_for_content_packs_filename            = "splunk-app-for-content-packs_190.spl"            # this file should be located in the non_public_files folder
+splunk_it_service_intelligence_filename          = "itsi-4.20.0-62084.spl"                           # this file should be located in the non_public_files folder
+splunk_infrastructure_monitoring_add_on_filename = "signed_5247_36428_1738861405.tar"                # this file should be located in the non_public_files folder
 
 ### MS SQL Server Variables ###
 ms_sql_user              = "signalfxagent"
@@ -112,7 +115,11 @@ mysql_user_pwd      = "<STRONG_PWD>"
 mysql_instance_type = "t3.xlarge"
 
 ### EKS Variables ###
-eks_access_token    = "<ACCESS_TOKEN>>"
-eks_splunk_endpoint = "http://<EIP>:8088" #An EIP in AWS
-eks_hec_token       = "<HEC_TOKEN>>"
+eks_access_token    = "<ACCESS_TOKEN>"
+eks_splunk_endpoint = "http://<FQDN>:8088" #An FQDN linked to an EIP in AWS
+eks_hec_token       = "<HEC_TOKEN>"
 eks_splunk_index    = "k8s-logs"
+# eks_instance_type   = "m6g.xlarge" # ARM
+# eks_ami_type        = "AL2_ARM_64" # ARM
+eks_instance_type   = "t2.xlarge" # x86
+eks_ami_type        = "AL2_x86_64" # x86
