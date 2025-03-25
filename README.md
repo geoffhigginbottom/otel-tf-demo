@@ -26,9 +26,36 @@ Update the contents of terraform.tfvars replacing any value contained within <> 
 
 Any value can be removed or commented out with a #, by doing so Terraform will prompt you for the appropriate value at run time.
 
-The following describes each section of terraform.tfvars:
+S3 is used to store a number of files that are used by the instances, so create a private S3 bucket that can be used for this purpose - ensure it is private and not public - the name will be recorded below in terraform.tfvars.
+
+There are three folders that get synchronized into this bucket at run time (there is no need to manually create these in the bucket):
+
+- config_files
+- scripts
+- non_public_files
+
+The contents of config_files and scripts are included in the repo, but the non_public_files folder will need to be created in the root of your local repo and populated before your 1st run of terraform.  The non_public_files folder stores files that are not publicly available so you will need to download these from splunkbase / sharepoint and place them in the non_public_files folder.  This folder does not get stored in github.
+
+The following files need to be added from Spunk Base (these will need updating on a regular basis):
+
+- [Splunk Infrastructure Monitoring Add-on](https://splunkbase.splunk.com/app/5247)
+- [Splunk IT Service Intelligence](https://splunkbase.splunk.com/app/1841)
+- [Splunk Add-On for OpenTelemetry Collector](https://splunkbase.splunk.com/app/7125)
+- [Splunk Add-on for Unix and Linux](https://splunkbase.splunk.com/app/833)
+- [Splunk App for Content Packs](https://splunkbase.splunk.com/app/5391)
+
+The following License Files need to be added (update based on current date window):
+
+- Splunk_Enterprise_NFR_1H_2025.xml
+- Splunk_ITSI_NFR_1H_2025.xml
+
+A SplunkCloud Universal Forwarder Auth File will be needed when deploying instances with the optional Splunk Cloud Integration enabled.
+
+- splunkclouduf.spl
 
 ### terraform.tfvars
+
+The following describes each section of terraform.tfvars:
 
 #### Enable / Disable Modules
 
@@ -81,7 +108,7 @@ proxied_windows_server_count = "1"
 
 This section details the parameters required by AWS such as Region (see below for more info on this), VPC settings, SSH Auth Key, and authentication to your AWS account.
 
-#### Region
+##### Region
 
 When you run the deployment terraform will prompt you for a Region, however if you enable the setting here, and populate it with a numerical value representing your preferred AWS Region, it will save you having to enter a value on each run. The settings for this are controlled via variables.tf, but the valid options are:
 
@@ -101,7 +128,7 @@ When you run the deployment terraform will prompt you for a Region, however if y
 #region = "<REGION>"
 ```
 
-#### VPC Settings
+##### VPC Settings
 
 A new VPC is created and is used by all the modules with the exception of the ECS Cluster Module which creates its own VPC.  The number of subnets is controlled by the 'subnet_count' parameter, and defaults to 2 which should be sufficient for most test cases.
 
@@ -115,7 +142,7 @@ vpc_cidr_block        = "172.32.0.0/16"
 subnet_count          = "2" 
 ```
 
-#### Auth Settings
+##### Auth Settings
 
 Terraform needs to authenticate with AWS in order to create the resources and also access each instance using a Key Pair.  Create a user such as "Terraform" within AWS and attach "AdministratorAccess" policy.  Add the access_key details to enable your local terraform to authenticate using this account.  Ensure there is a Key Pair created in each region you intend to use so that terraform can login to each ec2 instance to run commands.
 
@@ -127,7 +154,7 @@ aws_access_key_id     = "<ACCCESS_KEY_ID>>"
 aws_secret_access_key = "<SECRET_ACCESS_KEY>>"
 ```
 
-#### Misc Instance Types
+##### Misc Instance Types
 
 Most instances will use the following default flavours unless their configuration specifically overrides these.
 
@@ -137,7 +164,7 @@ instance_type           = "t2.large"
 gateway_instance_type   = "t2.small"
 ```
 
-#### S3
+##### S3
 
 S3 is used to store a number of files that are used by the instances, so create an S3 bucket and then enter its name here.
 
