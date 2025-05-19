@@ -144,7 +144,7 @@ subnet_count          = "2"
 
 ##### Auth Settings
 
-Terraform needs to authenticate with AWS in order to create the resources and also access each instance using a Key Pair.  Create a user such as "Terraform" within AWS and attach "AdministratorAccess" policy.  Add the access_key details to enable your local terraform to authenticate using this account.  Ensure there is a Key Pair created in each region you intend to use so that terraform can login to each ec2 instance to run commands.
+Terraform needs to authenticate with AWS in order to create the resources and also access each instance using a Key Pair.  Create a user such as "Terraform" within AWS and attach the default "AdministratorAccess" policy.  Add the access_key details to enable your local terraform to authenticate using this account.  Ensure there is a Key Pair created in each region you intend to use so that terraform can login to each ec2 instance to run commands. Ensure the private_key_path maps to the location of your id_rsa file that is associated with the Key Pair you are using.
 
 ```yaml
 ## Auth Settings ##
