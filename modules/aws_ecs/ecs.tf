@@ -2,11 +2,8 @@ resource "aws_ecs_cluster" "ecs_cluster" {
   name = "${var.environment}_ecs_cluster"
 }
 
-data "template_file" "hotrod" {
-  template = file("${path.module}/templates/ecs/hotrod.json.tpl")
-  # template = file("${path.module}/templates/ecs/hotrod_no_trace.json.tpl")
-
-  vars = {
+locals {
+  hotrod_container_definitions = templatefile("${path.module}/templates/ecs/hotrod.json.tpl", {
     app_image      = var.ecs_app_image
     app_port       = var.ecs_app_port
     fargate_cpu    = var.ecs_fargate_cpu
@@ -15,8 +12,24 @@ data "template_file" "hotrod" {
     access_token   = var.access_token
     realm          = var.realm
     environment    = var.environment
-  }
+  })
 }
+
+# data "template_file" "hotrod" {
+#   template = file("${path.module}/templates/ecs/hotrod.json.tpl")
+#   # template = file("${path.module}/templates/ecs/hotrod_no_trace.json.tpl")
+
+#   vars = {
+#     app_image      = var.ecs_app_image
+#     app_port       = var.ecs_app_port
+#     fargate_cpu    = var.ecs_fargate_cpu
+#     fargate_memory = var.ecs_fargate_memory
+#     region         = var.region
+#     access_token   = var.access_token
+#     realm          = var.realm
+#     environment    = var.environment
+#   }
+# }
 
 resource "aws_ecs_task_definition" "ecs_task_def" {
   family                   = "ecs_task"
@@ -25,7 +38,8 @@ resource "aws_ecs_task_definition" "ecs_task_def" {
   requires_compatibilities = ["FARGATE"]
   cpu                      = var.ecs_fargate_cpu
   memory                   = var.ecs_fargate_memory
-  container_definitions    = data.template_file.hotrod.rendered
+  # container_definitions    = data.template_file.hotrod.rendered
+  container_definitions    = local.hotrod_container_definitions
 }
 
 resource "aws_ecs_service" "ecs_service" {
