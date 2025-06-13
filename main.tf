@@ -174,6 +174,7 @@ module "instances" {
   source                                            = "./modules/instances"
   count                                             = var.instances_enabled ? 1 : 0
   access_token                                      = var.access_token
+  rum_access_token                                  = var.rum_access_token
   api_url                                           = var.api_url
   realm                                             = var.realm
   environment                                       = var.environment

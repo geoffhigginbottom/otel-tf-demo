@@ -15,6 +15,21 @@ aws s3 cp s3://${s3_bucket_name}/config_files/iis/index.html C:\inetpub\wwwroot\
 aws s3 cp s3://${s3_bucket_name}/config_files/iis/contact.html C:\inetpub\wwwroot\contact.html
 aws s3 cp s3://${s3_bucket_name}/config_files/iis/style.css C:\inetpub\wwwroot\style.css
 
+# Create config.json
+$config = @{
+    realm                 = "eu0"
+    rumAccessToken        = "${rum_access_token}"
+    applicationName       = "IIS_Demo"
+    deploymentEnvironment = "demo"
+    version               = "1.3"
+    release               = "A"
+}
+
+# Convert to JSON and save to IIS root (usually C:\inetpub\wwwroot)
+$config | ConvertTo-Json -Depth 3 | Set-Content -Path "C:\inetpub\wwwroot\config.json" -Encoding UTF8
+
+
+
 # Fetch the instance's private IP DNS name
 $privateIpDnsName = (Invoke-RestMethod -Uri "http://169.254.169.254/latest/meta-data/local-hostname").ToString()
 # Write the DNS name to a file for verification

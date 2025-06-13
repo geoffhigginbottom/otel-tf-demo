@@ -124,6 +124,9 @@ variable "apache_web_count" {
 variable "branch" {
   default = []
 }
+variable "rum_access_token" {
+  default = {}
+}
 
 
 ### Splunk Enterprise Variables ###

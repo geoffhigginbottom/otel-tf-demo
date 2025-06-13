@@ -350,7 +350,7 @@
     default = {}
   }
 
-### SignalFX Variables ###
+### IM/APM Variables ###
   variable "access_token" {
     default = []
   }
@@ -382,6 +382,9 @@
     default = {}
   }
   variable "detector_promoting_tags_id" {
+    default = {}
+  }
+  variable "rum_access_token" {
     default = {}
   }
 

@@ -22,6 +22,7 @@ resource "aws_instance" "iis_server" {
     splunk_cloud_enabled              = var.splunk_cloud_enabled
     splunk_password                   = var.splunk_admin_pwd
     gateway_lb_dns_name               = aws_lb.gateway-lb.dns_name
+    rum_access_token                  = var.rum_access_token
   })
 
   tags = {
