@@ -26,12 +26,24 @@ resource "aws_instance" "eks_admin_server" {
     destination = "/tmp/install_eks_tools.sh"
   }
 
+  provisioner "file" {
+    source      = "${path.module}/config_files/opentelemetry-demo-values.yaml"
+    destination = "/tmp/opentelemetry-demo-values.yaml"
+  }
+
+   provisioner "file" {
+    content     = local.configmap_and_secrets
+    destination = "/tmp/configmap-and-secrets.yaml"
+  }
+
   # provisioner "file" {
   #   source      = "${path.module}/config_files/deployment.yaml"
   #   destination = "/home/ubuntu/deployment.yaml"
   # }
 
-  depends_on = [aws_eks_cluster.demo]
+  depends_on = [
+    aws_eks_cluster.demo
+  ]
 
 # remote-exec
   provisioner "remote-exec" {
@@ -74,18 +86,19 @@ resource "aws_instance" "eks_admin_server" {
       "eksctl get clusters",
       "aws eks update-kubeconfig --name $EKS_CLUSTER_NAME",
 
-    ## Install K8S Integration using OTEL
-      "TOKEN=${var.eks_access_token}",
-      "REALM=${var.realm}",
-      "EKS_CLUSTER_NAME=${var.eks_cluster_name}",
-      "SPLUNK_ENDPOINT=${var.eks_splunk_endpoint}",
-      "HEC_TOKEN=${var.eks_hec_token}",
-      "SPLUNK_INDEX=${var.eks_splunk_index}",
-      "EKS_ACCESS_TOKEN=${var.eks_access_token}",
-      "ENVIRONMENT=${var.environment}",
-      "helm repo add splunk-otel-collector-chart https://signalfx.github.io/splunk-otel-collector-chart",
-      "helm repo update",
-      "helm install --set cloudProvider='aws' --set distribution='eks' --set splunkObservability.accessToken=$EKS_ACCESS_TOKEN --set clusterName=$EKS_CLUSTER_NAME --set splunkObservability.realm=$REALM --set gateway.enabled='false' --set splunkObservability.profilingEnabled='true' --set splunkPlatform.endpoint=$SPLUNK_ENDPOINT --set splunkPlatform.token=$HEC_TOKEN --set splunkPlatform.index=$SPLUNK_INDEX --set environment=$ENVIRONMENT --generate-name splunk-otel-collector-chart/splunk-otel-collector",
+    # ## Install K8S Integration using Splunk OTel Collector Helm Chart
+    #   "TOKEN=${var.eks_access_token}",
+    #   "REALM=${var.realm}",
+    #   "EKS_CLUSTER_NAME=${var.eks_cluster_name}",
+    #   "SPLUNK_ENDPOINT=${var.eks_splunk_endpoint}",
+    #   "HEC_TOKEN=${var.hec_otel_k8s_token}",
+    #   "SPLUNK_INDEX=${var.eks_splunk_index}",
+    #   "EKS_ACCESS_TOKEN=${var.eks_access_token}",
+    #   "ENVIRONMENT=${var.environment}",
+    #   "helm repo add splunk-otel-collector-chart https://signalfx.github.io/splunk-otel-collector-chart",
+    #   "helm repo update",
+    #   "helm install --set cloudProvider='aws' --set distribution='eks' --set splunkObservability.accessToken=$EKS_ACCESS_TOKEN --set clusterName=$EKS_CLUSTER_NAME --set splunkObservability.realm=$REALM --set gateway.enabled='false' --set splunkObservability.profilingEnabled='true' --set splunkPlatform.endpoint=$SPLUNK_ENDPOINT --set splunkPlatform.token=$HEC_TOKEN --set splunkPlatform.index=$SPLUNK_INDEX --set environment=$ENVIRONMENT --generate-name splunk-otel-collector-chart/splunk-otel-collector",
+
 
     ## Deploy Hot Rod
       # "kubectl apply -f /home/ubuntu/deployment.yaml",
@@ -101,18 +114,34 @@ resource "aws_instance" "eks_admin_server" {
     #   "sudo mv ./kubectl /usr/local/bin/",
     #   "kubectl patch svc astro-shop-demo-frontendproxy -n default -p '{\"spec\": {\"type\": \"LoadBalancer\"}}'",
 
-    # Deploy Astro Shop
+    # Deploy OTel Contrib and Prep for Astro Shop Deployment - based on https://github.com/splunk/observability-workshop/tree/main/workshop/otel-contrib-splunk-demo
+      "TOKEN=${var.eks_access_token}",
+      "REALM=${var.realm}",
+
       "git clone https://github.com/splunk/observability-workshop",
       "helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts",
-      # "helm install astro-shop-demo open-telemetry/opentelemetry-demo --values /home/ubuntu/observability-workshop/workshop/oteldemo/otel-demo.yaml",
-      # "helm install astro-shop-demo open-telemetry/opentelemetry-demo --values /home/ubuntu/observability-workshop/workshop/apm/otel-demo.yaml",
-      "helm install astro-shop-demo open-telemetry/opentelemetry-demo",
       "curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\"",
+      
       "chmod +x ./kubectl",
       "sudo mv ./kubectl /usr/local/bin/",
-      "kubectl patch svc frontendproxy -n default -p '{\"spec\": {\"type\": \"LoadBalancer\"}}'",
-      # "kubectl patch svc frontendproxy -n default -p '{"spec": {"type": "LoadBalancer"}}'", # version for console testing
+      "sudo mv /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/k8s_manifests/configmap-and-secrets.yaml /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/k8s_manifests/configmap-and-secrets.original",
+      "sudo mv /tmp/configmap-and-secrets.yaml /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/k8s_manifests/configmap-and-secrets.yaml",
+      "kubectl apply -f /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/k8s_manifests/",
+      
+      "mv /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/opentelemetry-demo-values.yaml /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/opentelemetry-demo-values.yaml.original",
+      "cp /tmp/opentelemetry-demo-values.yaml /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/opentelemetry-demo-values.yaml",
+      
+      ### Astro Shop is now deployed via astro_shop_helm.tf and patched via patch_frontend_proxy.tf ###
+      ### This enables Terraform to control the lifecycle of these resources ###
+      # "helm install astro-shop open-telemetry/opentelemetry-demo --values /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/opentelemetry-demo-values.yaml",
+      # "kubectl patch svc frontend-proxy -n default -p '{\"spec\": {\"type\": \"LoadBalancer\"}}'",
+      # kubectl patch svc frontend-proxy -n default -p '{"spec": {"type": "LoadBalancer"}}' # version for console testing
 
+    # ## Cleanup script for Helm and Service Patch
+    #   "sudo echo '#!/bin/bash\nhelm delete astro-shop --namespace default\nkubectl patch svc frontend-proxy -n default -p '{\"spec\": {\"type\": \"ClusterIP\"}}'' > /usr/local/bin/cleanup.sh",
+    #   "sudo chmod +x /usr/local/bin/cleanup.sh",
+    #   "sudo echo '[Unit]\nDescription=Cleanup Helm and Patch Service on Shutdown\nDefaultDependencies=no\nBefore=shutdown.target reboot.target halt.target\n\n[Service]\nType=oneshot\nExecStart=/usr/local/bin/cleanup.sh\nRemainAfterExit=yes\n\n[Install]\nWantedBy=halt.target reboot.target shutdown.target' > /etc/systemd/system/helm-cleanup.service",
+    #   "sudo systemctl enable helm-cleanup.service",
 
     ## Write env vars to file (used for debugging)
       "echo $AWS_ACCESS_KEY_ID > /tmp/aws_access_key_id",
@@ -143,6 +172,7 @@ output "eks_admin_server_details" {
   value =  formatlist(
     "%s, %s", 
     aws_instance.eks_admin_server.*.tags.Name,
-    aws_instance.eks_admin_server.*.public_ip,
+    # aws_instance.eks_admin_server.*.public_ip,
+    aws_eip_association.eks-admin-server-eip-assoc.*.public_ip,
   )
 }

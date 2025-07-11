@@ -36,12 +36,65 @@ curl -k -u admin:$PASSWORD https://localhost:8089/services/admin/roles \
 #Add LOC User
 /opt/splunk/bin/splunk add user LO-Connect -role lo_connect -password $LO_CONNECT_PASSWORD -auth admin:$PASSWORD
 
-#Add K8S-Logs Index
+#Add Indexes
 /opt/splunk/bin/splunk add index k8s-logs -auth admin:$PASSWORD
+/opt/splunk/bin/splunk add index metrics -datatype metric -auth admin:$PASSWORD
 
 #Enable HEC
 /opt/splunk/bin/splunk http-event-collector enable -uri https://localhost:8089 -enable-ssl 0 -port 8088 -auth admin:$PASSWORD
 
 #Create HEC Tokens
-/opt/splunk/bin/splunk http-event-collector create OTEL-K8S -uri https://localhost:8089 -description "Used by OTEL K8S" -disabled 0 -index k8s-logs -indexes k8s-logs -auth admin:$PASSWORD
-/opt/splunk/bin/splunk http-event-collector create OTEL -uri https://localhost:8089 -description "Used by OTEL" -disabled 0 -index main -indexes main -auth admin:$PASSWORD
+# /opt/splunk/bin/splunk http-event-collector create OTEL-K8S -uri https://localhost:8089 -description "Used by OTEL K8S" -disabled 0 -index k8s-logs -indexes k8s-logs -auth admin:$PASSWORD
+# /opt/splunk/bin/splunk http-event-collector create OTEL -uri https://localhost:8089 -description "Used by OTEL" -disabled 0 -index main -indexes main -auth admin:$PASSWORD
+# /opt/splunk/bin/splunk http-event-collector create HEC-METRICS -uri https://localhost:8089 -description "Metrics from OTel via HEC" -disabled 0 -index metrics -indexes metrics -auth admin:$PASSWORD
+
+
+declare -A tokens
+
+function create_hec_token() {
+  local name=$1
+  local description=$2
+  local index=$3
+
+  echo "Creating or fetching token for $name..."
+
+  # Try to create the token and capture output (including errors)
+  token_line=$(/opt/splunk/bin/splunk http-event-collector create "$name" \
+    -uri https://localhost:8089 \
+    -description "$description" \
+    -disabled 0 \
+    -index "$index" \
+    -indexes "$index" \
+    -auth admin:$PASSWORD 2>&1)
+
+  # If token already exists, fetch token info using list command
+  if echo "$token_line" | grep -q 'already exists'; then
+    echo "Token $name already exists, fetching existing token..."
+    token_line=$(/opt/splunk/bin/splunk http-event-collector list \
+      -uri https://localhost:8089 -auth admin:$PASSWORD 2>&1 | grep -A5 "http://$name")
+  fi
+
+  # Extract the token UUID from output (look for token=UUID)
+  token=$(echo "$token_line" | grep -oP '(?<=token=)[\w-]+')
+
+  # Save token in associative array
+  tokens["$name"]=$token
+
+  echo "Token for $name is $token"
+}
+
+# Create or get tokens
+create_hec_token "OTEL-K8S" "Used by OTEL K8S" "k8s-logs"
+create_hec_token "OTEL" "Used by OTEL" "main"
+create_hec_token "HEC-METRICS" "Metrics from OTel via HEC" "metrics"
+
+# Write tokens to JSON file for Terraform to consume
+echo -n '{' > /tmp/hec_tokens.json
+first=1
+for key in "${!tokens[@]}"; do
+  [[ $first -eq 1 ]] && first=0 || echo -n ',' >> /tmp/hec_tokens.json
+  echo -n "\"$key\":\"${tokens[$key]}\"" >> /tmp/hec_tokens.json
+done
+echo '}' >> /tmp/hec_tokens.json
+
+echo "Tokens written to /tmp/hec_tokens.json"

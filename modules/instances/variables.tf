@@ -164,6 +164,10 @@ variable "add_itsi_splunk_enterprise" {
   type = bool
   default = false
 }
+variable "splunk_hec_metrics_enabled" {
+  type    = bool
+  default = false
+}
 
 ### Splunk ITSI Variables ###
 variable "splunk_itsi_license_filename" {

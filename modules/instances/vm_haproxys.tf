@@ -48,6 +48,7 @@ resource "aws_instance" "haproxy" {
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_haproxy.sh /tmp/install_haproxy.sh",
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_splunk_universal_forwarder_haproxy.sh /tmp/install_splunk_universal_forwarder.sh",
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_splunk_universal_forwarder_haproxy_splunk_cloud.sh /tmp/install_splunk_universal_forwarder_splunk_cloud.sh",
+      "aws s3 cp s3://${var.s3_bucket_name}/scripts/update_splunk_hec_metrics.sh /tmp/update_splunk_hec_metrics.sh",
       
       "aws s3 cp s3://${var.s3_bucket_name}/config_files/haproxy_agent_config.yaml /tmp/agent_config.yaml",
       
@@ -80,7 +81,7 @@ resource "aws_instance" "haproxy" {
     ## If splunk_ent_count = 0 then set a default value to prevent terraform errors
       # "SPLUNK_IP=${length(aws_instance.splunk_ent) > 0 ? aws_instance.splunk_ent[0].private_ip : "127.0.0.1"}",
 
-    ## Deloy UF for Splunk Ent, but only if splunk_ent_count = 1
+    ## Deploy UF for Splunk Ent, but only if splunk_ent_count = 1
       <<EOT
       if [ ${var.splunk_ent_count} -eq 1 ]; then
         sudo chmod +x /tmp/install_splunk_universal_forwarder.sh
@@ -103,7 +104,7 @@ resource "aws_instance" "haproxy" {
       EOT
       ,
 
-    ## Deloy UF for Splunk Cloud, but only if splunk_cloud_enabled = true
+    ## Deploy UF for Splunk Cloud, but only if splunk_cloud_enabled = true
       <<EOT
       if [ "${var.splunk_cloud_enabled}" = "true" ]; then
         sudo chmod +x /tmp/install_splunk_universal_forwarder_splunk_cloud.sh
@@ -120,6 +121,19 @@ resource "aws_instance" "haproxy" {
         echo $PRIVATE_DNS > /tmp/PRIVATE_DNS
       else
         echo "Skipping as splunk_cloud_enabled is false"
+      fi
+      EOT
+      ,
+
+      ## Enable Metrics to Splunk, but only if splunk_hec_metrics_enabled = true
+      <<EOT
+      if [ "${var.splunk_hec_metrics_enabled}" = "true" ]; then
+        sudo chmod +x /tmp/update_splunk_hec_metrics.sh
+        SPLUNK_IP=${var.splunk_private_ip}
+        HEC_TOKEN=${data.external.hec_tokens.result["HEC-METRICS"]}
+        sudo /tmp/update_splunk_hec_metrics.sh $SPLUNK_IP $HEC_TOKEN
+      else
+        echo "Skipping as splunk_hec_metrics_enabled is false"
       fi
       EOT
       ,

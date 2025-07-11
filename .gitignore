@@ -41,6 +41,7 @@ retail*
 lambda.zip
 lambda_function.py
 index.js
+hec_tokens.json
 
 **/.vscode/*
 

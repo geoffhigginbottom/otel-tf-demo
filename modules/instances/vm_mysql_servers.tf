@@ -33,6 +33,7 @@ resource "aws_instance" "mysql" {
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_mysql.sh /tmp/install_mysql.sh",
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_splunk_universal_forwarder_mysql.sh /tmp/install_splunk_universal_forwarder.sh",
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_splunk_universal_forwarder_mysql_splunk_cloud.sh /tmp/install_splunk_universal_forwarder_splunk_cloud.sh",
+      "aws s3 cp s3://${var.s3_bucket_name}/scripts/update_splunk_hec_metrics.sh /tmp/update_splunk_hec_metrics.sh",
       
       "aws s3 cp s3://${var.s3_bucket_name}/config_files/mysql_agent_config.yaml /tmp/agent_config.yaml",
       
@@ -109,6 +110,19 @@ resource "aws_instance" "mysql" {
         echo $PRIVATE_DNS > /tmp/PRIVATE_DNS
       else
         echo "Skipping as splunk_cloud_enabled is false"
+      fi
+      EOT
+      ,
+          
+      ## Enable Metrics to Splunk, but only if splunk_hec_metrics_enabled = true
+      <<EOT
+      if [ "${var.splunk_hec_metrics_enabled}" = "true" ]; then
+        sudo chmod +x /tmp/update_splunk_hec_metrics.sh
+        SPLUNK_IP=${var.splunk_private_ip}
+        HEC_TOKEN=${data.external.hec_tokens.result["HEC-METRICS"]}
+        sudo /tmp/update_splunk_hec_metrics.sh $SPLUNK_IP $HEC_TOKEN
+      else
+        echo "Skipping as splunk_hec_metrics_enabled is false"
       fi
       EOT
       ,

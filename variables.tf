@@ -26,157 +26,221 @@
   variable "detectors_enabled" {
     type = bool
   }
-  variable "itsi_o11y_cp_enabled" {
-    type = bool
+  variable "splunk_hec_metrics_enabled" {
+    type    = bool
+    default = false
   }
 
 
 ### AWS Variables ###
   variable "profile" {
-    default = []
+    type    = string
+    default = ""
   }
   variable "aws_access_key_id" {
-    default = []
+    type    = string
+    default = ""
   }
   variable "aws_secret_access_key" {
-    default = []
+    type    = string
+    default = ""
   }
   variable "vpc_id" {
-    default = []
+    type    = string
+    default = ""
   }
   variable "vpc_name" {
-    default = []
+    type    = string
+    default = ""
   }
   variable "vpc_cidr_block" {
-    default = []
+    type    = string
+    default = ""
   }
   variable "public_subnet_ids" {
     default = {}
   }
   variable "private_subnet_ids" {
-    default = {}
+    type = list(string)
+    default = []
   }
   variable "subnet_count" {
-    default = {}
+    type = number
   }
   variable "key_name" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "private_key_path" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "instance_type" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "gateway_instance_type" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "mysql_instance_type" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "ms_sql_instance_type" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "windows_server_instance_type" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "aws_api_gateway_deployment_retailorder_invoke_url" {
-    default = {}
+    type = string
+    default = ""
   }
   variable "my_public_ip" {
-    default = []
+    type = string
+    default = ""
   }
   variable "splunk_ent_eip" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "splunk_private_ip" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "s3_bucket_name" {
-    default = []
+    type    = string
+    default = ""
   }
+
 
 ## EKS Variables ##
   variable "eks_cluster_name" {
-    default = {}
+    type    = string
+    default = ""
   }
   variable "eks_access_token" {
-    default = {}
+    type    = string
+    default = ""
   }
   variable "eks_splunk_endpoint" {
-    default = {}
+    type    = string
+    default = ""
   }
-  variable "eks_hec_token" {
-    default = {}
+  variable "splunk_ent_url_hec" {
+    type    = string
+    default = ""
   }
   variable "eks_splunk_index" {
-    default = {}
+    type    = string
+    default = ""
   }
   variable "eks_instance_type" {
-    default = "t2.xlarge"
+    type    = string
+    default = ""
   }
   variable "eks_ami_type" {
-    default = "AL2_x86_64"
+    type    = string
+    default = ""
+  }
+  variable "eks_admin_server_eip" {
+    type    = string
+    default = ""
   }
 
 ### Certificate Vars ###
   variable "certpath" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "passphrase" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "fqdn" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "country" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "state" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "location" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "org" {
-    default = []
+    type    = string
+    default = ""
   }
+
 
 ## EKS-Fargate Variables ##
   variable "eks_fargate_cluster_name" {
-    default = {}
+    type    = string
+    default = ""
   }
 
 ## AWS_ECS Variables ##
   variable "ecs_app_port" {
+    type        = number
     description = "Port exposed by the docker image to redirect traffic to"
     default     = 8080
   }
   variable "ecs_az_count" {
+    type        = number
     description = "Number of AZs to cover in a given region"
     default     = "2"
   }
   variable "ecs_health_check_path" {
+    type        = string
     description = "Path used by ALB for Health Checks"
     default     = "/"
   }
   variable "ecs_app_image" {
+    type        = string
     description = "Docker image to run in the ECS cluster"
     default     = "jaegertracing/example-hotrod"
   }
   variable "ecs_container_name" {
-    description = "Name of the coantiner deployed in ECS"
+    type        = string
+    description = "Name of the container deployed in ECS"
     default     = "hotrod"
   }
   variable "ecs_fargate_cpu" {
+    type        = number
     description = "Fargate instance CPU units to provision (1 vCPU = 1024 CPU units)"
     default     = "1024"
   }
   variable "ecs_fargate_memory" {
+    type        = number
     description = "Fargate instance memory to provision (in MiB)"
     default     = "2048"
   }
   variable "ecs_app_count" {
+    type        = number
     description = "Number of docker containers to run"
     default     = 3
   }
@@ -240,56 +304,71 @@
 
 ### Instance Count Variables ###
   variable "gateway_count" {
-    default = {}
+    type = number
   }
+
   variable "haproxy_count" {
-    default = {}
+    type = number
   }
+
   variable "mysql_count" {
-    default = {}
+    type = number
   }
+
   variable "mysql_user" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "mysql_user_pwd" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "ms_sql_count" {
-    default = {}
+    type = number
   }
   variable "ms_sql_user" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "ms_sql_user_pwd" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "iis_server_count" {
-    default = {}
+    type = number
   }
+
   variable "windows_server_administrator_pwd" {
-    default = []
+    type    = string
+    default = ""
   }
+
   variable "apache_web_count" {
-    default = {}
+    type = number
   }
   variable "splunk_cloud_enabled" {
     type    = bool
     default = false
   }
   variable "splunk_ent_count" {
-    default = {}
+    type = number
   }
   variable "proxied_apache_web_count" {
-    default = {}
+    type = number
   }
   variable "proxied_windows_server_count" {
-    default = {}
+    type = number
   }
   variable "proxy_server_count" {
-    default = {}
+    type = number
   }
 
   variable "region" {
+    type = string
     description = "Select region (1:eu-west-1, 2:eu-west-3, 3:eu-central-1, 4:us-east-1, 5:us-east-2, 6:us-west-1, 7:us-west-2, 8:ap-southeast-1, 9:ap-southeast-2, 10:sa-east-1 )"
   }
 
@@ -352,19 +431,14 @@
 
 ### IM/APM Variables ###
   variable "access_token" {
-    default = []
   }
   variable "api_url" {
-    default = []
   }
   variable "realm" {
-    default = []
   }
   variable "notification_email" {
-    default = []
   }
   # variable "smart_agent_version" {
-  #   default = []
   # }
   variable "environment" {
     default = {}

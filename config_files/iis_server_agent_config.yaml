@@ -86,6 +86,7 @@ receivers:
       - RpcEptMapper
       - MSDTC
       - SamSs
+      - W3SVC
 
   smartagent/procstat-otel:
     type: telegraf/procstat

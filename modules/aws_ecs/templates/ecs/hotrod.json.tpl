@@ -39,6 +39,10 @@
       {
           "name": "ECS_METADATA_EXCLUDED_IMAGES",
           "value": "[\"quay.io/signalfx/splunk-otel-collector:latest\"]"
+      },
+      {
+          "name": "OTEL_RESOURCE_ATTRIBUTES",
+          "value": "deployment.environment=${environment}-hotrod,service.name=hotrod"
       }
     ],
     "image": "quay.io/signalfx/splunk-otel-collector:latest",

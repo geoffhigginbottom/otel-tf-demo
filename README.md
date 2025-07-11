@@ -78,7 +78,6 @@ eks_cluster_enabled         = false
 ecs_cluster_enabled         = false
 instances_enabled           = false
 proxied_instances_enabled   = false
-itsi_o11y_cp_enabled        = false
 phone_shop_enabled          = false
 lambda_sqs_dynamodb_enabled = false
 dashboards_enabled          = false
