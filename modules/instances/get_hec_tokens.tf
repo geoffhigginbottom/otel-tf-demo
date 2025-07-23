@@ -1,4 +1,6 @@
+# Only fetch tokens if splunk_ent_count != 0
 resource "null_resource" "fetch_hec_tokens" {
+  count      = var.splunk_ent_count != 0 ? 1 : 0
   depends_on = [aws_instance.splunk_ent]
 
   provisioner "local-exec" {
@@ -16,6 +18,7 @@ resource "null_resource" "fetch_hec_tokens" {
 
 # External data source to read JSON file after it is copied
 data "external" "hec_tokens" {
+  count      = var.splunk_ent_count != 0 ? 1 : 0
   depends_on = [null_resource.fetch_hec_tokens]
 
   program = [
@@ -24,18 +27,18 @@ data "external" "hec_tokens" {
   ]
 }
 
-# Outputs
+# Outputs (conditionally emitted)
 output "hec_metrics_token" {
-  value     = data.external.hec_tokens.result["HEC-METRICS"]
+  value     = var.splunk_ent_count != 0 ? data.external.hec_tokens[0].result["HEC-METRICS"] : null
   sensitive = true
 }
 
 output "hec_otel_token" {
-  value     = data.external.hec_tokens.result["OTEL"]
+  value     = var.splunk_ent_count != 0 ? data.external.hec_tokens[0].result["OTEL"] : null
   sensitive = true
 }
 
 output "hec_otel_k8s_token" {
-  value     = data.external.hec_tokens.result["OTEL-K8S"]
+  value     = var.splunk_ent_count != 0 ? data.external.hec_tokens[0].result["OTEL-K8S"] : null
   sensitive = true
 }
