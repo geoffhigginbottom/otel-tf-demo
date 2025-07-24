@@ -43,8 +43,12 @@ receivers:
     protocols:
       grpc:
         endpoint: "${SPLUNK_LISTEN_INTERFACE}:4317"
+        # Uncomment below config to preserve incoming access token and use it instead of the token value set in exporter config
+        # include_metadata: true
       http:
         endpoint: "${SPLUNK_LISTEN_INTERFACE}:4318"
+        # Uncomment below config to preserve incoming access token and use it instead of the token value set in exporter config
+        # include_metadata: true
 
   # This section is used to collect the OpenTelemetry Collector metrics
   # Even if just a Splunk APM customer, these metrics are included
@@ -262,6 +266,7 @@ exporters:
       "X-SF-Token": "${SPLUNK_ACCESS_TOKEN}"
     auth:
       authenticator: headers_setter
+
   # Logs
   splunk_hec:
     token: "${SPLUNK_HEC_TOKEN}"
@@ -279,6 +284,7 @@ exporters:
   # Send to gateway
   otlphttp/gateway:
     endpoint: http://${SPLUNK_GATEWAY_URL}:4318
+
   otlp/gateway:
     endpoint: "${SPLUNK_GATEWAY_URL}:4317"
     tls:
@@ -291,10 +297,6 @@ exporters:
     verbosity: detailed
 
 service:
-  telemetry:
-    metrics:
-      address: "${SPLUNK_LISTEN_INTERFACE}:8888"
-
   extensions:
   - headers_setter
   - health_check
