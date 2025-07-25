@@ -78,19 +78,9 @@ receivers:
 
   nop:
 
-  # Apache Specific Receivers # not active in pipelines anymore as now using auto-discovery
-  # Note Default Apache Dashboards are built for smartagent/apache and not OTel Apache so will
-  # not show any metrics when using Auto Discovery as of Jan 2025
-  smartagent/apache:
-    type: collectd/apache
-    host: localhost
-    port: 80
-    url: "http://{{.Host}}:{{.Port}}/server-status?auto"
-
-  smartagent/processes:
-    type: collectd/processes
-    processes:
-      - apache2
+  # apache: #removed as now using auto discovery
+  #   endpoint: "http://localhost/server-status?auto"
+  #   collection_interval: 10s
 
 processors:
   batch:
@@ -223,9 +213,7 @@ service:
       - hostmetrics
       - otlp
       - signalfx
-      # Apache Specific Receivers
-      # - smartagent/apache  # removed as now using auto discovery
-      # - smartagent/processes
+      # - apache #removed as now using auto discovery
       processors:
       - memory_limiter
       - batch
