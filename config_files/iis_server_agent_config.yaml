@@ -312,7 +312,7 @@ service:
       # - signalfx
       # Use instead when sending to gateway
       - otlphttp/gateway
-      - splunk_hec # sends metrics to Splunk Enterprise via HEC
+      # - splunk_hec # sends metrics to Splunk Enterprise via HEC
 
     metrics/internal:
       receivers:
