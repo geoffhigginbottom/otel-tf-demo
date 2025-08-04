@@ -277,9 +277,9 @@ output "splunk_url_fqdn" {value = var.instances_enabled && var.splunk_ent_count 
 output "splunk_ent_url_hec" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url_hec : null}
 output "splunk_ent_details" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_details : null}
 
-output "hec_metrics_token" {value = var.instances_enabled && var.splunk_hec_metrics_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_metrics_token : null}
-output "hec_otel_token" {value = var.instances_enabled && var.splunk_hec_metrics_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_otel_token : null}
-output "hec_otel_k8s_token" {value = var.instances_enabled && var.splunk_hec_metrics_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_otel_k8s_token : null}
+output "hec_metrics_token" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_metrics_token : null}
+output "hec_otel_token" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_otel_token : null}
+output "hec_otel_k8s_token" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_otel_k8s_token : null}
 ### Detector Outputs
 output "detector_promoting_tags_id" {value = var.detectors_enabled ? module.detectors.*.detector_promoting_tags_id : null}
 
