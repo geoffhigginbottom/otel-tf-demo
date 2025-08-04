@@ -78,9 +78,9 @@ receivers:
 
   nop:
 
-  # apache: #removed as now using auto discovery
-  #   endpoint: "http://localhost/server-status?auto"
-  #   collection_interval: 10s
+  apache:
+    endpoint: "http://localhost/server-status?auto"
+    collection_interval: 1s
 
 processors:
   batch:
@@ -206,7 +206,7 @@ service:
       - hostmetrics
       - otlp
       - signalfx
-      # - apache #removed as now using auto discovery
+      - apache
       processors:
       - memory_limiter
       - batch

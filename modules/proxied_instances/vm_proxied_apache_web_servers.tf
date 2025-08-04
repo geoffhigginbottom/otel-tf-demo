@@ -3,15 +3,6 @@ resource "aws_instance" "proxied_apache_web" {
   ami                       = var.ami
   instance_type             = var.instance_type
   subnet_id                 = "${var.public_subnet_ids[ count.index % length(var.public_subnet_ids) ]}"
-  # root_block_device {
-  #   volume_size = 16
-  #   volume_type = "gp2"
-  # }
-  # ebs_block_device {
-  #   device_name = "/dev/xvdg"
-  #   volume_size = 8
-  #   volume_type = "gp2"
-  # }
   key_name                  = var.key_name
   vpc_security_group_ids    = [aws_security_group.proxied_instances_sg.id]
   iam_instance_profile      = var.ec2_instance_profile_name
@@ -28,12 +19,12 @@ resource "aws_instance" "proxied_apache_web" {
     ## Set Proxy in Current Session
       "export http_proxy=http://${aws_instance.proxy_server[0].private_ip}:8080",
       "export https_proxy=http://${aws_instance.proxy_server[0].private_ip}:8080",
-      "export no_proxy=169.254.169.254",
+      "export no_proxy=169.254.169.254,localhost,127.0.0.1",
     
     ## Persist Proxy Settings
       "sudo sed -i '$ a http_proxy=http://${aws_instance.proxy_server[0].private_ip}:8080/' /etc/environment",
       "sudo sed -i '$ a https_proxy=http://${aws_instance.proxy_server[0].private_ip}:8080/' /etc/environment",
-      "sudo sed -i '$ a no_proxy=169.254.169.254' /etc/environment",
+      "sudo sed -i '$ a no_proxy=169.254.169.254,localhost,127.0.0.1' /etc/environment",
 
     ## Set Hostname
       "sudo sed -i 's/127.0.0.1.*/127.0.0.1 ${self.tags.Name}.local ${self.tags.Name} localhost/' /etc/hosts",
@@ -43,13 +34,6 @@ resource "aws_instance" "proxied_apache_web" {
       "sudo apt-get update",
       "sudo apt-get update",
       "sudo apt-get upgrade -y",
-
-      # "sudo mkdir /media/data",
-      # "sudo echo 'type=83' | sudo sfdisk /dev/xvdg",
-      # "sudo mkfs.ext4 /dev/xvdg1",
-      # "sudo mount /dev/xvdg1 /media/data",
-      # "sudo mkdir /media/data/logs",
-      # "sudo mkdir /media/data/logs/otel",
 
       ## Install AWS CLI
       "curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o awscliv2.zip",
