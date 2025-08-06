@@ -360,6 +360,10 @@
   variable "proxied_apache_web_count" {
     type = number
   }
+  variable "proxied_mysql_count" {
+    type = number
+    default = 0
+  }
   variable "proxied_windows_server_count" {
     type = number
   }

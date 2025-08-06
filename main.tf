@@ -162,10 +162,14 @@ module "proxied_instances" {
   key_name                         = var.key_name
   private_key_path                 = var.private_key_path
   instance_type                    = var.instance_type
+  mysql_instance_type              = var.mysql_instance_type
   ami                              = data.aws_ami.latest-ubuntu.id
   ec2_instance_profile_name        = module.s3.ec2_instance_profile_name
   s3_bucket_name                   = var.s3_bucket_name
   proxied_apache_web_count         = var.proxied_apache_web_count
+  proxied_mysql_count              = var.proxied_mysql_count
+  mysql_user                       = var.mysql_user
+  mysql_user_pwd                   = var.mysql_user_pwd
   proxied_windows_server_count     = var.proxied_windows_server_count
   windows_server_administrator_pwd = var.windows_server_administrator_pwd
   windows_proxied_server_agent_url = var.windows_proxied_server_agent_url
@@ -258,8 +262,9 @@ output "collector_lb_dns" {value = var.instances_enabled ? module.instances.*.ga
 output "SQS_Test_Server" {value = var.lambda_sqs_dynamodb_enabled ? module.lambda_sqs_dynamodb.*.sqs_test_server_details : null}
 
 ### Proxied Instances Outputs ###
-output "Proxied_Apache_Web_Servers" {value = var.proxied_instances_enabled ? module.proxied_instances.*.proxied_apache_web_details : null}
-output "Proxied_Windows_Servers" {value = var.proxied_instances_enabled ? module.proxied_instances.*.proxied_windows_server_details : null}
+output "Proxied_Apache_Web_Servers" {value = var.proxied_instances_enabled && var.proxied_apache_web_count > 0? module.proxied_instances.*.proxied_apache_web_details : null}
+output "Proxied_MySQL_Servers" {value = var.proxied_instances_enabled && var.proxied_mysql_count > 0? module.proxied_instances.*.proxied_mysql_details : null}
+output "Proxied_Windows_Servers" {value = var.proxied_instances_enabled && var.proxied_windows_server_count > 0 ? module.proxied_instances.*.proxied_windows_server_details : null}
 output "Proxy_Server" {value = var.proxied_instances_enabled ? module.proxied_instances.*.proxy_server_details : null}
 
 # ### Phone Shop Outputs ###

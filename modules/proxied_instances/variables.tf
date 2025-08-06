@@ -20,6 +20,18 @@ variable "private_key_path"{
 variable "instance_type" {
   default = []
 }
+variable "mysql_instance_type" {
+  type    = string
+  default = ""
+}
+variable "mysql_user" {
+  type    = string
+  default = ""
+}
+variable "mysql_user_pwd" {
+  type    = string
+  default = ""
+}
 variable "ami" {
   default = {}
 }
@@ -61,14 +73,11 @@ variable "environment" {
 variable "proxied_apache_web_count" {
   default = {}
 }
-variable "proxied_apache_web_ids" {
-  default = []
+variable "proxied_mysql_count" {
+  type = number
 }
 variable "proxied_windows_server_count" {
   default = {}
-}
-variable "proxied_windows_server_ids" {
-  default = []
 }
 variable "windows_proxied_server_agent_url" {
   default = {}
