@@ -280,8 +280,10 @@ output "splunk_ent_details" {value = var.instances_enabled && var.splunk_ent_cou
 output "hec_metrics_token" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_metrics_token : null}
 output "hec_otel_token" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_otel_token : null}
 output "hec_otel_k8s_token" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_otel_k8s_token : null}
+
 ### Detector Outputs
 output "detector_promoting_tags_id" {value = var.detectors_enabled ? module.detectors.*.detector_promoting_tags_id : null}
 
 ### EKS Outputs ###
 output "eks_admin_server" {value = var.eks_cluster_enabled ? module.eks.*.eks_admin_server_details : null}
+output "astro_shop_url" {value = var.eks_cluster_enabled ? module.eks.*.astro_shop_url : null}
