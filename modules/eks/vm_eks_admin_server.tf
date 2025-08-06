@@ -86,6 +86,9 @@ resource "aws_instance" "eks_admin_server" {
       "eksctl get clusters",
       "aws eks update-kubeconfig --name $EKS_CLUSTER_NAME",
 
+    ## Install jq
+      "sudo apt-get install -y jq",
+      
     # ## Install K8S Integration using Splunk OTel Collector Helm Chart
     #   "TOKEN=${var.eks_access_token}",
     #   "REALM=${var.realm}",

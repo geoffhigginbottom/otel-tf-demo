@@ -58,3 +58,7 @@ output "config_map_aws_auth" {
 output "kubeconfig" {
   value = local.kubeconfig
 }
+
+output "astro_shop_url" {
+  value       = "http://${trim(data.local_file.frontend_lb_hostname.content, " \n")}:8080"
+}
