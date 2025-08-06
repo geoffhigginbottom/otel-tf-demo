@@ -32,6 +32,7 @@ splunk_hec_metrics_enabled  = false # Enable sending Metrics to Splunk Enterpris
 ## Proxied Instances Quantities ##
 proxy_server_count = "1" # only one is required, used as a yes/no parameter
 proxied_apache_web_count = "0"
+proxied_mysql_count = "0"
 proxied_windows_server_count = "0"
 
 ### AWS Variables ###
@@ -116,10 +117,11 @@ mysql_user_pwd      = "<STRONG_PWD>"
 mysql_instance_type = "t3.xlarge"
 
 ### EKS Variables ###
-eks_access_token    = "<ACCESS_TOKEN>"
-eks_splunk_endpoint = "http://<FQDN>:8088" #An FQDN linked to an EIP in AWS
-eks_splunk_index    = "k8s-logs"
-# eks_instance_type   = "m6g.xlarge" # ARM
-# eks_ami_type        = "AL2_ARM_64" # ARM
-eks_instance_type   = "t3.medium" # x86
-eks_ami_type        = "AL2023_x86_64_STANDARD" # x86
+eks_access_token        = "<ACCESS_TOKEN>"
+eks_splunk_endpoint     = "http://<FQDN>:8088" #An FQDN linked to an EIP in AWS
+eks_admin_server_eip    = "<nn.nn.nn.nn>" #ensure this aligns with region setting above
+eks_splunk_index        = "k8s-logs"
+# eks_instance_type       = "m6g.xlarge" # ARM
+# eks_ami_type            = "AL2_ARM_64" # ARM
+eks_instance_type       = "t3.medium" # x86
+eks_ami_type            = "AL2023_x86_64_STANDARD" # x86
