@@ -311,6 +311,10 @@
     type = number
   }
 
+  variable "nginx_count" {
+    type = number
+  }
+
   variable "mysql_count" {
     type = number
   }

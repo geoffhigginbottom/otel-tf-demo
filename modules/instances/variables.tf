@@ -94,6 +94,9 @@ variable "gateway_count" {
 variable "haproxy_count" {
   default = {}
 }
+variable "nginx_count" {
+  type = number
+}
 variable "mysql_count" {
   default = {}
 }
