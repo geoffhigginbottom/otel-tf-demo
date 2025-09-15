@@ -179,13 +179,6 @@ exporters:
     verbosity: detailed
 
 service:
-  telemetry:
-    logs:
-      encoding: json
-      level: "debug"
-      output_paths: [/media/data/logs/otel/collector.log]
-      error_output_paths: [/media/data/logs/otel/collector.log]
-
   extensions:
   - headers_setter
   - health_check
