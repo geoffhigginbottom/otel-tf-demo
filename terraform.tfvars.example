@@ -22,6 +22,7 @@ eks_fargate_cluster_enabled = false # Not Working Yet
 gateway_count               = "2" # uses var.collector_version
 apache_web_count            = "1" # uses var.collector_version & auto discovery - files from S3
 haproxy_count               = "1" # uses var.collector_version - files from S3
+nginx_count                 = "1" # uses var.collector_version & auto discovery - files from S3
 mysql_count                 = "1" # uses var.collector_version & auto discovery - files from S3
 ms_sql_count                = "0" # uses var.collector_version - files from S3
 iis_server_count            = "0" # uses var.collector_version - files from S3
@@ -97,7 +98,7 @@ location    = "London"
 org         = "ACME"
 
 ### Splunk ITSI Variables ###
-splunk_itsi_license_filename                     = "Splunk ITSI NFR CY2025 2H.License"                     # this file should be located in the non_public_files folder
+splunk_itsi_license_filename                     = "Splunk_ITSI_NFR_CY2025_2H.License"               # this file should be located in the non_public_files folder
 splunk_app_for_content_packs_filename            = "splunk-app-for-content-packs_190.spl"            # this file should be located in the non_public_files folder
 splunk_it_service_intelligence_filename          = "itsi-4.20.0-62084.spl"                           # this file should be located in the non_public_files folder
 splunk_infrastructure_monitoring_add_on_filename = "signed_5247_36428_1738861405.tar"                # this file should be located in the non_public_files folder
