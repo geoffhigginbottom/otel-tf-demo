@@ -17,6 +17,8 @@ extensions:
       endpoint: "https://api.${SPLUNK_REALM}.signalfx.com"
   zpages:
     endpoint: "${SPLUNK_LISTEN_INTERFACE}:55679"
+    expvar:
+      enabled: true
 
 receivers:
     # GH Added Logs and Host Metrics Receiver to enable collection from the Gateway itself
@@ -76,14 +78,14 @@ receivers:
             regex: 'otelcol_processor_batch_.*'
             action: drop
 
-  smartagent/processlist:
-    type: processlist
+  # smartagent/processlist:
+  #   type: processlist
 
-  sapm:
-    endpoint: "${SPLUNK_LISTEN_INTERFACE}:7276"
-    # Whether to preserve incoming access token and use instead of exporter token
-    # default = false
-    #access_token_passthrough: true
+  # sapm:
+  #   endpoint: "${SPLUNK_LISTEN_INTERFACE}:7276"
+  #   # Whether to preserve incoming access token and use instead of exporter token
+  #   # default = false
+  #   #access_token_passthrough: true
 
   signalfx:
     endpoint: "${SPLUNK_LISTEN_INTERFACE}:9943"
@@ -197,7 +199,7 @@ service:
   extensions: [headers_setter, health_check, http_forwarder, zpages]
   pipelines:
     traces:
-      receivers: [jaeger, otlp, sapm, zipkin]
+      receivers: [jaeger, otlp, zipkin]
       processors:
       - memory_limiter
       - batch
@@ -215,7 +217,7 @@ service:
       exporters: [signalfx/internal]
 
     logs/signalfx:
-      receivers: [signalfx, smartagent/processlist]
+      receivers: [signalfx]
       processors: [memory_limiter, batch]
       exporters: [signalfx]
 
