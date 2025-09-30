@@ -122,6 +122,23 @@ processors:
         value: "agent"
         key: otelcol.service.mode
 
+  metricstransform:
+    transforms:
+      - include: ^nginx\.
+        match_type: regexp
+        action: update
+        operations:
+          - action: add_label
+            new_label: version
+            new_value: opentelemetry collector {{version}}
+      - include: ^system\.
+        match_type: regexp
+        action: update
+        operations:
+          - action: add_label
+            new_label: version
+            new_value: opentelemetry collector {{version}}
+
 exporters:
   # Traces
   otlphttp:
@@ -212,6 +229,7 @@ service:
       - memory_limiter
       - batch
       - resourcedetection
+      - metricstransform
       exporters:
       # - signalfx
       # Use instead when sending to gateway
