@@ -9,5 +9,7 @@ resource "aws_vpc_endpoint" "s3_gateway" {
 
   tags = {
     Name = "s3-gateway-endpoint"
+    splunkit_environment_type = "non-prd"
+    splunkit_data_classification = "public"
   }
 }

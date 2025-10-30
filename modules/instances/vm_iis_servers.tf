@@ -25,11 +25,24 @@ resource "aws_instance" "iis_server" {
     rum_access_token                  = var.rum_access_token
   })
 
+  root_block_device {
+    volume_size = 80
+    volume_type = "gp3"
+    encrypted   = true
+    delete_on_termination = true
+
+    tags = {
+      Name                          = lower(join("-", [var.environment, "haproxy", count.index + 1, "root"]))
+      splunkit_environment_type     = "non-prd"
+      splunkit_data_classification  = "private"
+    }
+  }
+
   tags = {
     Name = lower(join("-",[var.environment, "iis", count.index + 1]))
     Environment = lower(var.environment)
     splunkit_environment_type = "non-prd"
-    splunkit_data_classification = "public"
+    splunkit_data_classification = "private"
   }
 }
 

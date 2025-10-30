@@ -26,11 +26,24 @@ resource "aws_instance" "ms_sql" {
     ms_sql_user_pwd                   = var.ms_sql_user_pwd
   })
 
+  root_block_device {
+    volume_size = 120
+    volume_type = "gp3"
+    encrypted   = true
+    delete_on_termination = true
+
+    tags = {
+      Name                          = lower(join("-", [var.environment, "ms-sql", count.index + 1, "root"]))
+      splunkit_environment_type     = "non-prd"
+      splunkit_data_classification  = "private"
+    }
+  }
+
   tags = {
     Name = lower(join("-",[var.environment, "ms-sql", count.index + 1]))
     Environment = lower(var.environment)
     splunkit_environment_type = "non-prd"
-    splunkit_data_classification = "public"
+    splunkit_data_classification = "private"
   }
 }
 

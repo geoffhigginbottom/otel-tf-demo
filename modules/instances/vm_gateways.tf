@@ -7,17 +7,25 @@ resource "aws_instance" "gateway" {
   vpc_security_group_ids    = [aws_security_group.instances_sg.id]
   iam_instance_profile      = var.ec2_instance_profile_name
 
-  ### needed for Splunk Golden Image to enable SSH
-  ### the 'ssh connection' should use the same user
-  # user_data = file("${path.module}/scripts/userdata.sh")
+  root_block_device {
+    volume_size = 16
+    volume_type = "gp3"
+    encrypted   = true
+    delete_on_termination = true
 
+    tags = {
+      Name                          = lower(join("-", [var.environment, "gateway", count.index + 1, "root"]))
+      splunkit_environment_type     = "non-prd"
+      splunkit_data_classification  = "private"
+    }
+  }
 
   tags = {
     Name = lower(join("-",[var.environment, "gateway", count.index + 1]))
     Environment = lower(var.environment)
     role = "collector"
     splunkit_environment_type = "non-prd"
-    splunkit_data_classification = "public"
+    splunkit_data_classification = "private"
   }
 
   provisioner "remote-exec" {

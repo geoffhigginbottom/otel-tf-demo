@@ -18,10 +18,6 @@ resource "aws_instance" "splunk_ent" {
   ami                       = var.ami
   instance_type             = var.splunk_ent_inst_type
   subnet_id                 = "${var.public_subnet_ids[ count.index % length(var.public_subnet_ids) ]}"
-    root_block_device {
-    volume_size = 32
-    volume_type = "gp2"
-  }
   private_ip                = var.splunk_private_ip
   key_name                  = var.key_name
   vpc_security_group_ids    = [
@@ -29,6 +25,19 @@ resource "aws_instance" "splunk_ent" {
     aws_security_group.splunk_ent_sg.id,
   ]
   iam_instance_profile      = var.ec2_instance_profile_name
+  
+  root_block_device {
+    volume_size = 32
+    volume_type = "gp3"
+    encrypted   = true
+    delete_on_termination = true
+
+    tags = {
+      Name                          = lower(join("-", [var.environment, "splunk-enterprise", "root"]))
+      splunkit_environment_type     = "non-prd"
+      splunkit_data_classification  = "private"
+    }
+  }
   
   tags = {
     Name = lower(join("-",[var.environment, "splunk-enterprise", count.index + 1]))

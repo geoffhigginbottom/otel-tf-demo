@@ -7,6 +7,8 @@ resource "aws_vpc" "ecs_vpc" {
 
   tags = {
     Name = join("_",[var.environment, var.ecs_vpc_name])
+    splunkit_environment_type = "non-prd"
+    splunkit_data_classification = "public"
   }
 }
 
