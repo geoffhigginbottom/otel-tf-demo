@@ -260,7 +260,7 @@ output "MS_SQL_Servers" {value = var.instances_enabled && var.ms_sql_count > 0 ?
 output "Apache_Web_Servers" {value = var.instances_enabled && var.apache_web_count > 0 ? module.instances.*.apache_web_details : null}
 output "IIS_Servers" {value = var.instances_enabled && var.iis_server_count > 0 ? module.instances.*.iis_server_details : null}
 
-output "collector_lb_dns" {value = var.instances_enabled ? module.instances.*.gateway_lb_int_dns : null}
+# output "collector_lb_dns" {value = var.instances_enabled ? module.instances.*.gateway_lb_int_dns : null}
 output "SQS_Test_Server" {value = var.lambda_sqs_dynamodb_enabled ? module.lambda_sqs_dynamodb.*.sqs_test_server_details : null}
 
 ### Proxied Instances Outputs ###
@@ -278,19 +278,30 @@ output "ECS_ALB_hostname" {value = var.ecs_cluster_enabled ? module.aws_ecs.*.ec
 ### Splunk Enterprise Outputs ###
 # output "splunk_password" {value = (var.instances_enabled && var.splunk_ent_count > 0 || var.splunk_cloud_enabled == true) ? module.instances.*.splunk_password : null}
 output "lo_connect_password" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.lo_connect_password : null}
-output "splunk_enterprise_private_ip" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_enterprise_private_ip : null}
+# output "splunk_enterprise_private_ip" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_enterprise_private_ip : null}
 output "splunk_url" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url : null}
 output "splunk_url_fqdn" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url_fqdn : null}
 output "splunk_ent_url_hec" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url_hec : null}
 output "splunk_ent_details" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_details : null}
 
-output "hec_metrics_token" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_metrics_token : null}
-output "hec_otel_token" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_otel_token : null}
-output "hec_otel_k8s_token" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_otel_k8s_token : null}
+output "hec_metrics_token" {
+    value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_metrics_token : null
+    sensitive = true
+  }
+output "hec_otel_token" {
+  value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_otel_token : null
+  sensitive = true
+}
+output "hec_otel_k8s_token" {
+  value     = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_otel_k8s_token : null
+  sensitive = true
+}
 
 ### Detector Outputs
 output "detector_promoting_tags_id" {value = var.detectors_enabled ? module.detectors.*.detector_promoting_tags_id : null}
 
 ### EKS Outputs ###
 output "eks_admin_server" {value = var.eks_cluster_enabled ? module.eks.*.eks_admin_server_details : null}
+# output "aws_eks_node_group_name" {value = var.eks_cluster_enabled ? module.eks.*.aws_eks_node_group_name : null}
+# output "aws_lb_target_group_arn" {value = var.eks_cluster_enabled ? module.eks.*.aws_lb_target_group_arn : null}
 output "astro_shop_url" {value = var.eks_cluster_enabled ? module.eks.*.astro_shop_url : null}
