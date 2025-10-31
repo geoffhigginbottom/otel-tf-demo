@@ -17,6 +17,7 @@ resource "aws_security_group" "instances_sg" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["${var.my_public_ip}/32"]
+    # cidr_blocks = ["0.0.0.0/0"]
   }
 
   ## Allow RDP - Enable Windows Remote Desktop
@@ -40,16 +41,8 @@ resource "aws_security_group" "instances_sg" {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
-    # cidr_blocks = ["${var.my_public_ip}/32"]
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ## Allow Trace data direct to Gateway Nodes
-  ingress {
-    from_port   = 9411
-    to_port     = 9411
-    protocol    = "tcp"
     cidr_blocks = ["${var.my_public_ip}/32"]
+    # cidr_blocks = ["0.0.0.0/0"]
   }
 
   ## Allow all egress traffic
@@ -60,7 +53,6 @@ resource "aws_security_group" "instances_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
-
 
 resource "aws_security_group" "splunk_ent_sg" {
   name          = "${var.environment}_Splunk Ent SG"
@@ -78,32 +70,10 @@ resource "aws_security_group" "splunk_ent_sg" {
     from_port   = 8089
     to_port     = 8089
     protocol    = "tcp"
-    cidr_blocks = ["${var.my_public_ip}/32"]
-  }
-
-  ingress {
-    from_port   = 8089
-    to_port     = 8089
-    protocol    = "tcp"
     cidr_blocks = [
       "108.128.26.145/32",
       "34.250.243.212/32",
       "54.171.237.247/32"
     ]
-  }
-
-  ingress {
-    from_port   = 8088
-    to_port     = 8088
-    protocol    = "tcp"
-    # cidr_blocks = ["${var.my_public_ip}/32"]
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 9997
-    to_port     = 9997
-    protocol    = "tcp"
-    cidr_blocks = ["${var.my_public_ip}/32"]
   }
 }
