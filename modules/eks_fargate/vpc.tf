@@ -9,6 +9,8 @@ data "aws_availability_zones" "available" {
   tags = {
     Name = "${var.environment}-eks-fargate-vpc"
     "kubernetes.io/cluster/${var.eks_fargate_cluster_name}" = "shared"
+    splunkit_environment_type = "non-prd"
+    splunkit_data_classification = "public"
   }
 }
 
