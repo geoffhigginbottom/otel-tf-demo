@@ -9,7 +9,7 @@ metadata:
   namespace: kube-system
 data:
   mapRoles: |
-    - rolearn: ${aws_iam_role.demo-node.arn}
+    - rolearn: ${aws_iam_role.eks_node.arn}
       username: system:node:{{EC2PrivateDNSName}}
       groups:
         - system:bootstrappers
@@ -22,8 +22,8 @@ CONFIGMAPAWSAUTH
 apiVersion: v1
 clusters:
 - cluster:
-    server: ${aws_eks_cluster.demo.endpoint}
-    certificate-authority-data: ${aws_eks_cluster.demo.certificate_authority[0].data}
+    server: ${aws_eks_cluster.eks_cluster.endpoint}
+    certificate-authority-data: ${aws_eks_cluster.eks_cluster.certificate_authority[0].data}
   name: kubernetes
 contexts:
 - context:
@@ -48,7 +48,7 @@ KUBECONFIG
 
 output "eks_cluster_endpoint" {
   description = "The endpoint for the Kubernetes API server"
-  value       = aws_eks_cluster.demo.endpoint
+  value       = aws_eks_cluster.eks_cluster.endpoint
 }
 
 output "config_map_aws_auth" {
@@ -57,8 +57,4 @@ output "config_map_aws_auth" {
 
 output "kubeconfig" {
   value = local.kubeconfig
-}
-
-output "astro_shop_url" {
-  value       = "http://${trim(data.local_file.frontend_lb_hostname.content, " \n")}:8080"
 }

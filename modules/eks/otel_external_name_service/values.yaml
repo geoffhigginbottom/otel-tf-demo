@@ -1,0 +1,7 @@
+# Central OTEL collector info
+collector:
+  serviceName: splunk-otel-collector-agent
+  namespace: default
+  ports:
+    - 4317
+    - 4318
