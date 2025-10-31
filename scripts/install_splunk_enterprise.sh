@@ -40,15 +40,13 @@ curl -k -u admin:$PASSWORD https://localhost:8089/services/admin/roles \
 /opt/splunk/bin/splunk add index k8s-logs -auth admin:$PASSWORD
 /opt/splunk/bin/splunk add index metrics -datatype metric -auth admin:$PASSWORD
 
+#Change webport to 8000 to avoid conflict with Splunk Offices WiFi Restrictons
+/opt/splunk/bin/splunk set web-port 80
+
 #Enable HEC
 /opt/splunk/bin/splunk http-event-collector enable -uri https://localhost:8089 -enable-ssl 0 -port 8088 -auth admin:$PASSWORD
 
 #Create HEC Tokens
-# /opt/splunk/bin/splunk http-event-collector create OTEL-K8S -uri https://localhost:8089 -description "Used by OTEL K8S" -disabled 0 -index k8s-logs -indexes k8s-logs -auth admin:$PASSWORD
-# /opt/splunk/bin/splunk http-event-collector create OTEL -uri https://localhost:8089 -description "Used by OTEL" -disabled 0 -index main -indexes main -auth admin:$PASSWORD
-# /opt/splunk/bin/splunk http-event-collector create HEC-METRICS -uri https://localhost:8089 -description "Metrics from OTel via HEC" -disabled 0 -index metrics -indexes metrics -auth admin:$PASSWORD
-
-
 declare -A tokens
 
 function create_hec_token() {

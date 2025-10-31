@@ -20,7 +20,7 @@ output "splunk_ent_url" {
     "http://",
     # aws_instance.splunk_ent.*.public_ip,
     aws_eip_association.eip_assoc.*.public_ip,
-    "8000",
+    "80",
   )
 }
 
@@ -30,7 +30,7 @@ output "splunk_ent_url_fqdn" {
     "http://",
     # aws_instance.splunk_ent.*.public_ip,
     var.fqdn,
-    "8000",
+    "80",
   )
 }
 
