@@ -1,16 +1,3 @@
-# ### Lambda Function Code
-# ## Terafrom generates the lambda function from a zip file which is pulled down 
-# ## from a separate repo defined in variables.tf in root folder
-# resource "null_resource" "lamdba_function_lamdba_sqs_dynamodb_file" {
-#   provisioner "local-exec" {
-#     command = "curl -o lamdba_sqs_dynamodb_function.py ${var.function_lamdba_sqs_dynamodb_url}"
-#   }
-#   provisioner "local-exec" {
-#     when    = destroy
-#     command = "rm lamdba_sqs_dynamodb_function.py && rm lamdba_sqs_dynamodb.zip"
-#   }
-# }
-
 ### Create a local zip file containing lambda function code so we can upload to AWS
 data "archive_file" "lamdba_sqs_dynamodb_zip" {
   type         = "zip"
@@ -24,19 +11,23 @@ resource "aws_lambda_function" "lamdba_sqs_dynamodb" {
   function_name = "${var.environment}_Lambda_SQS_DynamoDB"
   role          = aws_iam_role.lambda_sqs_dynamodb_role.arn
   handler       = "lamdba_sqs_dynamodb_function.lambda_handler"
-  layers        = [var.region_wrapper_python]
-  runtime       = "python3.8"
+  layers        = [var.region_wrapper_splunk_apm]
+  runtime       = "python3.9"
   timeout       = var.function_timeout
 
   environment {
     variables = {
-      DYNAMODB_TABLE           = "${var.environment}-messages"
-      MAX_QUEUE_MESSAGES       = "10"
-      QUEUE_NAME               = "${var.environment}-messages"
-      SIGNALFX_ACCESS_TOKEN    = var.access_token
-      SIGNALFX_APM_ENVIRONMENT = var.environment
-      SIGNALFX_METRICS_URL     = "https://ingest.${var.realm}.signalfx.com"
-      SIGNALFX_TRACING_URL     = "https://ingest.${var.realm}.signalfx.com/v2/trace"
+      DYNAMODB_TABLE                     = "${var.environment}_messages"
+      MAX_QUEUE_MESSAGES                 = "10"
+      QUEUE_NAME                         = "${var.environment}-messages"
+      OTEL_EXPORTER_OTLP_TRACES_ENDPOINT = "https://ingest.${var.realm}.signalfx.com/v2/trace"
+      OTEL_RESOURCE_ATTRIBUTES           = "environment=${var.environment}"
+      OTEL_EXPORTER_OTLP_TRACES_PROTOCOL = "http/protobuf"
+      OTEL_SERVICE_NAME                  = "lambda_sqs_dynamodb"
+      SPLUNK_ACCESS_TOKEN                = var.access_token
+      SPLUNK_REALM                       = var.realm
+      AWS_LAMBDA_EXEC_WRAPPER            = "/opt/otel-instrument"
+      
     }
   }
 }

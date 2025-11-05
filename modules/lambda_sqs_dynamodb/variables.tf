@@ -8,10 +8,6 @@ variable "environment" {
 variable "realm" {
   default = []
 }
-# variable "smart_agent_version" {
-#   default = []
-# }
-
 
 ### AWS Variables ###
 variable "aws_access_key_id" {
@@ -36,7 +32,7 @@ variable "lambda_role_arn" {
   default = {}
 }
 variable "function_timeout" {
-  default = 15
+  default = 120
 }
 variable "region" {
   default = {}
@@ -47,7 +43,7 @@ variable "vpc_id" {
 variable "vpc_cidr_block" {
   default = []
 }
-variable "region_wrapper_python" {
+variable "region_wrapper_splunk_apm" {
   default = {}
 }
 variable "ami" {
@@ -55,4 +51,7 @@ variable "ami" {
 }
 variable "my_public_ip" {
   default = []
+}
+variable "collector_version" {
+  default = {}
 }

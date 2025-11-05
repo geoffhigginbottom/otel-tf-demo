@@ -412,6 +412,22 @@
     }
   }
 
+## List available at https://github.com/signalfx/lambda-layer-versions/blob/main/splunk-apm/splunk-apm.md ##
+  variable "region_wrapper_splunk_apm" {
+    default = {
+      "1"  = "arn:aws:lambda:eu-west-1:254067382080:layer:splunk-apm:118"
+      "2"  = "arn:aws:lambda:eu-west-3:254067382080:layer:splunk-apm:118"
+      "3"  = "arn:aws:lambda:ca-central-1:254067382080:layer:splunk-apm:118"
+      "4"  = "arn:aws:lambda:us-east-1:254067382080:layer:splunk-apm:118"
+      "5"  = "arn:aws:lambda:us-east-2:254067382080:layer:splunk-apm:118"
+      "6"  = "arn:aws:lambda:us-west-1:254067382080:layer:splunk-apm:118"
+      "7"  = "arn:aws:lambda:us-west-2:254067382080:layer:splunk-apm:118"
+      "8"  = "arn:aws:lambda:ap-southeast-1:254067382080:layer:splunk-apm:118"
+      "9"  = "arn:aws:lambda:ap-southeast-2:254067382080:layer:splunk-apm:118"
+      "10" = "arn:aws:lambda:sa-east-1:254067382080:layer:splunk-apm:118"
+    }
+  }
+
   ## List available at https://github.com/signalfx/lambda-layer-versions/blob/master/node/NODE.md ##
   variable "region_wrapper_nodejs" {
     default = {
@@ -443,6 +459,8 @@
   variable "api_url" {
   }
   variable "realm" {
+    type        = string
+    default     = "eu0"
   }
   variable "notification_email" {
   }

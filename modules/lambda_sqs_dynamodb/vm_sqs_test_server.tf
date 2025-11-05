@@ -9,6 +9,19 @@ resource "aws_instance" "sqs_test_server" {
     Name  = "sqs_test"
   }
 
+  root_block_device {
+    volume_size = 16
+    volume_type = "gp3"
+    encrypted   = true
+    delete_on_termination = true
+
+    tags = {
+      Name                          = lower(join("-", [var.environment, "sqs_test", "root"]))
+      splunkit_environment_type     = "non-prd"
+      splunkit_data_classification  = "private"
+    }
+  }
+
   provisioner "file" {
     source      = "${path.module}/send_message.py"
     destination = "/tmp/sendmessage.py"
@@ -24,16 +37,6 @@ resource "aws_instance" "sqs_test_server" {
     destination = "/tmp/generate_aws_config.sh"
   }
 
-  # provisioner "file" {
-  #   source      = "${path.module}/scripts/install_sfx_agent.sh"
-  #   destination = "/tmp/install_sfx_agent.sh"
-  # }
-
-  # provisioner "file" {
-  #   source      = "${path.module}/scripts/update_sfx_environment.sh"
-  #   destination = "/tmp/update_sfx_environment.sh"
-  # }
-
 # remote-exec
   provisioner "remote-exec" {
     inline = [
@@ -44,20 +47,10 @@ resource "aws_instance" "sqs_test_server" {
     # Update
       "sudo apt-get update",
       "sudo apt-get upgrade -y",
-
-    # # Install SignalFx
-    #   "TOKEN=${var.access_token}",
-    #   "REALM=${var.realm}",
-    #   "HOSTNAME=${self.tags.Name}",
-    #   "AGENTVERSION=${var.smart_agent_version}",
-    #   "sudo chmod +x /tmp/install_sfx_agent.sh",
-    #   "sudo /tmp/install_sfx_agent.sh $TOKEN $REALM $AGENTVERSION",
-    #   "sudo chmod +x /tmp/update_sfx_environment.sh",
-    #   "sudo /tmp/update_sfx_environment.sh $ENVIRONMENT",
  
     ## Install Otel Agent
       "sudo curl -sSL https://dl.signalfx.com/splunk-otel-collector.sh > /tmp/splunk-otel-collector.sh",
-      "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --without-fluentd",
+      "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --collector-version ${var.collector_version}",
 
     ## Setup testing env
       "sudo apt install python3 -y",
