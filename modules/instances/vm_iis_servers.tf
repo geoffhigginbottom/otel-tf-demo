@@ -32,7 +32,7 @@ resource "aws_instance" "iis_server" {
     delete_on_termination = true
 
     tags = {
-      Name                          = lower(join("-", [var.environment, "haproxy", count.index + 1, "root"]))
+      Name                          = lower(join("-", [var.environment, "iis", count.index + 1, "root"]))
       splunkit_environment_type     = "non-prd"
       splunkit_data_classification  = "private"
     }
