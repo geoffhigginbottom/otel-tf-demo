@@ -14,6 +14,19 @@ resource "aws_instance" "proxied_mysql" {
     splunkit_data_classification = "public"
   }
 
+  root_block_device {
+    volume_size = 16
+    volume_type = "gp3"
+    encrypted   = true
+    delete_on_termination = true
+
+    tags = {
+      Name                          = lower(join("-", [var.environment, "proxied-mysql", count.index + 1, "root"]))
+      splunkit_environment_type     = "non-prd"
+      splunkit_data_classification  = "private"
+    }
+  }
+
   provisioner "remote-exec" {
     inline = [
     ## Set Proxy in Current Session
@@ -44,7 +57,7 @@ resource "aws_instance" "proxied_mysql" {
       ## Sync Required Files
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/update_splunk_otel_collector_proxied_mysql.sh /tmp/update_splunk_otel_collector.sh",
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_mysql.sh /tmp/install_mysql.sh",      
-      "aws s3 cp s3://${var.s3_bucket_name}/config_files/proxied_mysql_agent_config.yaml /tmp/agent_config.yaml",
+      # "aws s3 cp s3://${var.s3_bucket_name}/config_files/proxied_mysql_agent_config.yaml /tmp/agent_config.yaml", # Now using auto discovery so no longer required
       "aws s3 cp s3://${var.s3_bucket_name}/config_files/service-proxy.conf /tmp/service-proxy.conf",
 
       # "aws s3 cp s3://${var.s3_bucket_name}/scripts/xxx /tmp/xxx",
@@ -67,9 +80,9 @@ resource "aws_instance" "proxied_mysql" {
     ## Install Otel Agent
       "sudo curl -sSL https://dl.signalfx.com/splunk-otel-collector.sh > /tmp/splunk-otel-collector.sh",
       "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --collector-version ${var.collector_version} --discovery",
-      "sudo mv /etc/otel/collector/agent_config.yaml /etc/otel/collector/agent_config.bak",
-      "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml",
-      "sudo chown splunk-otel-collector:splunk-otel-collector agent_config.yaml",
+      # "sudo mv /etc/otel/collector/agent_config.yaml /etc/otel/collector/agent_config.bak", # Now using auto discovery so no longer required
+      # "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml", # Now using auto discovery so no longer required
+      # "sudo chown splunk-otel-collector:splunk-otel-collector agent_config.yaml", # Now using auto discovery so no longer required
       "sudo chmod +x /tmp/update_splunk_otel_collector.sh",
       "sudo /tmp/update_splunk_otel_collector.sh $MYSQLUSER $MYSQLPWD",
       "sudo chown root:root /tmp/service-proxy.conf",

@@ -12,7 +12,20 @@ resource "aws_instance" "proxy_server" {
     Name = lower(join("-",[var.environment, "proxy-server", count.index + 1]))
     Environment = lower(var.environment)
     splunkit_environment_type = "non-prd"
-    splunkit_data_classification = "public"
+    splunkit_data_classification = "private"
+  }
+
+  root_block_device {
+    volume_size = 16
+    volume_type = "gp3"
+    encrypted   = true
+    delete_on_termination = true
+
+    tags = {
+      Name                          = lower(join("-", [var.environment, "proxy-server", count.index + 1, "root"]))
+      splunkit_environment_type     = "non-prd"
+      splunkit_data_classification  = "private"
+    }
   }
  
   # provisioner "file" {

@@ -11,5 +11,9 @@ else
   printf "LB URL Variable Detected...\n"
 fi
 
-echo MYSQL_USER=$MYSQL_USER >> /etc/otel/collector/splunk-otel-collector.conf
-echo MYSQL_USER_PWD=$MYSQL_USER_PWD >> /etc/otel/collector/splunk-otel-collector.conf
+# echo MYSQL_USER=$MYSQL_USER >> /etc/otel/collector/splunk-otel-collector.conf
+# echo MYSQL_USER_PWD=$MYSQL_USER_PWD >> /etc/otel/collector/splunk-otel-collector.conf
+
+## Add MySQL Receiver Config to Splunk OTel Collector Config File for Auto Discovery
+echo SPLUNK_DISCOVERY_RECEIVERS_mysql_CONFIG_username=$MYSQL_USER >> /etc/otel/collector/splunk-otel-collector.conf
+echo SPLUNK_DISCOVERY_RECEIVERS_mysql_CONFIG_password=$MYSQL_USER_PWD >> /etc/otel/collector/splunk-otel-collector.conf
