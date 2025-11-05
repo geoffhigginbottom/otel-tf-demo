@@ -39,9 +39,9 @@ components:
         service.beta.kubernetes.io/aws-load-balancer-tags: "splunkit_environment_type=non-prd,splunkit_data_classification=private"
     envOverrides:
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: "http/protobuf"
+        value: "grpc"
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: "http://splunk-otel-collector-agent:4318"
+        value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
         value: "deployment.environment=astro-shop-demo,env=eks"
 
@@ -50,18 +50,18 @@ components:
   accounting:
     envOverrides:
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: "http/protobuf"
+        value: "grpc"
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: "http://splunk-otel-collector-agent:4318"
+        value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
         value: "deployment.environment=astro-shop-demo,env=eks"
 
   ad:
     envOverrides:
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: "http/protobuf"
+        value: "grpc"
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: "http://splunk-otel-collector-agent:4318"
+        value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
         value: "deployment.environment=astro-shop-demo,env=eks"
 
@@ -95,9 +95,9 @@ components:
   email:
     envOverrides:
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: "http/protobuf"
+        value: "grpc"
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: "http://splunk-otel-collector-agent:4318"
+        value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
         value: "deployment.environment=astro-shop-demo,env=eks"
 
@@ -128,6 +128,15 @@ components:
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
         value: "deployment.environment=astro-shop-demo,env=eks"
 
+  image-provider:
+    envOverrides:
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: "grpc"
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: "http://splunk-otel-collector-agent:4317"
+      - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
+        value: "deployment.environment=astro-shop-demo,env=eks"
+
   load-generator:
     envOverrides:
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
@@ -138,6 +147,15 @@ components:
         value: "deployment.environment=astro-shop-demo,env=eks"
 
   payment:
+    envOverrides:
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: "grpc"
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: "http://splunk-otel-collector-agent:4317"
+      - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
+        value: "deployment.environment=astro-shop-demo,env=eks"
+
+  postgresql:
     envOverrides:
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
         value: "grpc"
@@ -158,9 +176,9 @@ components:
   quote:
     envOverrides:
       - name: OTEL_EXPORTER_OTLP_PROTOCOL
-        value: "http/protobuf"
+        value: "grpc"
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
-        value: "http://splunk-otel-collector-agent:4318"
+        value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
         value: "deployment.environment=astro-shop-demo,env=eks"
 
@@ -176,9 +194,9 @@ components:
   # kafka:
   #   envOverrides:
   #     - name: OTEL_EXPORTER_OTLP_PROTOCOL
-  #       value: "http/protobuf"
+  #       value: "grpc"
   #     - name: OTEL_EXPORTER_OTLP_ENDPOINT
-  #       value: "http://splunk-otel-collector-agent:4318"
+  #       value: "http://splunk-otel-collector-agent:4317"
   #     - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
   #       value: "deployment.environment=astro-shop-demo,env=eks"
 
@@ -191,4 +209,11 @@ components:
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
         value: "deployment.environment=astro-shop-demo,env=eks"
 
-### TESTING ###
+  valkey-cart:
+    envOverrides:
+      - name: OTEL_EXPORTER_OTLP_PROTOCOL
+        value: "grpc"
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: "http://splunk-otel-collector-agent:4317"
+      - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
+        value: "deployment.environment=astro-shop-demo,env=eks"
