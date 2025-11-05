@@ -137,7 +137,6 @@ module "eks_fargate" {
 module "lambda_sqs_dynamodb" {
   source                = "./modules/lambda_sqs_dynamodb"
   count                 = var.lambda_sqs_dynamodb_enabled ? 1 : 0
-  region_wrapper_python = lookup(var.region_wrapper_python, var.region)
   region_wrapper_splunk_apm = lookup(var.region_wrapper_splunk_apm, var.region)
   access_token          = var.access_token
   region                = lookup(var.aws_region, var.region)
