@@ -4,5 +4,4 @@ terraform {
       source = "splunk-terraform/signalfx"
     }
   }
-  required_version = ">= 0.13"
 }

@@ -13,6 +13,7 @@ provider "aws" {
 
 provider "signalfx" {
   auth_token = var.access_token
+  # realm     = var.realm
   api_url    = var.api_url
 }
 
@@ -137,6 +138,7 @@ module "lambda_sqs_dynamodb" {
   source                = "./modules/lambda_sqs_dynamodb"
   count                 = var.lambda_sqs_dynamodb_enabled ? 1 : 0
   region_wrapper_python = lookup(var.region_wrapper_python, var.region)
+  region_wrapper_splunk_apm = lookup(var.region_wrapper_splunk_apm, var.region)
   access_token          = var.access_token
   region                = lookup(var.aws_region, var.region)
   vpc_id                = module.vpc.vpc_id
@@ -151,6 +153,7 @@ module "lambda_sqs_dynamodb" {
   public_subnet_ids     = module.vpc.public_subnet_ids
   ami                   = data.aws_ami.latest-ubuntu.id
   my_public_ip          = "${chomp(data.http.my_public_ip.response_body)}"
+  collector_version     = var.collector_version
 }
 
 module "proxied_instances" {

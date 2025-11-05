@@ -5,11 +5,12 @@ terraform {
     }
     signalfx = {
       source = "splunk-terraform/signalfx"
+      version = "~> 9.0"
     }
     splunk = {
       source = "splunk/splunk"
-      version = "1.4.19"
+      version = "~> 1.0"
     }
   }
-  # required_version = ">= 0.13"
+  required_version = "~> 1.13"
 }
