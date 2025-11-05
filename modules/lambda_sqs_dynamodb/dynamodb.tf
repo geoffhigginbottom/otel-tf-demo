@@ -1,8 +1,8 @@
 resource "aws_dynamodb_table" "messages" {
   name           = "${var.environment}_messages"
   billing_mode   = "PROVISIONED"
-  read_capacity  = 5
-  write_capacity = 5
+  read_capacity  = 50
+  write_capacity = 50
   hash_key       = "MessageId"
 
   attribute {
