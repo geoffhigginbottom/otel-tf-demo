@@ -6,13 +6,13 @@ resource "null_resource" "astro_shop_helm_install" {
     EOT
   }
   
-  # provisioner "local-exec" {
-  #   when = destroy
-  #   command = <<EOT
-  #     ssh -o StrictHostKeyChecking=no -i ${self.triggers.private_key_path} ubuntu@${self.triggers.admin_ip} \
-  #     'helm delete astro-shop --namespace astro-shop'
-  #   EOT
-  # }
+  provisioner "local-exec" {
+    when = destroy
+    command = <<EOT
+      ssh -o StrictHostKeyChecking=no -i ${self.triggers.private_key_path} ubuntu@${self.triggers.admin_ip} \
+      'helm delete astro-shop --namespace astro-shop'
+    EOT
+  }
 
   triggers = {
     admin_ip          = var.eks_admin_server_eip
