@@ -32,6 +32,8 @@ override.tf.json
 *.DS_Store
 *.backup
 
+registry.terraform.io*
+
 variables.tfvars
 terraform.tfvars
 splunkclouduf.spl
