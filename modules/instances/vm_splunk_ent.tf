@@ -43,7 +43,7 @@ resource "aws_instance" "splunk_ent" {
     Name = lower(join("-",[var.environment, "splunk-enterprise", count.index + 1]))
     Environment = lower(var.environment)
     splunkit_environment_type = "non-prd"
-    splunkit_data_classification = "public"
+    splunkit_data_classification = "private"
   }
 
   provisioner "remote-exec" {
