@@ -13,7 +13,7 @@ resource "null_resource" "aws_cli_config" {
     aws_secret_key    = var.aws_secret_access_key
     aws_session_token = var.aws_session_token
 
-    always_run = timestamp()  # forces rerun every apply
+    # always_run = timestamp()  # forces rerun every apply
   }
 
   depends_on = [
