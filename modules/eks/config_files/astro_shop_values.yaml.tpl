@@ -1,7 +1,7 @@
 default:
   envOverrides:
     - name: OTEL_RESOURCE_ATTRIBUTES
-      value: "deployment.environment=astro-shop-demo,env=eks"
+      value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
 opentelemetry-collector:
   enabled: false
@@ -15,19 +15,6 @@ opensearch:
   enabled: false
 
 components:
-  # frontend-proxy:
-  #   service:
-  #     type: LoadBalancer
-  #     # annotations:
-  #     #   service.beta.kubernetes.io/aws-load-balancer-tags: "splunkit_environment_type=non-prd,splunkit_data_classification=private"
-  #   envOverrides:
-  #     - name: OTEL_EXPORTER_OTLP_PROTOCOL
-  #       value: "grpc"  # Not sure is this is the correct one yet
-  #     - name: OTEL_EXPORTER_OTLP_ENDPOINT
-  #       value: "http://splunk-otel-collector-agent:4317"  # Not sure is this is the correct one yet
-  #     - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-  #       value: "deployment.environment=astro-shop-demo,env=eks"
-
   frontend-proxy:
     service:
       type: NodePort
@@ -43,7 +30,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
 
 
@@ -54,7 +41,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   ad:
     envOverrides:
@@ -63,7 +50,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   cart:
     envOverrides:
@@ -72,7 +59,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   checkout:
     envOverrides:
@@ -81,7 +68,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   currency:
     envOverrides:
@@ -90,7 +77,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   email:
     envOverrides:
@@ -99,7 +86,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   flagd:
     envOverrides:
@@ -108,7 +95,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   fraud-detection:
     envOverrides:
@@ -117,7 +104,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   frontend:
     envOverrides:
@@ -126,7 +113,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   image-provider:
     envOverrides:
@@ -135,7 +122,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   load-generator:
     envOverrides:
@@ -144,7 +131,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   payment:
     envOverrides:
@@ -153,7 +140,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   postgresql:
     envOverrides:
@@ -162,7 +149,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   product-catalog:
     envOverrides:
@@ -171,7 +158,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   quote:
     envOverrides:
@@ -180,7 +167,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   recommendation:
     envOverrides:
@@ -189,16 +176,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
-
-  # kafka:
-  #   envOverrides:
-  #     - name: OTEL_EXPORTER_OTLP_PROTOCOL
-  #       value: "grpc"
-  #     - name: OTEL_EXPORTER_OTLP_ENDPOINT
-  #       value: "http://splunk-otel-collector-agent:4317"
-  #     - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-  #       value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   shipping:
     envOverrides:
@@ -207,7 +185,7 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"
 
   valkey-cart:
     envOverrides:
@@ -216,4 +194,4 @@ components:
       - name: OTEL_EXPORTER_OTLP_ENDPOINT
         value: "http://splunk-otel-collector-agent:4317"
       - name: SPLUNK_OTEL_COLLECTOR_RESOURCE_ATTRIBUTES
-        value: "deployment.environment=astro-shop-demo,env=eks"
+        value: "deployment.environment=astro-shop-demo-${environment},env=eks"

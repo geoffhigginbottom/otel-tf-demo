@@ -10,4 +10,8 @@ locals {
     access_token         = var.access_token
     hec_token            = local.safe_hec_token
   })
+
+  astro_shop_values = templatefile("${path.module}/config_files/astro_shop_values.yaml.tpl", {
+    environment = var.environment
+  })
 }
