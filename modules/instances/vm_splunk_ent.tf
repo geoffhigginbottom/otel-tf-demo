@@ -124,6 +124,11 @@ resource "aws_instance" "splunk_ent" {
       "sudo cp /opt/splunk/etc/auth/sloccerts/mySplunkWebCert.pem /tmp/mySplunkWebCert.pem",
       "sudo chown ubuntu:ubuntu /tmp/mySplunkWebCert.pem",
 
+    ## Install SIM Add-On
+      "SPLUNK_INFRASTRUCTURE_MONITORING_ADD_ON_FILENAME=${var.splunk_infrastructure_monitoring_add_on_filename}",
+      "sudo tar -xvf /tmp/$SPLUNK_INFRASTRUCTURE_MONITORING_ADD_ON_FILENAME -C /opt/splunk/etc/apps",
+      "sudo /opt/splunk/bin/splunk restart",
+
     ## Install ITSI, but only if add_itsi_splunk_enterprise = true
       <<EOT
       if [ ${var.add_itsi_splunk_enterprise} = true ]; then
@@ -154,7 +159,7 @@ resource "aws_instance" "splunk_ent" {
         ## install apps
         wget -O /tmp/$FILENAME "https://download.splunk.com/products/splunk/releases/$VERSION/linux/$FILENAME"
         sudo tar -xvf /tmp/$SPLUNK_IT_SERVICE_INTELLIGENCE_FILENAME -C /opt/splunk/etc/apps
-        sudo tar -xvf /tmp/$SPLUNK_INFRASTRUCTURE_MONITORING_ADD_ON_FILENAME -C /opt/splunk/etc/apps
+        # sudo tar -xvf /tmp/$SPLUNK_INFRASTRUCTURE_MONITORING_ADD_ON_FILENAME -C /opt/splunk/etc/apps
         sudo tar -xvf /tmp/$SPLUNK_APP_FOR_CONTENT_PACKS_FILENAME -C /opt/splunk/etc/apps
 
         ## start splunk
