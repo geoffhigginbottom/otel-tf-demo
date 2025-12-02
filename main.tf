@@ -102,8 +102,7 @@ module "eks" {
   eks_cluster_name      = join("-", [var.environment, "eks-cluster"])
   eks_access_token      = var.eks_access_token
   eks_splunk_endpoint   = var.eks_splunk_endpoint
-  # hec_otel_k8s_token    = module.instances[0].hec_otel_k8s_token
-  hec_otel_k8s_token    = length(module.instances) > 0 ? module.instances[0].hec_otel_k8s_token : "faketoken" # Fallback for when instances module is not created
+  hec_otel_k8s_token    = var.splunk_ent_count > 0 ? try(module.instances[0].hec_otel_k8s_token, "faketoken") : "faketoken"
   eks_splunk_index      = var.eks_splunk_index
   fqdn                  = var.fqdn
   eks_admin_server_eip  = var.eks_admin_server_eip
