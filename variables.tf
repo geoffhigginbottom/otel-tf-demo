@@ -45,6 +45,10 @@
     type    = string
     default = ""
   }
+  variable "aws_session_token" {
+    type    = string
+    default = ""
+  }
   variable "vpc_id" {
     type    = string
     default = ""

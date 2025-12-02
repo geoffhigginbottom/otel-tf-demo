@@ -40,9 +40,14 @@ resource "aws_instance" "eks_admin_server" {
   }
 
   provisioner "file" {
-    source      = "${path.module}/config_files/astro_shop_values.yaml"
+    content     = local.astro_shop_values
     destination = "/tmp/astro_shop_values.yaml"
   }
+
+  # provisioner "file" {
+  #   source      = "${path.module}/config_files/astro_shop_values.yaml"
+  #   destination = "/tmp/astro_shop_values.yaml"
+  # }
 
   provisioner "file" {
     source      = "${path.module}/otel_external_name_service/Chart.yaml"
@@ -86,8 +91,9 @@ resource "aws_instance" "eks_admin_server" {
       "sudo chmod +x /tmp/generate_aws_config.sh",
       "AWS_ACCESS_KEY_ID=${var.aws_access_key_id}",
       "AWS_SECRET_ACCESS_KEY=${var.aws_secret_access_key}",
+      "AWS_SESSION_TOKEN=${var.aws_session_token}",
       "REGION=${var.region}",
-      "/tmp/generate_aws_config.sh $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY $REGION",
+      "/tmp/generate_aws_config.sh $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY $AWS_SESSION_TOKEN $REGION",
 
     ## Install EKS Tools
       "sudo chmod +x /tmp/install_eks_tools.sh",
@@ -139,6 +145,7 @@ resource "aws_instance" "eks_admin_server" {
     ## Write env vars to file (used for debugging)
       "echo $AWS_ACCESS_KEY_ID > /tmp/aws_access_key_id",
       "echo $AWS_SECRET_ACCESS_KEY > /tmp/aws_secret_access_key",
+      "echo $AWS_SESSION_TOKEN > /tmp/aws_session_token",
       "echo $REGION > /tmp/region",
       "echo $EKS_CLUSTER_NAME > /tmp/eks_cluster_name",
       "echo $TOKEN > /tmp/access_token",

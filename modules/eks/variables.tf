@@ -29,7 +29,10 @@ variable "aws_secret_access_key" {
     type    = string
     default = ""
   }
-
+variable "aws_session_token" {
+    type    = string
+    default = ""
+  }
 variable "instance_type" {
   type    = string
   default = "t3.medium"
