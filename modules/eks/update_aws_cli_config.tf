@@ -13,11 +13,11 @@ resource "null_resource" "aws_cli_config" {
     aws_secret_key    = var.aws_secret_access_key
     aws_session_token = var.aws_session_token
 
-    # always_run = timestamp()  # forces rerun every apply
+    always_run = timestamp()  # forces rerun every apply
   }
 
   depends_on = [
     aws_instance.eks_admin_server,
-    aws_eip_association.eks-admin-server-eip-assoc,
+    aws_eip_association.eks_admin_server_eip_assoc,
   ]
 }
