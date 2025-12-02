@@ -96,30 +96,3 @@ done
 echo '}' >> /tmp/hec_tokens.json
 
 echo "Tokens written to /tmp/hec_tokens.json"
-
-/opt/splunk/bin/splunk http-event-collector create OTEL -uri https://localhost:8089 -description "Used by OTEL" -disabled 0 -index main -indexes main -auth admin:$PASSWORD
-
-#Create /etc/systemd/system/Splunkd.service
-#https://docs.splunk.com/Documentation/Splunk/latest/Troubleshooting/ulimitErrors
-cat << EOF > /etc/systemd/system/Splunkd.service
-LimitNOFILE=64000
-LimitNPROC=16000
-LimitDATA=16000000000
-LimitFSIZE=infinity
-TasksMax=8192
-EOF
-
-#Create /etc/systemd/system/disable-thp.service
-#https://docs.splunk.com/Documentation/Splunk/latest/ReleaseNotes/SplunkandTHP
-cat << EOF > /etc/systemd/system/disable-thp.service
-[Unit]
-Description=Disable Transparent Huge Pages (THP)
-
-[Service]
-Type=oneshot
-ExecStart=/bin/bash -c "echo never > /sys/kernel/mm/transparent_hugepage/enabled"
-ExecStart=/bin/bash -c "echo never > /sys/kernel/mm/transparent_hugepage/defrag"
-
-[Install]
-WantedBy=multi-user.target
-EOF
