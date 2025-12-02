@@ -208,8 +208,8 @@ module "instances" {
   collector_version                                 = var.collector_version
   # aws_access_key_id                                 = var.aws_access_key_id
   # aws_secret_access_key                             = var.aws_secret_access_key
-  aws_access_key_id                                 = local.access_key_id
-  aws_secret_access_key                             = local.secret_access_key
+  # aws_access_key_id                                 = local.access_key_id
+  # aws_secret_access_key                             = local.secret_access_key
   vpc_id                                            = module.vpc.vpc_id
   vpc_cidr_block                                    = var.vpc_cidr_block
   public_subnet_ids                                 = module.vpc.public_subnet_ids
