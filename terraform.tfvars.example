@@ -47,8 +47,6 @@ subnet_count            = "2"
 ## Auth Settings ##
 key_name                = "<NAME>"
 private_key_path        = "~/.ssh/id_rsa"
-aws_access_key_id       = "<ACCCESS_KEY_ID>>"
-aws_secret_access_key   = "<SECRET_ACCESS_KEY>>"
 
 ## Misc Instance Types ##
 instance_type           = "t2.large"

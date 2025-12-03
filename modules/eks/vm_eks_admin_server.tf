@@ -4,6 +4,7 @@ resource "aws_instance" "eks_admin_server" {
   subnet_id                 = element(var.public_subnet_ids, 0)
   key_name                  = var.key_name
   vpc_security_group_ids    = [aws_security_group.eks_admin_server.id]
+  iam_instance_profile      = aws_iam_instance_profile.eks_client_profile.name
  
   root_block_device {
     volume_size = 16
@@ -25,11 +26,6 @@ resource "aws_instance" "eks_admin_server" {
   }
 
   provisioner "file" {
-    source      = "${path.module}/scripts/generate_aws_config.sh"
-    destination = "/tmp/generate_aws_config.sh"
-  }
-
-  provisioner "file" {
     source      = "${path.module}/scripts/install_eks_tools.sh"
     destination = "/tmp/install_eks_tools.sh"
   }
@@ -43,11 +39,6 @@ resource "aws_instance" "eks_admin_server" {
     content     = local.astro_shop_values
     destination = "/tmp/astro_shop_values.yaml"
   }
-
-  # provisioner "file" {
-  #   source      = "${path.module}/config_files/astro_shop_values.yaml"
-  #   destination = "/tmp/astro_shop_values.yaml"
-  # }
 
   provisioner "file" {
     source      = "${path.module}/otel_external_name_service/Chart.yaml"
@@ -88,12 +79,6 @@ resource "aws_instance" "eks_admin_server" {
       "sudo apt install unzip -y",
       "unzip /tmp/awscliv2.zip",
       "sudo ~/aws/install",
-      "sudo chmod +x /tmp/generate_aws_config.sh",
-      "AWS_ACCESS_KEY_ID=${var.aws_access_key_id}",
-      "AWS_SECRET_ACCESS_KEY=${var.aws_secret_access_key}",
-      "AWS_SESSION_TOKEN=${var.aws_session_token}",
-      "REGION=${var.region}",
-      "/tmp/generate_aws_config.sh $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY $AWS_SESSION_TOKEN $REGION",
 
     ## Install EKS Tools
       "sudo chmod +x /tmp/install_eks_tools.sh",
@@ -101,11 +86,11 @@ resource "aws_instance" "eks_admin_server" {
 
     ## Setup eksutils
       "AWS_DEFAULT_REGION=${var.region}",
-      "AWS_DEFAULT_OUTPUT=json",
+      # "AWS_DEFAULT_OUTPUT=json",
       "EKS_CLUSTER_NAME=${var.eks_cluster_name}",
-      "eksctl utils write-kubeconfig --cluster=$EKS_CLUSTER_NAME",
-      "eksctl get clusters",
-      "aws eks update-kubeconfig --name $EKS_CLUSTER_NAME",
+      "eksctl utils write-kubeconfig --cluster=$EKS_CLUSTER_NAME --region $AWS_DEFAULT_REGION",
+      "eksctl get clusters --region $AWS_DEFAULT_REGION",
+      "aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_DEFAULT_REGION",
 
     ## Install jq
       "sudo apt-get install -y jq",
@@ -143,9 +128,6 @@ resource "aws_instance" "eks_admin_server" {
       "sudo mv /tmp/otel_external_name_service.yaml /home/ubuntu/helm_otel_external_name/templates/otel_external_name_service.yaml",
 
     ## Write env vars to file (used for debugging)
-      "echo $AWS_ACCESS_KEY_ID > /tmp/aws_access_key_id",
-      "echo $AWS_SECRET_ACCESS_KEY > /tmp/aws_secret_access_key",
-      "echo $AWS_SESSION_TOKEN > /tmp/aws_session_token",
       "echo $REGION > /tmp/region",
       "echo $EKS_CLUSTER_NAME > /tmp/eks_cluster_name",
       "echo $TOKEN > /tmp/access_token",
@@ -173,7 +155,6 @@ resource "aws_instance" "eks_admin_server" {
       
       # "mv /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/opentelemetry-demo-values.yaml /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/opentelemetry-demo-values.yaml.original",
       # "cp /tmp/opentelemetry-demo-values.yaml /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/opentelemetry-demo-values.yaml",
-  
 
     ]
   }
@@ -186,12 +167,3 @@ resource "aws_instance" "eks_admin_server" {
     agent = "true"
   }
 }
-
-# output "eks_admin_server_details" {
-#   value =  formatlist(
-#     "%s, %s", 
-#     aws_instance.eks_admin_server.*.tags.Name,
-#     # aws_instance.eks_admin_server.*.public_ip,
-#     aws_eip_association.eks_admin_server_eip_assoc.*.public_ip,
-#   )
-# }

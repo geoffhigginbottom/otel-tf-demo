@@ -9,7 +9,7 @@ resource "null_resource" "delete_vpc_default_security_group_ingress_rule" {
   }
 
   provisioner "local-exec" {
-    command = "AWS_ACCESS_KEY_ID=${var.aws_access_key_id} AWS_SECRET_ACCESS_KEY=${var.aws_secret_access_key} aws ec2 revoke-security-group-ingress --group-id ${data.aws_security_group.vpc_default_sg.id} --protocol all --port all --source-group ${data.aws_security_group.vpc_default_sg.id} --region ${var.region}"
+    command = "aws ec2 revoke-security-group-ingress --group-id ${data.aws_security_group.vpc_default_sg.id} --protocol all --port all --source-group ${data.aws_security_group.vpc_default_sg.id} --region ${var.region}"
   }
 }
 
@@ -19,6 +19,6 @@ resource "null_resource" "delete_vpc_default_security_group_egress_rule" {
   }
 
   provisioner "local-exec" {
-    command = "AWS_ACCESS_KEY_ID=${var.aws_access_key_id} AWS_SECRET_ACCESS_KEY=${var.aws_secret_access_key} aws ec2 revoke-security-group-egress --group-id ${data.aws_security_group.vpc_default_sg.id} --protocol all --port all --cidr 0.0.0.0/0 --region ${var.region}"
+    command = "aws ec2 revoke-security-group-egress --group-id ${data.aws_security_group.vpc_default_sg.id} --protocol all --port all --cidr 0.0.0.0/0 --region ${var.region}"
   }
 }

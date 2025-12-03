@@ -1,8 +1,6 @@
 # AWS Auth Configuration
 provider "aws" {
   region     = lookup(var.aws_region, var.region)
-  # access_key = var.aws_access_key_id
-  # secret_key = var.aws_secret_access_key
   default_tags {
     tags = {
       splunkit_environment_type     = "non-prd"
@@ -13,15 +11,8 @@ provider "aws" {
 
 provider "signalfx" {
   auth_token = var.access_token
-  # realm     = var.realm
   api_url    = var.api_url
 }
-
-# provider "helm" {
-#   kubernetes {
-#     config_path = "~/.kube/config"
-#   }
-# }
 
 module "dashboards" {
   source           = "./modules/dashboards"
@@ -48,10 +39,6 @@ module "vpc" {
   subnet_count          = var.subnet_count
   region                = lookup(var.aws_region, var.region)
   environment           = var.environment
-  # aws_access_key_id     = var.aws_access_key_id
-  # aws_secret_access_key = var.aws_secret_access_key
-  aws_access_key_id     = local.access_key_id
-  aws_secret_access_key = local.secret_access_key
 }
 
 module "s3" {
@@ -88,11 +75,6 @@ module "eks" {
   vpc_id                = module.vpc.vpc_id
   vpc_cidr_block        = var.vpc_cidr_block
   public_subnet_ids     = module.vpc.public_subnet_ids
-  # aws_access_key_id     = var.aws_access_key_id
-  # aws_secret_access_key = var.aws_secret_access_key
-  aws_access_key_id     = local.access_key_id
-  aws_secret_access_key = local.secret_access_key
-  aws_session_token     = local.session_token
   instance_type         = var.instance_type
   eks_instance_type     = var.eks_instance_type
   eks_ami_type          = var.eks_ami_type
@@ -148,10 +130,6 @@ module "lambda_sqs_dynamodb" {
   vpc_cidr_block        = var.vpc_cidr_block
   environment           = var.environment
   realm                 = var.realm
-  # aws_access_key_id     = var.aws_access_key_id
-  # aws_secret_access_key = var.aws_secret_access_key
-  aws_access_key_id     = local.access_key_id
-  aws_secret_access_key = local.secret_access_key
   key_name              = var.key_name
   private_key_path      = var.private_key_path
   instance_type         = var.instance_type
@@ -205,10 +183,6 @@ module "instances" {
   environment                                       = var.environment
   region                                            = lookup(var.aws_region, var.region)
   collector_version                                 = var.collector_version
-  # aws_access_key_id                                 = var.aws_access_key_id
-  # aws_secret_access_key                             = var.aws_secret_access_key
-  # aws_access_key_id                                 = local.access_key_id
-  # aws_secret_access_key                             = local.secret_access_key
   vpc_id                                            = module.vpc.vpc_id
   vpc_cidr_block                                    = var.vpc_cidr_block
   public_subnet_ids                                 = module.vpc.public_subnet_ids

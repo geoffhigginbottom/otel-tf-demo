@@ -40,14 +40,12 @@ The following files need to be added from Spunk Base (these will need updating o
 
 - [Splunk Infrastructure Monitoring Add-on](https://splunkbase.splunk.com/app/5247)
 - [Splunk IT Service Intelligence](https://splunkbase.splunk.com/app/1841)
-- [Splunk Add-On for OpenTelemetry Collector](https://splunkbase.splunk.com/app/7125)
-- [Splunk Add-on for Unix and Linux](https://splunkbase.splunk.com/app/833)
 - [Splunk App for Content Packs](https://splunkbase.splunk.com/app/5391)
 
 The following License Files need to be added (update based on current date window):
 
-- Splunk_Enterprise_NFR_1H_2025.xml
-- Splunk_ITSI_NFR_1H_2025.xml
+- Splunk_Enterprise_NFR_CY2025_2H.License
+- Splunk_ITSI_NFR_CY2025_2H.License
 
 A SplunkCloud Universal Forwarder Auth File will be needed when deploying instances with the optional Splunk Cloud Integration enabled.
 
@@ -61,11 +59,15 @@ The following describes each section of terraform.tfvars:
 
 There are a number of core modules which are always deployed such as VPC and S3, but the modules listed under the 'Enable / Disable Modules' comment can be activated by changing the values from the default of "false" to "true".
 
-You will find more information about each Module at the end of this document.
+You will find more information about each Module lower down in this document.
 
-There are generally no interdependencies between modules, so you can deploy almost any combination, but if enabling Dashboards, you should also enable Detectors.  The 'EKS Cluster', 'ECS Cluster' and 'Phone Shop' modules all have APM enabled and are instrumented to emit Traces.
+There are generally no interdependencies between modules, so you can deploy almost any combination, one exception is that if enabling Dashboards, you should also enable Detectors.  The 'EKS Cluster', 'ECS Cluster' and 'Phone Shop' modules all have APM enabled and are instrumented to emit Traces.
 
-The quantities of each EC2 Instance deployed as part of the 'Instances & Proxied Instances' Modules are also controlled here. You can deploy any quantity of most types, but you should always deploy at least 1 Gateway (Instances Module), which gets deployed behind an AWS ALB, and is used by the Instances to send in their metrics to the Splunk IM Platform. When using the Proxied Instances Module, again you must always deploy 1 Proxy Server.
+The quantities of each EC2 Instance deployed as part of the 'Instances & Proxied Instances' Modules are also controlled here. You can deploy any quantity of most types, but you should always deploy at least 1 Gateway (Instances Module), which gets deployed behind an AWS ALB, and is used by the Instances to send in their metrics to the Splunk IM Platform. Multiple Gateway nodes can be deployed to enable testing of lolad balancing etc.
+
+When using the Proxied Instances Module, you must always deploy exactly 1 Proxy Server.
+
+Do not deploy Splunk Enterprise as well as Splunk Cloud, they are an "either/or" - also ensure splunkclouduf.spl has been added to non_public_files folder
 
 ```yaml
 # This file contains all the settings which are unique to each deployment and it
@@ -78,7 +80,7 @@ eks_cluster_enabled         = false
 ecs_cluster_enabled         = false
 instances_enabled           = false
 proxied_instances_enabled   = false
-phone_shop_enabled          = false
+phone_shop_enabled          = false # Currently not supported - requires some updates to funciton again
 lambda_sqs_dynamodb_enabled = false
 dashboards_enabled          = false
 detectors_enabled           = false
@@ -99,6 +101,7 @@ add_itsi_splunk_enterprise = false # Install ITSI on Splunk Enterprise - Should 
 
 proxy_server_count = "1" # only one is required, used as a yes/no parameter
 proxied_apache_web_count = "1"
+proxied_mysql_count = "1"
 proxied_windows_server_count = "1"
 
 ```
@@ -122,6 +125,8 @@ When you run the deployment terraform will prompt you for a Region, however if y
 - 9: ap-southeast-2
 - 10: sa-east-1
 
+Also, ensure the chosen region aligns with your EIP and FQDN settings lower in this config file - they should all be from the same AWS Region
+
 ```yaml
 ## Region Settings ##
 #region = "<REGION>"
@@ -133,7 +138,7 @@ A new VPC is created and is used by all the modules with the exception of the EC
 
 Two sets of subnets will be created, a Private and a Public Subnet, so by default 4 subnets will be created. Each Subnet will be created using a CIDR allocated from the 'vpc_cidr_block', so by default the 1st subnet will use 172.32.0.0/24, the 2nd subnet will use 172.32.1.0/24 etc.
 
-Note: The ECS Cluster Module will create its own unique VPC and Subnets and creates a Fargate deployment.  At present all the variables controlling this are contained within the ECS Cluster modules variables.tf file (modules/aws_ecs/variables.tf).
+Note: The ECS Cluster Module will create its own unique VPC and Subnets and creates a Fargate deployment.
 
 ```yaml
 ## VPC Settings ##
@@ -142,15 +147,20 @@ subnet_count          = "2"
 ```
 
 ##### Auth Settings
+#### BREAKING CHANGE ####
+As of Dec 2025, the authentication method has changed!
 
-Terraform needs to authenticate with AWS in order to create the resources and also access each instance using a Key Pair.  Create a user such as "Terraform" within AWS and attach the default "AdministratorAccess" policy.  Add the access_key details to enable your local terraform to authenticate using this account.  Ensure there is a Key Pair created in each region you intend to use so that terraform can login to each ec2 instance to run commands. Ensure the private_key_path maps to the location of your id_rsa file that is associated with the Key Pair you are using.
+Previously a dedicated AWS account such as "terraform" was used, and the aws_access_key_id and aws_secret_access_key values were stored in terraform.tfvars - However due to policy changes Splunk AWS Accounts can no longer create new users with access keys, so Okta backed SSO Authentication needs to be used instead.
+
+Refeer to https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sso.html#cli-configure-sso-configure for more info
+
+#### SSH Key Pairs
+Terraform needs to authenticate with AWS in order to create the resources and also access each instance using a Key Pair.  Ensure the private_key_path maps to the location of your id_rsa file that is associated with the Key Pair you are using.  The key_name is the name of the Key Pair you are using in your chosen Region.
 
 ```yaml
 ## Auth Settings ##
 key_name              = "<NAME>"
 private_key_path      = "~/.ssh/id_rsa"
-aws_access_key_id     = "<ACCCESS_KEY_ID>>"
-aws_secret_access_key = "<SECRET_ACCESS_KEY>>"
 ```
 
 ##### Misc Instance Types
