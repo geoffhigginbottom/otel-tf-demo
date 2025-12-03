@@ -56,7 +56,8 @@ resource "aws_instance" "eks_admin_server" {
   }
 
   depends_on = [
-    aws_eks_cluster.eks_cluster
+    aws_eks_cluster.eks_cluster,
+    null_resource.map_admin_vm_role
   ]
 
 # remote-exec
