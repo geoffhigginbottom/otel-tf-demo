@@ -45,6 +45,7 @@ lambda_function.py
 index.js
 hec_tokens.json
 mySplunkWebCert.pem
+aws-auth.yaml
 
 **/.vscode/*
 
