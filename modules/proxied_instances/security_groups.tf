@@ -8,8 +8,9 @@ resource "aws_security_group" "proxy_server" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["${var.my_public_ip}/32"]
+    # cidr_blocks = ["${var.my_public_ip}/32"]
     # cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.insecure_sg_rules ? ["0.0.0.0/0"] : ["${var.my_public_ip}/32"]
   }
 
   ## Allow Proxy Traffic
@@ -51,8 +52,9 @@ resource "aws_security_group" "proxied_instances_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["${var.my_public_ip}/32"]
+    # cidr_blocks = ["${var.my_public_ip}/32"]
     # cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.insecure_sg_rules ? ["0.0.0.0/0"] : ["${var.my_public_ip}/32"]
   }
 
   ## Allow RDP - Enable Windows Remote Desktop
@@ -60,8 +62,9 @@ resource "aws_security_group" "proxied_instances_sg" {
     from_port   = 3389
     to_port     = 3389
     protocol    = "tcp"
-    cidr_blocks = ["${var.my_public_ip}/32"]
+    # cidr_blocks = ["${var.my_public_ip}/32"]
     # cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.insecure_sg_rules ? ["0.0.0.0/0"] : ["${var.my_public_ip}/32"]
   }
 
   ## Allow WinRM - Enable Windows Remote Desktop
@@ -69,8 +72,9 @@ resource "aws_security_group" "proxied_instances_sg" {
     from_port   = 5985
     to_port     = 5985
     protocol    = "tcp"
-    cidr_blocks = ["${var.my_public_ip}/32"]
+    # cidr_blocks = ["${var.my_public_ip}/32"]
     # cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.insecure_sg_rules ? ["0.0.0.0/0"] : ["${var.my_public_ip}/32"]
   }
 
   ## Allow all egress traffic

@@ -30,7 +30,11 @@
     type    = bool
     default = false
   }
-
+  variable "insecure_sg_rules" {
+    description = "Set to true to allow access from 0.0.0.0/0, false to restrict to my_public_ip."
+    type        = bool
+    default     = false # Set a default value, e.g., false for more secure
+  }
 
 ### AWS Variables ###
   variable "profile" {

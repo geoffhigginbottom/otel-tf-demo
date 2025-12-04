@@ -27,7 +27,8 @@ resource "aws_security_group" "eks_admin_server" {
     from_port         = 22
     to_port           = 22
     protocol          = "tcp"
-    cidr_blocks       = ["0.0.0.0/0"]
+    # cidr_blocks       = ["0.0.0.0/0"]
+    cidr_blocks = var.insecure_sg_rules ? ["0.0.0.0/0"] : ["${var.my_public_ip}/32"]
   }
 
   egress {
@@ -47,7 +48,8 @@ resource "aws_security_group" "frontend_proxy_sg" {
     from_port         = 80
     to_port           = 80
     protocol          = "tcp"
-    cidr_blocks       = ["0.0.0.0/0"]
+    # cidr_blocks       = ["0.0.0.0/0"]
+    cidr_blocks = var.insecure_sg_rules ? ["0.0.0.0/0"] : ["${var.my_public_ip}/32"]
   }
 
   ingress {

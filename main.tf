@@ -88,7 +88,8 @@ module "eks" {
   eks_splunk_index      = var.eks_splunk_index
   fqdn                  = var.fqdn
   eks_admin_server_eip  = var.eks_admin_server_eip
-  
+  my_public_ip          = "${chomp(data.http.my_public_ip.response_body)}"
+  insecure_sg_rules     = var.insecure_sg_rules
 }
 
 module "eks_fargate" {
@@ -170,6 +171,7 @@ module "proxied_instances" {
   collector_version                = var.collector_version
   proxy_server_count               = var.proxy_server_count
   my_public_ip                     = "${chomp(data.http.my_public_ip.response_body)}"
+  insecure_sg_rules                = var.insecure_sg_rules
 }
 
 module "instances" {
@@ -186,7 +188,6 @@ module "instances" {
   vpc_id                                            = module.vpc.vpc_id
   vpc_cidr_block                                    = var.vpc_cidr_block
   public_subnet_ids                                 = module.vpc.public_subnet_ids
-  
   key_name                                          = var.key_name
   private_key_path                                  = var.private_key_path
   instance_type                                     = var.instance_type
@@ -211,7 +212,6 @@ module "instances" {
   apache_web_count                                  = var.apache_web_count
   ec2_instance_profile_name                         = module.s3.ec2_instance_profile_name
   s3_bucket_name                                    = var.s3_bucket_name
-  
   splunk_cloud_enabled                              = var.splunk_cloud_enabled
   splunk_admin_pwd                                  = var.splunk_admin_pwd
   splunk_ent_count                                  = var.splunk_ent_count
@@ -231,7 +231,7 @@ module "instances" {
   universalforwarder_version                        = var.universalforwarder_version
   universalforwarder_url_windows                    = var.universalforwarder_url_windows
   my_public_ip                                      = "${chomp(data.http.my_public_ip.response_body)}"
-  
+  insecure_sg_rules                                 = var.insecure_sg_rules
   certpath                                          = var.certpath
   passphrase                                        = var.passphrase
   fqdn                                              = var.fqdn
