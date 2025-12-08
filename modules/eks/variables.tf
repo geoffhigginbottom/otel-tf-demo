@@ -100,6 +100,10 @@ variable "eks_admin_server_eip" {
   type    = string
   default = ""
 }
+variable "splunk_private_ip" {
+  type    = string
+  default = ""
+}
 variable "my_public_ip" {
   type = string
   default = ""

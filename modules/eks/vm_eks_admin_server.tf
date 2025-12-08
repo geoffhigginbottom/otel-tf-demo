@@ -112,7 +112,8 @@ resource "aws_instance" "eks_admin_server" {
       # Note the use of fullnameOverride - requried to ensure the atro-shop deployment works correctly
       "TOKEN=${var.eks_access_token}",
       "REALM=${var.realm}",
-      "SPLUNK_ENDPOINT=${var.eks_splunk_endpoint}",
+      "SPLUNK_PRIVATE_IP=${var.splunk_private_ip}",
+      "SPLUNK_ENDPOINT=${lower("http://${var.splunk_private_ip}:8088")}",
       "HEC_TOKEN=${var.hec_otel_k8s_token}",
       "SPLUNK_INDEX=${var.eks_splunk_index}",
       "EKS_CLUSTER_NAME=${var.eks_cluster_name}",
@@ -144,9 +145,15 @@ resource "aws_instance" "eks_admin_server" {
     ## Write env vars to file (used for debugging)
       "echo $REGION > /tmp/region",
       "echo $EKS_CLUSTER_NAME > /tmp/eks_cluster_name",
+      "echo $EKS_ACCESS_TOKEN > /tmp/eks_access_token",
       "echo $TOKEN > /tmp/access_token",
       "echo $REALM > /tmp/realm",
       "echo $ENVIRONMENT > /tmp/environment",
+      "echo $SPLUNK_ENDPOINT > /tmp/splunk_endpoint",
+      "echo $SPLUNK_PRIVATE_IP > /tmp/splunk_private_ip",
+      "echo $HEC_TOKEN > /tmp/hec_token",
+      "echo $SPLUNK_INDEX > /tmp/splunk_index",
+      "echo O11Y_DEPLOYMENT_COMMAND='${local.helm_command}' > /tmp/o11y_deployment_command",
 
     ## Configure motd
       "sudo curl -s https://raw.githubusercontent.com/signalfx/observability-workshop/master/cloud-init/motd -o /etc/motd",

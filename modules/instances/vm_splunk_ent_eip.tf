@@ -43,3 +43,13 @@ output "splunk_ent_url_hec" {
     "8088",
   )
 }
+
+output "splunk_ent_url_hec_local" {
+  value =  formatlist(
+    "%s%s:%s", 
+    "http://",
+    aws_instance.splunk_ent.*.private_ip,
+    # var.fqdn,
+    "8088",
+  )
+}
