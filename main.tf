@@ -90,6 +90,8 @@ module "eks" {
   eks_admin_server_eip  = var.eks_admin_server_eip
   my_public_ip          = "${chomp(data.http.my_public_ip.response_body)}"
   insecure_sg_rules     = var.insecure_sg_rules
+  splunk_ent_count      = var.splunk_ent_count
+  instances_enabled     = var.instances_enabled
 }
 
 module "eks_fargate" {

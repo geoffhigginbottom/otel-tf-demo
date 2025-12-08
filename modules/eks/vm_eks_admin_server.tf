@@ -1,3 +1,15 @@
+locals {
+  use_enterprise = var.splunk_ent_count == 1 && var.instances_enabled == true
+
+  helm_command_enterprise = "helm install --set cloudProvider='aws' --set distribution='eks' --set fullnameOverride='splunk-otel-collector' --set splunkObservability.accessToken=$EKS_ACCESS_TOKEN --set clusterName=$EKS_CLUSTER_NAME --set splunkObservability.realm=$REALM --set gateway.enabled='false' --set splunkObservability.profilingEnabled='true' --set splunkPlatform.endpoint=$SPLUNK_ENDPOINT --set splunkPlatform.token=$HEC_TOKEN --set splunkPlatform.index=$SPLUNK_INDEX --set environment=$ENVIRONMENT --set operatorcrds.install=true --set operator.enabled=true --set agent.discovery.enabled=true --generate-name splunk-otel-collector-chart/splunk-otel-collector"
+
+  helm_command_basic = "helm install --set cloudProvider='aws' --set distribution='eks' --set fullnameOverride='splunk-otel-collector' --set splunkObservability.accessToken=$EKS_ACCESS_TOKEN --set clusterName=$EKS_CLUSTER_NAME --set splunkObservability.realm=$REALM --set gateway.enabled='false' --set splunkObservability.profilingEnabled='true' --set environment=$ENVIRONMENT --set operatorcrds.install=true --set operator.enabled=true --set agent.discovery.enabled=true --generate-name splunk-otel-collector-chart/splunk-otel-collector"
+
+  # Final chosen command
+  helm_command = local.use_enterprise ? local.helm_command_enterprise : local.helm_command_basic
+}
+
+
 resource "aws_instance" "eks_admin_server" {
   ami                       = var.ami
   instance_type             = var.instance_type
@@ -95,7 +107,7 @@ resource "aws_instance" "eks_admin_server" {
 
     ## Install jq
       "sudo apt-get install -y jq",
-      
+
     ## Install K8S Integration using Splunk OTel Collector Helm Chart
       # Note the use of fullnameOverride - requried to ensure the atro-shop deployment works correctly
       "TOKEN=${var.eks_access_token}",
@@ -108,7 +120,8 @@ resource "aws_instance" "eks_admin_server" {
       "ENVIRONMENT=${var.environment}",
       "helm repo add splunk-otel-collector-chart https://signalfx.github.io/splunk-otel-collector-chart",
       "helm repo update",
-      "helm install --set cloudProvider='aws' --set distribution='eks' --set fullnameOverride='splunk-otel-collector' --set splunkObservability.accessToken=$EKS_ACCESS_TOKEN --set clusterName=$EKS_CLUSTER_NAME --set splunkObservability.realm=$REALM --set gateway.enabled='false' --set splunkObservability.profilingEnabled='true' --set splunkPlatform.endpoint=$SPLUNK_ENDPOINT --set splunkPlatform.token=$HEC_TOKEN --set splunkPlatform.index=$SPLUNK_INDEX --set environment=$ENVIRONMENT --set operatorcrds.install=true --set operator.enabled=true --set agent.discovery.enabled=true --generate-name splunk-otel-collector-chart/splunk-otel-collector",
+      # "helm install --set cloudProvider='aws' --set distribution='eks' --set fullnameOverride='splunk-otel-collector' --set splunkObservability.accessToken=$EKS_ACCESS_TOKEN --set clusterName=$EKS_CLUSTER_NAME --set splunkObservability.realm=$REALM --set gateway.enabled='false' --set splunkObservability.profilingEnabled='true' --set splunkPlatform.endpoint=$SPLUNK_ENDPOINT --set splunkPlatform.token=$HEC_TOKEN --set splunkPlatform.index=$SPLUNK_INDEX --set environment=$ENVIRONMENT --set operatorcrds.install=true --set operator.enabled=true --set agent.discovery.enabled=true --generate-name splunk-otel-collector-chart/splunk-otel-collector",
+      "${local.helm_command}", # See locals block at top of file for command selection logic
 
     ## Install kubectl
       "curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\"",
@@ -138,25 +151,6 @@ resource "aws_instance" "eks_admin_server" {
     ## Configure motd
       "sudo curl -s https://raw.githubusercontent.com/signalfx/observability-workshop/master/cloud-init/motd -o /etc/motd",
       "sudo chmod -x /etc/update-motd.d/*",
-
-    ### Removed as now using Splunk Otel Collector Helm Chart and not OTel Contrib
-     ## Deploy OTel Contrib and Prep for Astro Shop Deployment - based on https://github.com/splunk/observability-workshop/tree/main/workshop/otel-contrib-splunk-demo # Disabled as now using Splunk Otel and not contrib
-      # "TOKEN=${var.eks_access_token}",
-      # "REALM=${var.realm}",
-
-      # "git clone https://github.com/splunk/observability-workshop",
-      # "helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts",
-      # "curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\"",
-      
-      # "chmod +x ./kubectl",
-      # "sudo mv ./kubectl /usr/local/bin/",
-      # "sudo mv /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/k8s_manifests/configmap-and-secrets.yaml /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/k8s_manifests/configmap-and-secrets.original",
-      # "sudo mv /tmp/configmap-and-secrets.yaml /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/k8s_manifests/configmap-and-secrets.yaml",
-      # "kubectl apply -f /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/k8s_manifests/",
-      
-      # "mv /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/opentelemetry-demo-values.yaml /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/opentelemetry-demo-values.yaml.original",
-      # "cp /tmp/opentelemetry-demo-values.yaml /home/ubuntu/observability-workshop/workshop/otel-contrib-splunk-demo/opentelemetry-demo-values.yaml",
-
     ]
   }
 

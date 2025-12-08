@@ -89,6 +89,9 @@ variable "eks_splunk_index" {
   type    = string
   default = ""
 }
+variable "splunk_ent_count" {
+  default = {}
+}
 variable "fqdn" {
   type    = string
   default = ""
@@ -105,4 +108,7 @@ variable "insecure_sg_rules" {
   description = "Set to true to allow access from 0.0.0.0/0, false to restrict to my_public_ip."
   type        = bool
   default     = false # Set a default value, e.g., false for more secure
+}
+variable "instances_enabled" {
+  type = bool
 }
