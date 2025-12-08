@@ -83,13 +83,15 @@ module "eks" {
   private_key_path      = var.private_key_path
   eks_cluster_name      = join("-", [var.environment, "eks-cluster"])
   eks_access_token      = var.eks_access_token
-  eks_splunk_endpoint   = var.eks_splunk_endpoint
   hec_otel_k8s_token    = var.splunk_ent_count > 0 ? try(module.instances[0].hec_otel_k8s_token, "faketoken") : "faketoken"
   eks_splunk_index      = var.eks_splunk_index
   fqdn                  = var.fqdn
   eks_admin_server_eip  = var.eks_admin_server_eip
+  splunk_private_ip     = var.splunk_private_ip
   my_public_ip          = "${chomp(data.http.my_public_ip.response_body)}"
   insecure_sg_rules     = var.insecure_sg_rules
+  splunk_ent_count      = var.splunk_ent_count
+  instances_enabled     = var.instances_enabled
 }
 
 module "eks_fargate" {
@@ -272,6 +274,7 @@ output "lo_connect_password" {value = var.instances_enabled && var.splunk_ent_co
 output "splunk_url" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url : null}
 output "splunk_url_fqdn" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url_fqdn : null}
 output "splunk_ent_url_hec" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url_hec : null}
+output "splunk_ent_url_hec_local" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url_hec_local : null}
 output "splunk_ent_details" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_details : null}
 
 output "hec_metrics_token" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_metrics_token : null}

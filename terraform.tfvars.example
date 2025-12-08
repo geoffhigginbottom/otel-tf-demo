@@ -120,7 +120,7 @@ mysql_instance_type = "t3.xlarge"
 
 ### EKS Variables ###
 eks_access_token        = "<ACCESS_TOKEN>"
-eks_splunk_endpoint     = "http://<FQDN>:8088" #The FQDN linked to the Splunk Ent EIP in your chose region
+# eks_splunk_endpoint     = "http://172.32.2.10:8088" # Dynamically set in vm_eks_admin_server.tf so no longer set here and should be deleted
 eks_admin_server_eip    = "<nn.nn.nn.nn>" #ensure this aligns with region setting above
 eks_splunk_index        = "k8s-logs"
 eks_instance_type       = "t3.medium" # x86
