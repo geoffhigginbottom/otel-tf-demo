@@ -60,8 +60,13 @@ variable "ec2_instance_profile_name" {
   type = string
 }
 variable "s3_bucket_name" {
-    default = []
-  }
+  default = []
+}
+variable "insecure_sg_rules" {
+  description = "Set to true to allow access from 0.0.0.0/0, false to restrict to my_public_ip."
+  type        = bool
+  default     = false # Set a default value, e.g., false for more secure
+}
 
 ### SignalFX Variables ###
 variable "access_token" {
