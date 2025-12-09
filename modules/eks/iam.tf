@@ -28,6 +28,8 @@ resource "aws_iam_role_policy_attachment" "eks_cluster-AmazonEKSVPCResourceContr
   role       = aws_iam_role.eks_cluster.name
 }
 
+
+
 resource "aws_iam_role" "eks_node" {
   name = join("-",[var.environment,"node"])
 
@@ -45,10 +47,28 @@ resource "aws_iam_role" "eks_node" {
   })
 }
 
+resource "aws_iam_role_policy_attachment" "eks_node-AmazonEKSWorkerNodePolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+  role       = aws_iam_role.eks_node.name
+}
 
-##### testting #####
+resource "aws_iam_role_policy_attachment" "eks_node-AmazonEKS_CNI_Policy" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+  role       = aws_iam_role.eks_node.name
+}
 
-# EC2 IAM role for EKS client
+resource "aws_iam_role_policy_attachment" "eks_node-AmazonEC2ContainerRegistryReadOnly" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  role       = aws_iam_role.eks_node.name
+}
+
+resource "aws_iam_role_policy_attachment" "eks_node-AmazonEC2ReadOnlyAccess" {
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
+  role       = aws_iam_role.eks_node.name
+}
+
+
+# EC2 IAM role for EKS Admin Server
 resource "aws_iam_role" "eks_client_role" {
   name = "eks-client-role"
 
@@ -64,7 +84,7 @@ resource "aws_iam_role" "eks_client_role" {
   })
 }
 
-# Inline policy giving minimal AWS API access for eksctl/kubectl
+# Inline policy giving AWS API access for eksctl/kubectl for EKS Admin Server
 resource "aws_iam_policy" "eks_client_full_access" {
   name        = "eks-client-full-access"
   description = "Allows Admin VM to run eksctl/kubectl and query EC2/AutoScaling resources"
@@ -141,7 +161,7 @@ resource "aws_iam_policy" "eks_client_full_access" {
   })
 }
 
-# Attach to the Admin VM role
+# Attach policy to the Admin VM role
 resource "aws_iam_policy_attachment" "eks_client_full_access_attach" {
   name       = "eks-client-full-access-attach"
   roles      = [aws_iam_role.eks_client_role.name]
@@ -152,30 +172,4 @@ resource "aws_iam_policy_attachment" "eks_client_full_access_attach" {
 resource "aws_iam_instance_profile" "eks_client_profile" {
   name = "eks-client-profile"
   role = aws_iam_role.eks_client_role.name
-}
-
-
-##### testting #####
-
-
-
-
-resource "aws_iam_role_policy_attachment" "eks_node-AmazonEKSWorkerNodePolicy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-  role       = aws_iam_role.eks_node.name
-}
-
-resource "aws_iam_role_policy_attachment" "eks_node-AmazonEKS_CNI_Policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-  role       = aws_iam_role.eks_node.name
-}
-
-resource "aws_iam_role_policy_attachment" "eks_node-AmazonEC2ContainerRegistryReadOnly" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  role       = aws_iam_role.eks_node.name
-}
-
-resource "aws_iam_role_policy_attachment" "eks_node-AmazonEC2ReadOnlyAccess" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess"
-  role       = aws_iam_role.eks_node.name
 }
