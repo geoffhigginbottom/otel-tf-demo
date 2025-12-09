@@ -4,10 +4,7 @@ resource "aws_instance" "sqs_test_server" {
   subnet_id                 = element(var.public_subnet_ids, 0)
   key_name                  = var.key_name
   vpc_security_group_ids    = [aws_security_group.lambda_sqs_lambda_sg.id]
-
-  tags = {
-    Name  = "sqs_test"
-  }
+  iam_instance_profile      = aws_iam_instance_profile.ec2_sqs_instance_profile.name
 
   root_block_device {
     volume_size = 16
@@ -20,6 +17,12 @@ resource "aws_instance" "sqs_test_server" {
       splunkit_environment_type     = "non-prd"
       splunkit_data_classification  = "private"
     }
+  }
+
+  tags = {
+    Name                          = "${var.environment}-sqs-test"
+    splunkit_environment_type     = "non-prd"
+    splunkit_data_classification  = "private"
   }
 
   provisioner "file" {
@@ -50,7 +53,7 @@ resource "aws_instance" "sqs_test_server" {
  
     ## Install Otel Agent
       "sudo curl -sSL https://dl.signalfx.com/splunk-otel-collector.sh > /tmp/splunk-otel-collector.sh",
-      "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --collector-version ${var.collector_version}",
+      "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --collector-version ${var.collector_version} --without-instrumentation",
 
     ## Setup testing env
       "sudo apt install python3 -y",
@@ -69,20 +72,21 @@ resource "aws_instance" "sqs_test_server" {
       "sudo curl https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip -o /tmp/awscliv2.zip",
       "sudo apt install unzip",
       "sudo unzip /tmp/awscliv2.zip",
-      "sudo /tmp/aws/install",
+      "sudo ~/aws/install",
       "sudo chmod +x /tmp/generate_aws_config.sh",
-      "AWS_ACCESS_KEY_ID=${var.aws_access_key_id}",
-      "AWS_SECRET_ACCESS_KEY=${var.aws_secret_access_key}",
+      # "AWS_ACCESS_KEY_ID=${var.aws_access_key_id}",
+      # "AWS_SECRET_ACCESS_KEY=${var.aws_secret_access_key}",
       "REGION=${var.region}",
-      "/tmp/generate_aws_config.sh $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY $REGION",
+      # "/tmp/generate_aws_config.sh $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY $REGION",
+      "/tmp/generate_aws_config.sh $REGION",
 
     ## Write env vars to file (used for debugging)
-      "echo $AWS_ACCESS_KEY_ID > /tmp/aws_access_key_id",
-      "echo $AWS_SECRET_ACCESS_KEY > /tmp/aws_secret_access_key",
-      "echo $REGION > /tmp/region",
+      # "echo $AWS_ACCESS_KEY_ID > /tmp/aws_access_key_id",
+      # "echo $AWS_SECRET_ACCESS_KEY > /tmp/aws_secret_access_key",
+      # "echo $REGION > /tmp/region",
 
     ## Set permissions on home folder
-      "sudo chown -R ubuntu:ubuntu /home/ubuntu",
+      # "sudo chown -R ubuntu:ubuntu /home/ubuntu",
 
     ## Configure motd
       "sudo curl -s https://raw.githubusercontent.com/signalfx/observability-workshop/master/cloud-init/motd -o /etc/motd",
