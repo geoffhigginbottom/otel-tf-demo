@@ -14,8 +14,8 @@ resource "aws_security_group" "lambda_sqs_lambda_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["${var.my_public_ip}/32"]
-    # cidr_blocks = ["0.0.0.0/0"]
+    # cidr_blocks = ["${var.my_public_ip}/32"]
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {

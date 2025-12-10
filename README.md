@@ -115,15 +115,21 @@ This section details the parameters required by AWS such as Region (see below fo
 When you run the deployment terraform will prompt you for a Region, however if you enable the setting here, and populate it with a numerical value representing your preferred AWS Region, it will save you having to enter a value on each run. The settings for this are controlled via variables.tf, but the valid options are:
 
 - 1: eu-west-1
-- 2: eu-west-3
-- 3: eu-central-1
-- 4: us-east-1
-- 5: us-east-2
-- 6: us-west-1
-- 7: us-west-2
-- 8: ap-southeast-1
-- 9: ap-southeast-2
-- 10: sa-east-1
+- 2: eu-west-2
+- 3: eu-west-3
+- 4: eu-central-1
+- 5: us-east-1
+- 6: us-east-2
+- 7: us-west-1
+- 8: us-west-2
+- 9: ap-southeast-1
+- 10: ap-southeast-2
+- 11: sa-east-1
+- 12: ap-south-1
+- 13: ap-northeast-1
+- 14: ap-northeast-2
+- 15: ca-central-1
+- 16: eu-north-1
 
 Also, ensure the chosen region aligns with your EIP and FQDN settings lower in this config file - they should all be from the same AWS Region
 
