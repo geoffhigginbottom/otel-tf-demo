@@ -1,39 +1,3 @@
-# resource "aws_eks_node_group" "eks_nodes" {
-#   cluster_name    = aws_eks_cluster.eks_cluster.name
-#   node_group_name = join("_",[var.environment,"eks_node_group"])
-#   node_role_arn   = aws_iam_role.eks_node.arn
-#   subnet_ids      = var.public_subnet_ids
-#   instance_types  = ["${var.eks_instance_type}"]
-#   disk_size       = 100 # testing this new setting - default is 20
-
-#   scaling_config {
-#     desired_size = 4
-#     max_size     = 6
-#     min_size     = 1
-#   }
-  
-#   ami_type = "${var.eks_ami_type}"
-
-#   depends_on = [
-#     aws_iam_role_policy_attachment.eks_node-AmazonEKSWorkerNodePolicy,
-#     aws_iam_role_policy_attachment.eks_node-AmazonEKS_CNI_Policy,
-#     aws_iam_role_policy_attachment.eks_node-AmazonEC2ContainerRegistryReadOnly,
-#   ]
-# }
-
-# output "aws_eks_node_group_name" {
-#   value = aws_eks_node_group.eks_nodes.node_group_name
-# }
-
-
-
-
-### Due to new SCPs we need to use Launch Templates for EKS Node Groups so we can add tags and attach a custom SG as we can no longer use
-### kubectl patch commands. The custom SG is required to enable the loadbalancer to communicate with the worker nodes for health checks etc.
-
-# -------------------------
-# Launch Template for Node Group
-# -------------------------
 resource "aws_launch_template" "eks_nodes" {
   name_prefix   = "${var.environment}-eks-"
   instance_type = var.eks_instance_type
@@ -51,6 +15,13 @@ resource "aws_launch_template" "eks_nodes" {
       encrypted             = true
       delete_on_termination = true
     }
+  }
+
+  # Added this block to configure instance metadata options
+  metadata_options {
+    http_tokens                 = "required"              # Enforce IMDSv2 for security
+    http_endpoint               = "enabled"               # Ensure IMDS endpoint is enabled
+    http_put_response_hop_limit = 2                       # Set hop limit to 2 for pods to access IMDS
   }
 
   tag_specifications {
@@ -74,9 +45,6 @@ resource "aws_launch_template" "eks_nodes" {
   }
 }
 
-# -------------------------
-# EKS Node Group
-# -------------------------
 resource "aws_eks_node_group" "eks_nodes" {
   cluster_name    = aws_eks_cluster.eks_cluster.name
   node_group_name = "${var.environment}_eks_node_group"
@@ -84,7 +52,7 @@ resource "aws_eks_node_group" "eks_nodes" {
   subnet_ids      = var.public_subnet_ids
 
   scaling_config {
-    desired_size = 2
+    desired_size = 3
     max_size     = 6
     min_size     = 1
   }
@@ -103,9 +71,6 @@ resource "aws_eks_node_group" "eks_nodes" {
   ]
 }
 
-# -------------------------
-# Outputs
-# -------------------------
 output "aws_eks_node_group_name" {
   value = aws_eks_node_group.eks_nodes.node_group_name
 }

@@ -67,6 +67,13 @@ resource "aws_iam_role_policy_attachment" "eks_node-AmazonEC2ReadOnlyAccess" {
   role       = aws_iam_role.eks_node.name
 }
 
+resource "aws_iam_role_policy_attachment" "eks_node-AmazonEBSCSIDriverPolicy" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  role       = aws_iam_role.eks_node.name
+}
+
+
+
 
 # EC2 IAM role for EKS Admin Server
 resource "aws_iam_role" "eks_client_role" {
@@ -173,3 +180,57 @@ resource "aws_iam_instance_profile" "eks_client_profile" {
   name = "eks-client-profile"
   role = aws_iam_role.eks_client_role.name
 }
+
+
+
+
+
+
+# Fetch the TLS certificate for the EKS OIDC endpoint (needed for the provider)
+data "tls_certificate" "eks" {
+  url = aws_eks_cluster.eks_cluster.identity[0].oidc[0].issuer
+}
+
+# Create the IAM OIDC provider for this EKS cluster
+resource "aws_iam_openid_connect_provider" "eks" {
+  url = aws_eks_cluster.eks_cluster.identity[0].oidc[0].issuer
+
+  client_id_list = [
+    "sts.amazonaws.com"
+  ]
+
+  thumbprint_list = [
+    data.tls_certificate.eks.certificates[0].sha1_fingerprint
+  ]
+}
+
+# Create the IRSA role for the EBS CSI driver
+resource "aws_iam_role" "ebs_csi_irsa" {
+  name = "ebs-csi-irsa-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.eks.arn
+        },
+        Action = "sts:AssumeRoleWithWebIdentity",
+        Condition = {
+          StringEquals = {
+            # Use the resource, not the old data reference
+            "${replace(aws_iam_openid_connect_provider.eks.url, "https://", "")}:sub" = "system:serviceaccount:kube-system:ebs-csi-controller-sa"
+          }
+        }
+      }
+    ]
+  })
+}
+
+# Attach the managed EBS CSI policy to the IRSA role
+resource "aws_iam_role_policy_attachment" "ebs_csi_attach" {
+  role       = aws_iam_role.ebs_csi_irsa.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+}
+

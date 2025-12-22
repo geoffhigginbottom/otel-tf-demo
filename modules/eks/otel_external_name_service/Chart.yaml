@@ -1,5 +1,0 @@
-apiVersion: v2
-name: otel-externalname
-description: "Create ExternalName service for OTEL collector - used by astro-shop running in a dfferent namespace allowing OTEL data to be sent to central collector in default namespace"
-version: 0.1.0
-appVersion: "1.0"

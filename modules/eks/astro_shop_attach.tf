@@ -14,6 +14,6 @@ resource "null_resource" "astro_shop_attach_nodes" {
   depends_on = [
     aws_instance.eks_admin_server,
     aws_eip_association.eks_admin_server_eip_assoc,
-    null_resource.astro_shop_helm_install,
+    null_resource.astro_shop_deploy,
   ]
 }

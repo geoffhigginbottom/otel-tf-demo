@@ -14,6 +14,10 @@ data:
       groups:
         - system:bootstrappers
         - system:nodes
+    - rolearn: ${aws_iam_role.eks_client_role.arn}
+      username: ${aws_iam_role.eks_client_role.name}
+      groups:
+        - system:masters
 CONFIGMAPAWSAUTH
 
   kubeconfig = <<KUBECONFIG
