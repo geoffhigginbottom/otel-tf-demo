@@ -1,8 +1,9 @@
-resource "null_resource" "astro_shop_helm_install" {
+
+resource "null_resource" "astro_shop_deploy" {
   provisioner "local-exec" {
     command = <<EOT
       ssh -o StrictHostKeyChecking=no -i ${var.private_key_path} ubuntu@${self.triggers.admin_ip} \
-      'helm install astro-shop open-telemetry/opentelemetry-demo --namespace astro-shop --values /home/ubuntu/astro_shop_values.yaml'
+      'kubectl apply -f /home/ubuntu/splunk-astronomy-shop.yaml'
     EOT
   }
   
@@ -10,7 +11,7 @@ resource "null_resource" "astro_shop_helm_install" {
     when = destroy
     command = <<EOT
       ssh -o StrictHostKeyChecking=no -i ${self.triggers.private_key_path} ubuntu@${self.triggers.admin_ip} \
-      'helm delete astro-shop --namespace astro-shop'
+      'kubectl delete -f /home/ubuntu/splunk-astronomy-shop.yaml'
     EOT
   }
 

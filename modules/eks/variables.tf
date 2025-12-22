@@ -77,6 +77,9 @@ variable "eks_access_token" {
   type    = string
   default = ""
 }
+variable "rum_access_token" {
+  default = {}
+}
 variable "eks_splunk_endpoint" {
   type    = string
   default = ""

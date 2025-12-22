@@ -18,5 +18,5 @@ variable "vpc_cidr_block" {
   default = []
 }
 variable "subnet_count" {
-  default = {}
+  type    = number
 }

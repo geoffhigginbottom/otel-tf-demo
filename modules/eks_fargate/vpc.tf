@@ -57,7 +57,7 @@ resource "aws_internet_gateway" "eks_fargate_igw" {
 
 resource "aws_eip" "eks_fargate_nat" {
   # vpc              = true
-  domain           = "vpc"
+  # domain     = "vpc" # No longer needed in newer versions of the AWS provider
   count            = length(var.eks_fargate_private_cidr)
   public_ipv4_pool = "amazon"
 }

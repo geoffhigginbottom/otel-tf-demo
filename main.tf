@@ -71,6 +71,7 @@ module "eks" {
   region                = lookup(var.aws_region, var.region)
   environment           = var.environment
   access_token          = var.access_token
+  rum_access_token      = var.rum_access_token
   realm                 = var.realm
   vpc_id                = module.vpc.vpc_id
   vpc_cidr_block        = var.vpc_cidr_block

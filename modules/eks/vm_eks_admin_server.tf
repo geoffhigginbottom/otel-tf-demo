@@ -1,14 +1,49 @@
+# Note the use of fullnameOverride - requried to ensure the atro-shop deployment works correctly
 locals {
   use_enterprise = var.splunk_ent_count == 1 && var.instances_enabled == true
 
-  helm_command_enterprise = "helm install --set cloudProvider='aws' --set distribution='eks' --set fullnameOverride='splunk-otel-collector' --set splunkObservability.accessToken=$EKS_ACCESS_TOKEN --set clusterName=$EKS_CLUSTER_NAME --set splunkObservability.realm=$REALM --set gateway.enabled='false' --set splunkObservability.profilingEnabled='true' --set splunkPlatform.endpoint=$SPLUNK_ENDPOINT --set splunkPlatform.token=$HEC_TOKEN --set splunkPlatform.index=$SPLUNK_INDEX --set environment=$ENVIRONMENT --set operatorcrds.install=true --set operator.enabled=true --set agent.discovery.enabled=true --generate-name splunk-otel-collector-chart/splunk-otel-collector"
+  helm_command_enterprise = join(" ", [
+    "helm install",
+    "--set cloudProvider='aws'",
+    "--set distribution='eks'",
+    "--set fullnameOverride='splunk-otel-collector'",
+    "--set splunkObservability.accessToken='${var.eks_access_token}'",
+    "--set clusterName='${var.eks_cluster_name}'",
+    "--set splunkObservability.realm='${var.realm}'",
+    "--set gateway.enabled='false'",
+    "--set splunkObservability.profilingEnabled='true'",
+    "--set splunkObservability.infrastructureMonitoringEventsEnabled=true",
+    # "--set logsEngine=otel",
+    "--set splunkObservability.secureAppEnabled=true",
+    "--set splunkPlatform.endpoint='http://${var.splunk_private_ip}:8088'",
+    "--set splunkPlatform.token='${var.hec_otel_k8s_token}'",
+    "--set splunkPlatform.index='${var.eks_splunk_index}'",
+    "--set environment='${var.environment}'",
+    "--generate-name splunk-otel-collector-chart/splunk-otel-collector",
+    "-f splunk-astronomy-shop-values.yaml"
+  ])
 
-  helm_command_basic = "helm install --set cloudProvider='aws' --set distribution='eks' --set fullnameOverride='splunk-otel-collector' --set splunkObservability.accessToken=$EKS_ACCESS_TOKEN --set clusterName=$EKS_CLUSTER_NAME --set splunkObservability.realm=$REALM --set gateway.enabled='false' --set splunkObservability.profilingEnabled='true' --set environment=$ENVIRONMENT --set operatorcrds.install=true --set operator.enabled=true --set agent.discovery.enabled=true --generate-name splunk-otel-collector-chart/splunk-otel-collector"
+  helm_command_basic = join(" ", [
+    "helm install",
+    "--set cloudProvider='aws'",
+    "--set distribution='eks'",
+    "--set fullnameOverride='splunk-otel-collector'",
+    "--set splunkObservability.accessToken='${var.eks_access_token}'",
+    "--set clusterName='${var.eks_cluster_name}'",
+    "--set splunkObservability.realm='${var.realm}'",
+    "--set gateway.enabled='false'",
+    "--set splunkObservability.profilingEnabled='true'",
+    "--set splunkObservability.infrastructureMonitoringEventsEnabled=true",
+    # "--set logsEngine=otel",
+    "--set splunkObservability.secureAppEnabled=true",
+    "--set environment='${var.environment}'",
+    "--generate-name splunk-otel-collector-chart/splunk-otel-collector",
+    "-f splunk-astronomy-shop-values.yaml"
+  ])
 
-  # Final chosen command
+  # Final command
   helm_command = local.use_enterprise ? local.helm_command_enterprise : local.helm_command_basic
 }
-
 
 resource "aws_instance" "eks_admin_server" {
   ami                       = var.ami
@@ -39,32 +74,39 @@ resource "aws_instance" "eks_admin_server" {
 
   provisioner "file" {
     source      = "${path.module}/scripts/install_eks_tools.sh"
-    destination = "/tmp/install_eks_tools.sh"
+    destination = "/home/ubuntu/install_eks_tools.sh"
   }
 
   provisioner "file" {
     source      = "${path.module}/scripts/astro_shop_attach_nodes.sh"
-    destination = "/tmp/astro_shop_attach_nodes.sh"
+    destination = "/home/ubuntu/astro_shop_attach_nodes.sh"
   }
 
   provisioner "file" {
-    content     = local.astro_shop_values
-    destination = "/tmp/astro_shop_values.yaml"
+    content = templatefile("${path.module}/config_files/secrets.yaml.tpl", {
+      hec_otel_k8s_token = var.hec_otel_k8s_token
+      splunk_private_ip  = var.splunk_private_ip
+      eks_access_token   = var.eks_access_token
+      rum_token          = var.rum_access_token
+      hec_token          = var.hec_otel_k8s_token
+      hec_url            = "http://${var.splunk_private_ip}:8088/services/collector/event"
+      aws_lb_dns_name    = aws_lb.frontend_proxy_lb.dns_name
+      environment        = var.environment
+    })
+    destination = "/home/ubuntu/secrets.yaml"
+  }
+
+    provisioner "file" {
+    source      = "${path.module}/config_files/TEST-splunk-astronomy-shop-1.4.0-test.yaml"
+    destination = "/home/ubuntu/splunk-astronomy-shop.yaml"
   }
 
   provisioner "file" {
-    source      = "${path.module}/otel_external_name_service/Chart.yaml"
-    destination = "/tmp/otel_external_name_Chart.yaml"
-  }
-
-  provisioner "file" {
-    source      = "${path.module}/otel_external_name_service/values.yaml"
-    destination = "/tmp/otel_external_name_values.yaml"
-  }
-
-  provisioner "file" {
-    source      = "${path.module}/otel_external_name_service/templates/otel_external_name_service.yaml"
-    destination = "/tmp/otel_external_name_service.yaml"
+    content = templatefile("${path.module}/config_files/splunk-astronomy-shop-1.4.0-values.yaml.tpl", {
+      eks_access_token   = var.eks_access_token
+      realm              = var.realm
+    })
+    destination = "/home/ubuntu/splunk-astronomy-shop-values.yaml"
   }
 
   depends_on = [
@@ -94,8 +136,8 @@ resource "aws_instance" "eks_admin_server" {
       "sudo ~/aws/install",
 
     ## Install EKS Tools
-      "sudo chmod +x /tmp/install_eks_tools.sh",
-      "/tmp/install_eks_tools.sh",
+      "sudo chmod +x /home/ubuntu/install_eks_tools.sh",
+      "/home/ubuntu/install_eks_tools.sh",
 
     ## Setup eksutils
       "AWS_DEFAULT_REGION=${var.region}",
@@ -108,52 +150,34 @@ resource "aws_instance" "eks_admin_server" {
     ## Install jq
       "sudo apt-get install -y jq",
 
-    ## Install K8S Integration using Splunk OTel Collector Helm Chart
-      # Note the use of fullnameOverride - requried to ensure the atro-shop deployment works correctly
-      "TOKEN=${var.eks_access_token}",
-      "REALM=${var.realm}",
-      "SPLUNK_PRIVATE_IP=${var.splunk_private_ip}",
-      "SPLUNK_ENDPOINT=${lower("http://${var.splunk_private_ip}:8088")}",
-      "HEC_TOKEN=${var.hec_otel_k8s_token}",
-      "SPLUNK_INDEX=${var.eks_splunk_index}",
-      "EKS_CLUSTER_NAME=${var.eks_cluster_name}",
-      "EKS_ACCESS_TOKEN=${var.eks_access_token}",
-      "ENVIRONMENT=${var.environment}",
-      "helm repo add splunk-otel-collector-chart https://signalfx.github.io/splunk-otel-collector-chart",
-      "helm repo update",
-      # "helm install --set cloudProvider='aws' --set distribution='eks' --set fullnameOverride='splunk-otel-collector' --set splunkObservability.accessToken=$EKS_ACCESS_TOKEN --set clusterName=$EKS_CLUSTER_NAME --set splunkObservability.realm=$REALM --set gateway.enabled='false' --set splunkObservability.profilingEnabled='true' --set splunkPlatform.endpoint=$SPLUNK_ENDPOINT --set splunkPlatform.token=$HEC_TOKEN --set splunkPlatform.index=$SPLUNK_INDEX --set environment=$ENVIRONMENT --set operatorcrds.install=true --set operator.enabled=true --set agent.discovery.enabled=true --generate-name splunk-otel-collector-chart/splunk-otel-collector",
-      "${local.helm_command}", # See locals block at top of file for command selection logic
 
     ## Install kubectl
       "curl -LO \"https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl\"",
       "chmod +x ./kubectl",
       "sudo mv ./kubectl /usr/local/bin/",
 
-    ## Prep for Astro Shop Deployment # Uses default Splunk Otel Collector Helm Chart
-      "kubectl create namespace astro-shop",
-      "sudo mv /tmp/astro_shop_values.yaml /home/ubuntu/astro_shop_values.yaml",
-      "helm repo add open-telemetry https://open-telemetry.github.io/opentelemetry-helm-charts",
-      "sudo mv /tmp/astro_shop_attach_nodes.sh /home/ubuntu/astro_shop_attach_nodes.sh",
+    ## Prep for Astro Shop Deployment
       "sudo chmod +x /home/ubuntu/astro_shop_attach_nodes.sh",
-
-      "sudo mkdir -p /home/ubuntu/helm_otel_external_name",
-      "sudo mkdir -p /home/ubuntu/helm_otel_external_name/templates",
-      "sudo mv /tmp/otel_external_name_Chart.yaml /home/ubuntu/helm_otel_external_name/Chart.yaml",
-      "sudo mv /tmp/otel_external_name_values.yaml /home/ubuntu/helm_otel_external_name/values.yaml",
-      "sudo mv /tmp/otel_external_name_service.yaml /home/ubuntu/helm_otel_external_name/templates/otel_external_name_service.yaml",
+      "kubectl apply -f secrets.yaml",
+      "mkdir -p /home/ubuntu/k8s-manifests",
 
     ## Write env vars to file (used for debugging)
-      "echo $REGION > /tmp/region",
-      "echo $EKS_CLUSTER_NAME > /tmp/eks_cluster_name",
-      "echo $EKS_ACCESS_TOKEN > /tmp/eks_access_token",
-      "echo $TOKEN > /tmp/access_token",
-      "echo $REALM > /tmp/realm",
-      "echo $ENVIRONMENT > /tmp/environment",
-      "echo $SPLUNK_ENDPOINT > /tmp/splunk_endpoint",
-      "echo $SPLUNK_PRIVATE_IP > /tmp/splunk_private_ip",
-      "echo $HEC_TOKEN > /tmp/hec_token",
-      "echo $SPLUNK_INDEX > /tmp/splunk_index",
-      "echo O11Y_DEPLOYMENT_COMMAND='${local.helm_command}' > /tmp/o11y_deployment_command",
+      "echo $REGION > /home/ubuntu/region",
+      "echo $EKS_CLUSTER_NAME > /home/ubuntu/eks_cluster_name",
+      "echo $EKS_ACCESS_TOKEN > /home/ubuntu/eks_access_token",
+      "echo $TOKEN > /home/ubuntu/access_token",
+      "echo $REALM > /home/ubuntu/realm",
+      "echo $ENVIRONMENT > /home/ubuntu/environment",
+      "echo $SPLUNK_ENDPOINT > /home/ubuntu/splunk_endpoint",
+      "echo $SPLUNK_PRIVATE_IP > /home/ubuntu/splunk_private_ip",
+      "echo $HEC_TOKEN > /home/ubuntu/hec_token",
+      "echo $SPLUNK_INDEX > /home/ubuntu/splunk_index",
+      "echo '${local.helm_command}' > /home/ubuntu/o11y_deployment_command",
+
+    ## Install K8S Integration using Splunk OTel Collector Helm Chart
+      "helm repo add splunk-otel-collector-chart https://signalfx.github.io/splunk-otel-collector-chart",
+      "helm repo update",
+      "${local.helm_command}", # See locals block at top of file for command selection logic
 
     ## Configure motd
       "sudo curl -s https://raw.githubusercontent.com/signalfx/observability-workshop/master/cloud-init/motd -o /etc/motd",
