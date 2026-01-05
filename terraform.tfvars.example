@@ -79,13 +79,13 @@ rum_access_token                   = "<RUM_ACCESS_TOKEN>"
 
 ### Splunk Enterprise Variables ###
 splunk_admin_pwd                    = "<STRONG_PASSWORD>"
-splunk_ent_filename                 = "splunk-9.3.8-fbf0510dff69-linux-2.6-amd64.deb"
-splunk_ent_version                  = "9.3.8"
+splunk_ent_filename                 = "splunk-10.0.2-e2d18b4767e9-linux-2.6-amd64.deb"
+splunk_ent_version                  = "10.0.2"
 splunk_ent_inst_type                = "t2.2xlarge"
-universalforwarder_filename         = "splunkforwarder-9.3.8-fbf0510dff69-linux-2.6-amd64.deb"
-universalforwarder_version          = "9.3.8"
-universalforwarder_url_windows      = "https://download.splunk.com/products/universalforwarder/releases/9.3.8/windows/splunkforwarder-9.3.8-fbf0510dff69-x64-release.msi"
-splunk_enterprise_license_filename  = "Splunk_Enterprise_NFR_CY2025_2H.License" # should be added to the non_public_files folder which gets synced with S3 - get latest https://splunk.atlassian.net/wiki/spaces/PROD/pages/313538952312/Internal+NFR+License+Keys
+universalforwarder_filename         = "splunkforwarder-10.0.2-e2d18b4767e9-linux-2.6-amd64.deb"
+universalforwarder_version          = "10.0.2"
+universalforwarder_url_windows      = "https://download.splunk.com/products/universalforwarder/releases/10.0.2/windows/splunkforwarder-10.0.2-e2d18b4767e9-x64-release.msi"
+splunk_enterprise_license_filename  = "Splunk_Enterprise_NFR_CY2026.License" # should be added to the non_public_files folder which gets synced with S3 - get latest https://splunk.atlassian.net/wiki/spaces/PROD/pages/313538952312/Internal+NFR+License+Keys
 splunk_ent_eip                      = "nn.nn.nn.nn" # ensure this aligns with region setting above
 splunk_private_ip                   = "172.32.2.10"
 
@@ -99,7 +99,7 @@ location    = "London"
 org         = "ACME"
 
 ### Splunk ITSI Variables ###
-splunk_itsi_license_filename                     = "Splunk_ITSI_NFR_CY2025_2H.License"               # this file should be located in the non_public_files folder
+splunk_itsi_license_filename                     = "Splunk_ITSI_NFR_CY2026_1H.License"               # this file should be located in the non_public_files folder
 splunk_app_for_content_packs_filename            = "splunk-app-for-content-packs_240.spl"            # this file should be located in the non_public_files folder
 splunk_it_service_intelligence_filename          = "splunk-it-service-intelligence_4210.spl"         # this file should be located in the non_public_files folder
 splunk_infrastructure_monitoring_add_on_filename = "splunk-infrastructure-monitoring-add-on_127.tgz" # this file should be located in the non_public_files folder
