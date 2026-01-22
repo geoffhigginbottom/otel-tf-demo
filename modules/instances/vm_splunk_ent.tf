@@ -66,7 +66,8 @@ resource "aws_instance" "splunk_ent" {
       # "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/${} /tmp/${}",
 
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_splunk_enterprise.sh /tmp/install_splunk_enterprise.sh",
-      "aws s3 cp s3://${var.s3_bucket_name}/scripts/certs.sh /tmp/certs.sh",
+      # "aws s3 cp s3://${var.s3_bucket_name}/scripts/certs.sh /tmp/certs.sh",
+      "aws s3 cp s3://${var.s3_bucket_name}/scripts/certs_2026.sh /tmp/certs.sh",
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/update_splunk_otel_collector.sh /tmp/update_splunk_otel_collector.sh",
 
       "aws s3 cp s3://${var.s3_bucket_name}/config_files/splunkent_agent_config.yaml /tmp/agent_config.yaml",
@@ -77,6 +78,7 @@ resource "aws_instance" "splunk_ent" {
       "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/${var.splunk_app_for_content_packs_filename} /tmp/${var.splunk_app_for_content_packs_filename}",
       "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/${var.splunk_it_service_intelligence_filename} /tmp/${var.splunk_it_service_intelligence_filename}",
       "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/${var.splunk_infrastructure_monitoring_add_on_filename} /tmp/${var.splunk_infrastructure_monitoring_add_on_filename}",
+      "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/itsi-installer.sh /tmp/itsi-installer.sh",
 
     ## Create Splunk Ent Vars
       "TOKEN=${var.access_token}",
@@ -135,7 +137,6 @@ resource "aws_instance" "splunk_ent" {
         ## Create Splunk Ent Vars
         SPLUNK_ITSI_LICENSE_FILE=${var.splunk_itsi_license_filename}
         SPLUNK_IT_SERVICE_INTELLIGENCE_FILENAME=${var.splunk_it_service_intelligence_filename}
-        SPLUNK_INFRASTRUCTURE_MONITORING_ADD_ON_FILENAME=${var.splunk_infrastructure_monitoring_add_on_filename}
         SPLUNK_APP_FOR_CONTENT_PACKS_FILENAME=${var.splunk_app_for_content_packs_filename}
 
         ## Write env vars to file (used for debugging)
@@ -147,36 +148,42 @@ resource "aws_instance" "splunk_ent" {
         ## install ITSI NFR license
         # sudo mkdir /opt/splunk/etc/licenses/enterprise
         sudo cp /tmp/${var.splunk_itsi_license_filename} /opt/splunk/etc/licenses/enterprise/${var.splunk_itsi_license_filename}.lic
+    
+        sudo chmod +x /tmp/itsi-installer.sh
+        sudo /tmp/itsi-installer.sh
         sudo /opt/splunk/bin/splunk restart
     
         ## install java
         sudo apt install -y default-jre
         JAVA_HOME=$(realpath /usr/bin/java)
 
-        ## stop splunk
-        sudo /opt/splunk/bin/splunk stop
+    ## Commented Out Whilst Testing Marc's ITSI Installer Script ##
 
-        ## install apps
-        wget -O /tmp/$FILENAME "https://download.splunk.com/products/splunk/releases/$VERSION/linux/$FILENAME"
-        sudo tar -xvf /tmp/$SPLUNK_IT_SERVICE_INTELLIGENCE_FILENAME -C /opt/splunk/etc/apps
-        # sudo tar -xvf /tmp/$SPLUNK_INFRASTRUCTURE_MONITORING_ADD_ON_FILENAME -C /opt/splunk/etc/apps
-        sudo tar -xvf /tmp/$SPLUNK_APP_FOR_CONTENT_PACKS_FILENAME -C /opt/splunk/etc/apps
+        # ## stop splunk
+        # sudo /opt/splunk/bin/splunk stop
 
-        ## start splunk
-        sudo /opt/splunk/bin/splunk start
+        # ## install apps
+        # # wget -O /tmp/$FILENAME "https://download.splunk.com/products/splunk/releases/$VERSION/linux/$FILENAME"
+        # sudo tar -xvf /tmp/$SPLUNK_IT_SERVICE_INTELLIGENCE_FILENAME -C /opt/splunk/etc/apps
+        # sudo tar -xvf /tmp/$SPLUNK_APP_FOR_CONTENT_PACKS_FILENAME -C /opt/splunk/etc/apps
 
-        ## ensure inputs.conf reflects in the UI
-        sudo chmod 755 -R /opt/splunk/etc/apps/itsi/local
+        # ## start splunk
+        # sudo /opt/splunk/bin/splunk start
 
-        ## Add Modular Input
-        sudo cp /opt/splunk/etc/apps/itsi/local/inputs.conf /opt/splunk/etc/apps/itsi/local/inputs.bak
-        sudo cat /tmp/inputs.conf | sudo tee -a /opt/splunk/etc/apps/itsi/local/inputs.conf
+        # ## ensure inputs.conf reflects in the UI
+        # sudo chmod 755 -R /opt/splunk/etc/apps/itsi/local
 
-        ## ensure rights are given for the content pack
-        sudo chown splunk:splunk -R /opt/splunk/etc/apps
+        # ## Add Modular Input
+        # sudo cp /opt/splunk/etc/apps/itsi/local/inputs.conf /opt/splunk/etc/apps/itsi/local/inputs.bak
+        # sudo cat /tmp/inputs.conf | sudo tee -a /opt/splunk/etc/apps/itsi/local/inputs.conf
 
-        ## restart splunk
-        sudo /opt/splunk/bin/splunk restart
+        # ## ensure rights are given for the content pack
+        # sudo chown splunk:splunk -R /opt/splunk/etc/apps
+
+        # ## restart splunk
+        # sudo /opt/splunk/bin/splunk restart
+
+      ## Commented Out Whilst Testing Marc's ITSI Installer Script END##
 
       else
         echo "Skipping as add_itsi_splunk_enterprise is false"
