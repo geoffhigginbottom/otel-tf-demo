@@ -190,6 +190,10 @@ variable "splunk_it_service_intelligence_filename" {
 variable "splunk_infrastructure_monitoring_add_on_filename" {
   default = {}
 }
+variable "splunk_ai_toolkit_filename" {
+  default = {}
+} 
+
 
 ### Certificate Vars ###
 variable "certpath" {

@@ -1,5 +1,5 @@
 #! /bin/bash
-# Version 2.0
+# Version 2.4 - Fixed Chain Order & Password Logic
 
 ## Variables ##
 CERTPATH=$1
@@ -10,87 +10,75 @@ STATE=$5
 LOCATION=$6
 ORG=$7
 
-## Create folder for scripts ##
-echo "Creating folder $CERTPATH"
-/usr/bin/mkdir $CERTPATH
+if [ -z "$7" ]; then
+    echo "Usage: $0 <path> <passphrase> <fqdn> <country> <state> <location> <org>"
+    exit 1
+fi
 
-## Generate a new root certificate to be your Certificate Authority ##
-echo "Generating root cert for CA"
-/opt/splunk/bin/splunk cmd openssl genrsa -aes256 -passout pass:$PASSPHRASE -out $CERTPATH/myCAPrivateKey.key 2048
+# Create directory and set ownership
+/usr/bin/mkdir -p "$CERTPATH"
+/usr/bin/chown splunk:splunk "$CERTPATH"
 
-## Generate a certificate signing request using the root certificate private key myCAPrivateKey.key ##
-echo "Gemerating CSR"
-/opt/splunk/bin/splunk cmd openssl req -new \
-  -key $CERTPATH/myCAPrivateKey.key \
-  -out $CERTPATH/myCACertificate.csr \
-  -passin pass:$PASSPHRASE \
-  -passout pass:$PASSPHRASE \
-  -subj "/C=$COUNTRY/ST=$STATE/L=$LOCATION/O=$ORG/CN=$FQDN"
+## 1. Generate Root CA ##
+echo "Generating Root CA..."
+# Generate CA Key (Encrypted)
+sudo -u splunk /opt/splunk/bin/splunk cmd openssl genrsa -aes256 -passout pass:"$PASSPHRASE" -out "$CERTPATH/myCAPrivateKey.key" 2048
 
+# Create Extension Config
+cat > "$CERTPATH/ssl-extensions-x509.cnf" <<EOF
+[v3_ca]
+basicConstraints = critical,CA:TRUE
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign
 
-## Use the CSR file to generate a new root certificate and sign it with myCAPrivateKey.key ##
-echo "Generate new signed root cert"
-echo -e "# ssl-extensions-x509.cnf\n[v3_ca]\nbasicConstraints = CA:FALSE\nkeyUsage = digitalSignature, keyEncipherment\nsubjectAltName = DNS:$FQDN" > $CERTPATH/ssl-extensions-x509.cnf
+[v3_server]
+basicConstraints = critical,CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth, clientAuth
+subjectAltName = DNS:$FQDN
+EOF
+chown splunk:splunk "$CERTPATH/ssl-extensions-x509.cnf"
 
-/opt/splunk/bin/splunk cmd openssl x509 -req \
-  -in $CERTPATH/myCACertificate.csr \
-  -signkey $CERTPATH/myCAPrivateKey.key \
-  -passin pass:$PASSPHRASE \
-  -extensions v3_ca \
-  -extfile $CERTPATH/ssl-extensions-x509.cnf \
-  -out $CERTPATH/myCACertificate.pem \
-  -days 3650
+# Create CA CSR and Self-Sign
+sudo -u splunk /opt/splunk/bin/splunk cmd openssl req -new -key "$CERTPATH/myCAPrivateKey.key" -out "$CERTPATH/myCACertificate.csr" -passin pass:"$PASSPHRASE" -subj "/C=$COUNTRY/ST=$STATE/L=$LOCATION/O=$ORG/CN=MyCustomCA"
 
-## Create a new private key ##
-echo "Creating new private key"
-/opt/splunk/bin/splunk cmd openssl genrsa \
-  -aes256 \
-  -passout pass:$PASSPHRASE \
-  -out $CERTPATH/mySplunkWebPrivateKey.key 2048 \
+sudo -u splunk /opt/splunk/bin/splunk cmd openssl x509 -req -in "$CERTPATH/myCACertificate.csr" -signkey "$CERTPATH/myCAPrivateKey.key" -passin pass:"$PASSPHRASE" -extensions v3_ca -extfile "$CERTPATH/ssl-extensions-x509.cnf" -out "$CERTPATH/myCACertificate.pem" -days 3650
 
-## Remove Password from mySplunkWebPrivateKey.key ##
-echo "Removing password from private key"
-/opt/splunk/bin/splunk cmd openssl rsa \
-  -in $CERTPATH/mySplunkWebPrivateKey.key \
-  -passin pass:$PASSPHRASE \
-  -out $CERTPATH/mySplunkWebPrivateKey.key
+## 2. Generate Server Key and Certificate ##
+echo "Generating Server Certificate..."
+# Generate Server Key (Unencrypted for Splunk compatibility)
+sudo -u splunk /opt/splunk/bin/splunk cmd openssl genrsa -out "$CERTPATH/mySplunkWebPrivateKey.key" 2048
 
-## Create a new certificate signature request using mySplunkWebPrivateKey.key ##
-echo "Creating new csr using private key"
-/opt/splunk/bin/splunk cmd openssl req -new \
-  -key $CERTPATH/mySplunkWebPrivateKey.key \
-  -passin pass:$PASSPHRASE \
-  -out $CERTPATH/mySplunkWebCert.csr \
-  -subj "/C=$COUNTRY/ST=$STATE/L=$LOCATION/O=$ORG/CN=$FQDN"
+sudo -u splunk /opt/splunk/bin/splunk cmd openssl req -new -key "$CERTPATH/mySplunkWebPrivateKey.key" -out "$CERTPATH/mySplunkWebCert.csr" -subj "/C=$COUNTRY/ST=$STATE/L=$LOCATION/O=$ORG/CN=$FQDN"
 
-## Sign the CSR with the root certificate private key myCAPrivateKey.key ##
-echo "Signing cst with root cert private key"
-/opt/splunk/bin/splunk cmd openssl x509 -req \
-  -in $CERTPATH/mySplunkWebCert.csr \
-  -passin pass:$PASSPHRASE \
-  -CA $CERTPATH/myCACertificate.pem \
-  -extensions v3_ca \
-  -extfile $CERTPATH/ssl-extensions-x509.cnf \
-  -CAkey $CERTPATH/myCAPrivateKey.key \
-  -CAcreateserial \
-  -out $CERTPATH/mySplunkWebCert.pem \
-  -days 1095
+# Sign Server Cert with the CA
+sudo -u splunk /opt/splunk/bin/splunk cmd openssl x509 -req -in "$CERTPATH/mySplunkWebCert.csr" -CA "$CERTPATH/myCACertificate.pem" -CAkey "$CERTPATH/myCAPrivateKey.key" -passin pass:"$PASSPHRASE" -CAcreateserial -extensions v3_server -extfile "$CERTPATH/ssl-extensions-x509.cnf" -out "$CERTPATH/mySplunkWebCert.pem" -days 1095
 
-## Combine the server certificate and public certificates into a single certificate file ##
-echo "Combining certs into a single pem file"
-/usr/bin/cat $CERTPATH/mySplunkWebCert.pem $CERTPATH/myCACertificate.pem > $CERTPATH/mySplunkWebCertificate.pem
-/usr/bin/cat $CERTPATH/mySplunkWebCertificate.pem $CERTPATH/mySplunkWebPrivateKey.key > $CERTPATH/myFinalCert.pem
+## 3. Combine into Final PEM (CORRECT ORDER) ##
+echo "Creating myFinalCert.pem..."
+# Order: [Server Cert] [Private Key] [CA Chain]
+/usr/bin/cat "$CERTPATH/mySplunkWebCert.pem" "$CERTPATH/mySplunkWebPrivateKey.key" "$CERTPATH/myCACertificate.pem" > "$CERTPATH/myFinalCert.pem"
 
-## Fix permissions ##
-echo "Updating permissions"
-/usr/bin/chown -R splunk:splunk $CERTPATH
+# Create the CA Bundle for trust (Custom CA + Splunk Apps CA)
+/usr/bin/cp "$CERTPATH/myCACertificate.pem" "$CERTPATH/myCABundle.pem"
+/usr/bin/cat /opt/splunk/etc/auth/appsCA.pem >> "$CERTPATH/myCABundle.pem"
 
-## Update /opt/splunk/etc/system/local/server.conf
-echo "Updating Splunk config to use certs"
-/usr/bin/sed -i "/^sslPassword.*/a serverCert = $CERTPATH/myFinalCert.pem" /opt/splunk/etc/system/local/server.conf
-/usr/bin/sed -i "/^serverCert.*/a requireClientCert = false" /opt/splunk/etc/system/local/server.conf
-/usr/bin/sed -i "/^pass4SymmKey.*/a serverName = $FQDN" /opt/splunk/etc/system/local/server.conf
+## 4. Update Permissions ##
+/usr/bin/chown -R splunk:splunk "$CERTPATH"
+/usr/bin/chmod 644 "$CERTPATH"/*.pem
+/usr/bin/chmod 600 "$CERTPATH"/*.key
 
-# Restart Splunk
-echo "restarting Splunk"
-/opt/splunk/bin/splunk restart
+## 5. Update Splunk Configuration ##
+echo "Updating server.conf..."
+CONF_FILE="/opt/splunk/etc/system/local/server.conf"
+
+# Cleanup old settings
+/usr/bin/sed -i '/serverCert =/d' "$CONF_FILE"
+/usr/bin/sed -i '/sslRootCAPath =/d' "$CONF_FILE"
+/usr/bin/sed -i '/sslPassword =/d' "$CONF_FILE"
+
+# Add new settings. Note: sslPassword is omitted because the server key is unencrypted.
+# If you must use a password, encrypt the key in Step 2 and add sslPassword here.
+/usr/bin/sed -i "/\[sslConfig\]/a serverCert = $CERTPATH/myFinalCert.pem\nsslRootCAPath = $CERTPATH/myCABundle.pem" "$CONF_FILE"
+
+echo "Restarting Splunk..."
+systemctl restart Splunkd

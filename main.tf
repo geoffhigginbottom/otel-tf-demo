@@ -227,6 +227,7 @@ module "instances" {
   splunk_ent_eip                                    = var.splunk_ent_eip
   splunk_private_ip                                 = var.splunk_private_ip
   splunk_itsi_license_filename                      = var.splunk_itsi_license_filename
+  splunk_ai_toolkit_filename                        = var.splunk_ai_toolkit_filename
   splunk_app_for_content_packs_filename             = var.splunk_app_for_content_packs_filename
   splunk_it_service_intelligence_filename           = var.splunk_it_service_intelligence_filename
   splunk_infrastructure_monitoring_add_on_filename  = var.splunk_infrastructure_monitoring_add_on_filename

@@ -79,12 +79,13 @@ rum_access_token                   = "<RUM_ACCESS_TOKEN>"
 
 ### Splunk Enterprise Variables ###
 splunk_admin_pwd                    = "<STRONG_PASSWORD>"
-splunk_ent_filename                 = "splunk-10.0.2-e2d18b4767e9-linux-2.6-amd64.deb"
-splunk_ent_version                  = "10.0.2"
+splunk_ent_filename                 = "splunk-10.2.0-d749cb17ea65-linux-amd64.deb "
+splunk_ent_version                  = "10.2.0"
 splunk_ent_inst_type                = "t2.2xlarge"
-universalforwarder_filename         = "splunkforwarder-10.0.2-e2d18b4767e9-linux-2.6-amd64.deb"
-universalforwarder_version          = "10.0.2"
-universalforwarder_url_windows      = "https://download.splunk.com/products/universalforwarder/releases/10.0.2/windows/splunkforwarder-10.0.2-e2d18b4767e9-x64-release.msi"
+# splunk_ent_inst_type                = "m6i.4xlarge"
+universalforwarder_filename         = "splunkforwarder-10.2.0-d749cb17ea65-linux-amd64.deb"
+universalforwarder_version          = "10.2.0"
+universalforwarder_url_windows      = "https://download.splunk.com/products/universalforwarder/releases/10.2.0/windows/splunkforwarder-10.2.0-d749cb17ea65-windows-x64.msi"
 splunk_enterprise_license_filename  = "Splunk_Enterprise_NFR_CY2026.License" # should be added to the non_public_files folder which gets synced with S3 - get latest https://splunk.atlassian.net/wiki/spaces/PROD/pages/313538952312/Internal+NFR+License+Keys
 splunk_ent_eip                      = "nn.nn.nn.nn" # ensure this aligns with region setting above
 splunk_private_ip                   = "172.32.2.10"
@@ -123,7 +124,7 @@ eks_access_token        = "<ACCESS_TOKEN>"
 # eks_splunk_endpoint     = "http://172.32.2.10:8088" # Dynamically set in vm_eks_admin_server.tf so no longer set here and should be deleted
 eks_admin_server_eip    = "<nn.nn.nn.nn>" #ensure this aligns with region setting above
 eks_splunk_index        = "k8s-logs"
-eks_instance_type       = "t3.medium" # x86
+eks_instance_type       = "t3.large" # x86
 eks_ami_type            = "AL2023_x86_64_STANDARD" # x86
 # eks_instance_type       = "m6g.xlarge" # ARM
 # eks_ami_type            = "AL2_ARM_64" # ARM

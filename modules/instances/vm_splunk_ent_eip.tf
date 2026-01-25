@@ -27,17 +27,17 @@ output "splunk_ent_url" {
 output "splunk_ent_url_fqdn" {
   value =  formatlist(
     "%s%s:%s", 
-    "http://",
+    "https://",
     # aws_instance.splunk_ent.*.public_ip,
     var.fqdn,
-    "80",
+    "8000",
   )
 }
 
 output "splunk_ent_url_hec" {
   value =  formatlist(
     "%s%s:%s", 
-    "http://",
+    "https://",
     # aws_instance.splunk_ent.*.public_ip,
     var.fqdn,
     "8088",
@@ -47,7 +47,7 @@ output "splunk_ent_url_hec" {
 output "splunk_ent_url_hec_local" {
   value =  formatlist(
     "%s%s:%s", 
-    "http://",
+    "https://",
     aws_instance.splunk_ent.*.private_ip,
     # var.fqdn,
     "8088",

@@ -261,8 +261,9 @@
     filter {
       name = "name"
       # values = ["ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-*"]
-      values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+      # values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
       # values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"]
+      values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*"]
     }
 
     filter {
@@ -564,5 +565,8 @@
     default = {}
   }
   variable "splunk_infrastructure_monitoring_add_on_filename" {
+    default = {}
+  }
+  variable "splunk_ai_toolkit_filename" {
     default = {}
   }
