@@ -1,13 +1,13 @@
 #! /bin/bash
-# Version 2.0
+# Version 2.1
 ## Configure the otel agent to send metrics to Splunk HEC
 
-SPLUNK_IP=$1
+SPLUNK_FQDN=$1
 HEC_TOKEN=$2
 
-# Check if the SPLUNK_IP is provided
-if [ -z "$SPLUNK_IP" ]; then
-  echo "Usage: $0 <SPLUNK_IP>"
+# Check if the SPLUNK_FQDN is provided
+if [ -z "$SPLUNK_FQDN" ]; then
+  echo "Usage: $0 <SPLUNK_FQDN>"
   exit 1
 fi
 
@@ -19,7 +19,7 @@ cp /etc/otel/collector/splunk-otel-collector.conf /etc/otel/collector/splunk-ote
 CONFIG_FILE="/etc/otel/collector/splunk-otel-collector.conf"
 
 # New values
-NEW_URL="http://${SPLUNK_IP}:8088/services/collector"
+NEW_URL="https://${SPLUNK_FQDN}:8088/services/collector"
 NEW_TOKEN="${HEC_TOKEN}"
 
 # Replace SPLUNK_HEC_URL

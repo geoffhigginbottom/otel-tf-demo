@@ -47,8 +47,8 @@ resource "aws_security_group" "instances_sg" {
     to_port     = 80
     protocol    = "tcp"
     # cidr_blocks = ["${var.my_public_ip}/32"]
-    # cidr_blocks = ["0.0.0.0/0"]
-    cidr_blocks = var.insecure_sg_rules ? ["0.0.0.0/0"] : ["${var.my_public_ip}/32"]
+    cidr_blocks = ["0.0.0.0/0"]
+    # cidr_blocks = var.insecure_sg_rules ? ["0.0.0.0/0"] : ["${var.my_public_ip}/32"]
   }
 
   ## Allow all egress traffic
@@ -78,7 +78,8 @@ resource "aws_security_group" "splunk_ent_sg" {
     to_port     = 8088
     protocol    = "tcp"
     # cidr_blocks = ["0.0.0.0/0"]
-    cidr_blocks = ["${var.vpc_cidr_block}"] # this should allow HEC from within VPC
+    cidr_blocks = var.insecure_sg_rules ? ["0.0.0.0/0"] : ["${var.vpc_cidr_block}"]
+    # cidr_blocks = ["${var.vpc_cidr_block}"] # this should allow HEC from within VPC
   }
 
 # Log Observer Connect to Splunk Enterprise HEC https://help.splunk.com/en/splunk-observability-cloud/manage-data/view-splunk-platform-logs/set-up-log-observer-connect-for-splunk-cloud-platform

@@ -224,6 +224,7 @@ module "instances" {
   splunk_ent_inst_type                              = var.splunk_ent_inst_type
   add_itsi_splunk_enterprise                        = var.add_itsi_splunk_enterprise
   splunk_hec_metrics_enabled                        = var.splunk_hec_metrics_enabled
+  otel_logs_enabled                                 = var.otel_logs_enabled
   splunk_ent_eip                                    = var.splunk_ent_eip
   splunk_private_ip                                 = var.splunk_private_ip
   splunk_itsi_license_filename                      = var.splunk_itsi_license_filename
@@ -236,7 +237,8 @@ module "instances" {
   universalforwarder_url_windows                    = var.universalforwarder_url_windows
   my_public_ip                                      = "${chomp(data.http.my_public_ip.response_body)}"
   insecure_sg_rules                                 = var.insecure_sg_rules
-  certpath                                          = var.certpath
+  slo_certpath                                      = var.slo_certpath
+  le_certpath                                       = var.le_certpath
   passphrase                                        = var.passphrase
   fqdn                                              = var.fqdn
   country                                           = var.country

@@ -176,6 +176,10 @@ variable "splunk_hec_metrics_enabled" {
   type    = bool
   default = false
 }
+variable "otel_logs_enabled" {
+  type    = bool
+  default = false
+}
 
 ### Splunk ITSI Variables ###
 variable "splunk_itsi_license_filename" {
@@ -196,7 +200,10 @@ variable "splunk_ai_toolkit_filename" {
 
 
 ### Certificate Vars ###
-variable "certpath" {
+variable "slo_certpath" {
+  default = []
+}
+variable "le_certpath" {
   default = []
 }
 variable "passphrase" {

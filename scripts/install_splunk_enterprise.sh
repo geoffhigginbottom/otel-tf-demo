@@ -88,7 +88,9 @@ $S_CLI add user LO-Connect -role lo_connect -password "$LO_CONNECT_PASSWORD" -au
 
 # Add Indexes
 $S_CLI add index k8s-logs -auth admin:"$PASSWORD"
-$S_CLI add index metrics -datatype metric -auth admin:"$PASSWORD"
+$S_CLI add index otel-metrics -datatype metric -auth admin:"$PASSWORD"
+$S_CLI add index otel-logs -datatype event -auth admin:"$PASSWORD"
+
 
 # Enable HEC
 $S_CLI http-event-collector enable -uri https://localhost:8089 -enable-ssl 1 -port 8088 -auth admin:"$PASSWORD"
@@ -122,9 +124,9 @@ function create_hec_token() {
   echo "Token for $name is $token"
 }
 
-create_hec_token "OTEL-K8S" "Used by OTEL K8S" "k8s-logs"
-create_hec_token "OTEL" "Used by OTEL" "main"
-create_hec_token "HEC-METRICS" "Metrics from OTel via HEC" "metrics"
+create_hec_token "OTEL-K8S-LOGS" "Used by OTEL K8S" "k8s-logs"
+create_hec_token "OTEL-METRICS" "Metrics from OTel via HEC" "otel-metrics"
+create_hec_token "OTEL-LOGS" "Logs from OTel via HEC" "otel-logs"
 
 # 11. Write tokens to JSON file
 echo -n '{' > /tmp/hec_tokens.json

@@ -19,7 +19,9 @@ extensions:
     collectd:
       configDir: "${SPLUNK_COLLECTD_DIR}"
   zpages:
-    endpoint: "${SPLUNK_LISTEN_INTERFACE}:55679"
+    #endpoint: "${SPLUNK_LISTEN_INTERFACE}:55679"
+    expvar:
+      enabled: true
 
 receivers:
   hostmetrics:
@@ -119,7 +121,7 @@ processors:
 
 exporters:
   # Traces
-  otlphttp:
+  otlp_http:
     traces_endpoint: "${SPLUNK_INGEST_URL}/v2/trace/otlp"
     headers:
       "X-SF-Token": "${SPLUNK_ACCESS_TOKEN}"
@@ -137,7 +139,7 @@ exporters:
     correlation:
 
   # Entities (applicable only if discovery mode is enabled)
-  otlphttp/entities:
+  otlp_http/entities:
     logs_endpoint: "${SPLUNK_INGEST_URL}/v3/event"
     headers:
       "X-SF-Token": "${SPLUNK_ACCESS_TOKEN}"
@@ -159,10 +161,10 @@ exporters:
     log_data_enabled: false
 
   # Send to gateway
-  otlphttp/gateway:
+  otlp_http/gateway:
     endpoint: http://${SPLUNK_GATEWAY_URL}:4318
 
-  otlp/gateway:
+  otlp_grpc/gateway:
     endpoint: "${SPLUNK_GATEWAY_URL}:4317"
     tls:
       insecure: true
@@ -180,8 +182,6 @@ service:
       level: "debug"
       output_paths: [/media/data/logs/otel/collector.log]
       error_output_paths: [/media/data/logs/otel/collector.log]
-    metrics:
-      address: "${SPLUNK_LISTEN_INTERFACE}:8888"
 
   extensions:
   - headers_setter
@@ -200,10 +200,10 @@ service:
       - resourcedetection
       #- resource/add_environment
       exporters:
-      # - otlphttp
+      # - otlp_http
       # - signalfx
       # Use instead when sending to gateway
-      - otlphttp/gateway
+      - otlp_http/gateway
       - signalfx
 
     metrics:
@@ -218,7 +218,8 @@ service:
       exporters:
       # - signalfx
       # Use instead when sending to gateway
-      - otlphttp/gateway
+      - otlp_http/gateway
+      # - splunk_hec # sends metrics to Splunk Enterprise via HEC
 
     metrics/internal:
       receivers:
@@ -253,7 +254,7 @@ service:
       - batch
       - resourcedetection
       exporters:
-      - otlphttp/entities
+      - otlp_http/entities
 
     logs:
       receivers:
@@ -267,4 +268,4 @@ service:
       # - splunk_hec
       # - splunk_hec/profiling
       # Use instead when sending to gateway
-      - otlphttp/gateway
+      - otlp_http/gateway

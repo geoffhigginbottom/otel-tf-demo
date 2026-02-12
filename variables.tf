@@ -30,6 +30,10 @@
     type    = bool
     default = false
   }
+    variable "otel_logs_enabled" {
+    type    = bool
+    default = false
+  }
   variable "insecure_sg_rules" {
     description = "Set to true to allow access from 0.0.0.0/0, false to restrict to my_public_ip."
     type        = bool
@@ -153,7 +157,7 @@
   }
   variable "eks_splunk_index" {
     type    = string
-    default = ""
+    default = "k8s-logs"
   }
   variable "eks_instance_type" {
     type    = string
@@ -169,14 +173,19 @@
   }
 
 ### Certificate Vars ###
-  variable "certpath" {
+  variable "slo_certpath" {
     type    = string
-    default = ""
+    default = "/opt/splunk/etc/auth/sloccerts"
+  }
+
+  variable "le_certpath" {
+    type    = string
+    default = "/opt/splunk/etc/auth/letsencrypt"
   }
 
   variable "passphrase" {
     type    = string
-    default = ""
+    default = "qwertyuiop"
   }
 
   variable "fqdn" {
@@ -186,22 +195,22 @@
 
   variable "country" {
     type    = string
-    default = ""
+    default = "GB"
   }
 
   variable "state" {
     type    = string
-    default = ""
+    default = "London"
   }
 
   variable "location" {
     type    = string
-    default = ""
+    default = "London"
   }
 
   variable "org" {
     type    = string
-    default = ""
+    default = "SplunkLabs"
   }
 
 

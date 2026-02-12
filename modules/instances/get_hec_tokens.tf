@@ -29,16 +29,16 @@ data "external" "hec_tokens" {
 
 # Outputs (conditionally emitted)
 output "hec_metrics_token" {
-  value     = var.splunk_ent_count != 0 ? data.external.hec_tokens[0].result["HEC-METRICS"] : null
+  value     = var.splunk_ent_count != 0 ? data.external.hec_tokens[0].result["OTEL-METRICS"] : null
   sensitive = false
 }
 
 output "hec_otel_token" {
-  value     = var.splunk_ent_count != 0 ? data.external.hec_tokens[0].result["OTEL"] : null
+  value     = var.splunk_ent_count != 0 ? data.external.hec_tokens[0].result["OTEL-LOGS"] : null
   sensitive = false
 }
 
 output "hec_otel_k8s_token" {
-  value     = var.splunk_ent_count != 0 ? data.external.hec_tokens[0].result["OTEL-K8S"] : null
+  value     = var.splunk_ent_count != 0 ? data.external.hec_tokens[0].result["OTEL-K8S-LOGS"] : null
   sensitive = false
 }

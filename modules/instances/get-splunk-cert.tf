@@ -1,7 +1,7 @@
 resource "null_resource" "splunk_cert" {
   count = var.splunk_ent_count != 0 ? 1 : 0
   
-  depends_on = [aws_instance.splunk_ent]
+  depends_on = [aws_instance.splunk_ent, null_resource.splunk_cert_gen]
 
   provisioner "local-exec" {
     command = <<EOT
@@ -15,14 +15,9 @@ resource "null_resource" "splunk_cert" {
   }
 }
 
+# # Conditionally read file only if splunk_ent_count != 0
 # data "local_file" "mySplunkWebCert" {
-#   depends_on = [null_resource.splunk_cert]
-#   filename   = "./mySplunkWebCert.pem"
+#   count     = var.splunk_ent_count != 0 ? 1 : 0
+#   filename  = "./mySplunkWebCert.pem"
+#   depends_on = [null_resource.splunk_cert_gen]
 # }
-
-# Conditionally read file only if splunk_ent_count != 0
-data "local_file" "mySplunkWebCert" {
-  count     = var.splunk_ent_count != 0 ? 1 : 0
-  filename  = "./mySplunkWebCert.pem"
-  depends_on = [null_resource.splunk_cert]
-}

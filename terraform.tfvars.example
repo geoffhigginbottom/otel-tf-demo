@@ -32,6 +32,7 @@ iis_server_count            = "0" # uses var.collector_version - files from S3
 splunk_ent_count            = "0" # If also deploying ITSI ensure the versions are compatible - files from S3
 add_itsi_splunk_enterprise  = false # Install ITSI on Splunk Enterprise - Should be FALSE if using Splunk Cloud
 splunk_hec_metrics_enabled  = false # Enable sending Metrics to Splunk Enterprise via HEC
+otel_logs_enabled           = false # Enable sending Logs to Splunk Enterprise via Otel Agent
 
 ## Proxied Instances Quantities ##
 proxy_server_count = "1" # only one is required, used as a yes/no parameter
@@ -91,19 +92,14 @@ splunk_ent_eip                      = "nn.nn.nn.nn" # ensure this aligns with re
 splunk_private_ip                   = "172.32.2.10"
 
 ### Certificate Vars ###
-certpath    = "/opt/splunk/etc/auth/sloccerts"
-passphrase  = "xxxxxxxx"
 fqdn        = "xxx.xxx.co.uk"
-country     = "GB"
-state       = "London"
-location    = "London"
-org         = "ACME"
 
 ### Splunk ITSI Variables ###
 splunk_itsi_license_filename                     = "Splunk_ITSI_NFR_CY2026_1H.License"               # this file should be located in the non_public_files folder
 splunk_app_for_content_packs_filename            = "splunk-app-for-content-packs_240.spl"            # this file should be located in the non_public_files folder
-splunk_it_service_intelligence_filename          = "splunk-it-service-intelligence_4210.spl"         # this file should be located in the non_public_files folder
+splunk_it_service_intelligence_filename          = "splunk-it-service-intelligence_4211.spl"         # this file should be located in the non_public_files folder
 splunk_infrastructure_monitoring_add_on_filename = "splunk-infrastructure-monitoring-add-on_127.tgz" # this file should be located in the non_public_files folder
+splunk_ai_toolkit_filename                       = "splunk-ai-toolkit_564.tgz"                       # this file should be located in the non_public_files folder
 
 ### MS SQL Server Variables ###
 ms_sql_user              = "signalfxagent"
@@ -121,9 +117,8 @@ mysql_instance_type = "t3.xlarge"
 
 ### EKS Variables ###
 eks_access_token        = "<ACCESS_TOKEN>"
-# eks_splunk_endpoint     = "http://172.32.2.10:8088" # Dynamically set in vm_eks_admin_server.tf so no longer set here and should be deleted
 eks_admin_server_eip    = "<nn.nn.nn.nn>" #ensure this aligns with region setting above
-eks_splunk_index        = "k8s-logs"
+# eks_splunk_index        = "k8s-logs"
 eks_instance_type       = "t3.large" # x86
 eks_ami_type            = "AL2023_x86_64_STANDARD" # x86
 # eks_instance_type       = "m6g.xlarge" # ARM

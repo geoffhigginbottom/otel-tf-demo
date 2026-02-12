@@ -108,14 +108,9 @@ resource "aws_instance" "splunk_ent" {
       "sudo chown -R splunk:splunk /opt/splunk/etc/licenses",
       "sudo systemctl restart Splunkd",
 
-    ## Create Certs
+    ## Prep Certs Script
       "sudo chmod +x /tmp/certs.sh",
-      "sudo /tmp/certs.sh ${var.certpath} ${var.passphrase} ${var.fqdn} ${var.country} ${var.state} ${var.location} ${var.org}",
-      "sudo chown -R splunk:splunk /opt/splunk/etc/auth",
-     # Create copy in /tmp for easy access for setting up Log Observer Conect
-      "sudo cp /opt/splunk/etc/auth/sloccerts/mySplunkWebCert.pem /tmp/mySplunkWebCert.pem",
-      "sudo chown ubuntu:ubuntu /tmp/mySplunkWebCert.pem",
-
+      
     ## Install Apps
       "sudo tar -xvf /tmp/${var.splunk_infrastructure_monitoring_add_on_filename} -C /opt/splunk/etc/apps",
       "sudo tar -xvf /tmp/${var.splunk_ai_toolkit_filename} -C /opt/splunk/etc/apps",

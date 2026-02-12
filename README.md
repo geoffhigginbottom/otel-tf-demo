@@ -238,13 +238,7 @@ splunk_ent_eip                      = "<EIP>" # ensure this aligns with region s
 splunk_private_ip                   = "172.32.2.10" # ensure this aligns with vpc_cidr_block setting above
 
 ### Certificate Vars ###
-certpath    = "/opt/splunk/etc/auth/sloccerts"
-passphrase  = "qwertyuiop"
 fqdn        = "<FQDN>"
-country     = "GB"
-state       = "London"
-location    = "London"
-org         = "ACME"
 
 ### Splunk ITSI Variables ###
 splunk_itsi_license_filename                     = "Splunk_ITSI_NFR_1H_2025.xml"
