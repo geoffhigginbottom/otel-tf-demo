@@ -23,6 +23,18 @@ extensions:
     expvar:
       enabled: true
 
+  # Storage extension for storing filelog checkpoints.
+  # Checkpoints allow the receiver to pick up where it left off in the case of a
+  # collector restart.
+  file_storage/filelogs:
+    # Location where checkpoint files are stored. This directory must be writable
+    # by the collector.
+    directory: "${SPLUNK_FILE_STORAGE_EXTENSION_PATH}"
+    compaction:
+      on_start: true
+      directory: /tmp/
+    create_directory: true
+
 receivers:
   hostmetrics:
     collection_interval: 1s
@@ -83,6 +95,76 @@ receivers:
   # apache: #removed as now using auto discovery
   #   endpoint: "http://localhost/server-status?auto"
   #   collection_interval: 10s
+
+  ### File Logs Receivers - Start ###
+  # Apache access log.
+  # Configured using the LogFormat directive.
+  # By default, date and time are in the 'day/Month/year:hour:minute:second zone' format.
+  # See https://httpd.apache.org/docs/current/mod/mod_log_config.html#logformat
+  filelog/apache-access:
+    include: [ "/var/log/apache2/access.log" ]
+    operators:
+      - type: regex_parser
+        regex: '^(?P<host>.+) (?P<remote_logname>.+) (?P<user>.+) \[(?P<time>.+)\] "(?P<method>.+) (?P<path>.+) (?P<protocol>.+)" (?P<code>\d+) (?P<size>\d+) "(?P<referer>.+)" "(?P<agent>.+)"$'
+        timestamp:
+          parse_from: attributes.time
+          layout: '%d/%b/%Y:%H:%M:%S %z'
+    include_file_name: false
+    include_file_path: true
+    storage: file_storage/filelogs
+
+  # Apache error log.
+  # Configured using the ErrorLogFormat directive.
+  # By default, date and time are in the locale-specific representation (%c in strftime).
+  # See https://httpd.apache.org/docs/current/mod/core.html#errorlogformat
+  filelog/apache-error:
+    include: [ "/var/log/apache2/error.log" ]
+    operators:
+      - type: regex_parser
+        regex: '^\[(?P<time>.+?)\] \[(?P<module>\w+):(?P<level>\w+)\] \[pid (?P<pid>\d+):tid (?P<tid>\d+)\] (?P<log>.*)$'
+        timestamp:
+          parse_from: attributes.time
+          layout: '%c' # locale specific
+        severity:
+          parse_from: attributes.level
+          mapping:
+            fatal: emerg
+            error3: alert
+            error2: crit
+            info2: notice
+      - type: move
+        from: attributes.log
+        to: body
+      - type: retain
+        fields:
+          - attributes.module
+          - attributes["log.file.path"]
+    include_file_name: false
+    include_file_path: true
+    storage: file_storage/filelogs
+
+  # Syslog and messages log files.
+  # These are not in the RFC3164 format.
+  filelog/syslog:
+    include: [ "/var/log/syslog"]
+    operators:
+      - type: regex_parser
+        regex: '^(?P<time>.+?) (?P<hostname>\S+) (?P<program>[^ :\[]+)\[?(?P<pid>\d+)?\]?: (?P<log>.*)$'
+        timestamp:
+          parse_from: attributes.time
+          layout: '%b %e %H:%M:%S'
+      - type: move
+        from: attributes.log
+        to: body
+      - type: retain
+        fields:
+          - attributes.program
+          - attributes["log.file.path"]
+    include_file_name: false
+    include_file_path: true
+    storage: file_storage/filelogs
+
+  ### File Logs Receivers - End ###
 
 processors:
   batch:
@@ -190,6 +272,7 @@ service:
   extensions:
   - headers_setter
   - health_check
+  - file_storage/filelogs
   - http_forwarder
   - zpages
   - smartagent
@@ -264,13 +347,16 @@ service:
     logs:
       receivers:
       - otlp
+      - filelog/apache-access
+      - filelog/apache-error
+      - filelog/syslog
       processors:
       - memory_limiter
       - batch
       - resourcedetection
       #- resource/add_environment
       exporters:
-      # - splunk_hec
+      - splunk_hec
       # - splunk_hec/profiling
       # Use instead when sending to gateway
-      - otlp_http/gateway
+      # - otlp_http/gateway

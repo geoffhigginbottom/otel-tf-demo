@@ -23,6 +23,18 @@ extensions:
     expvar:
       enabled: true
 
+  # Storage extension for storing filelog checkpoints.
+  # Checkpoints allow the receiver to pick up where it left off in the case of a
+  # collector restart.
+  file_storage/filelogs:
+    # Location where checkpoint files are stored. This directory must be writable
+    # by the collector.
+    directory: "${SPLUNK_FILE_STORAGE_EXTENSION_PATH}"
+    compaction:
+      on_start: true
+      directory: /tmp/
+    create_directory: true
+
 receivers:
   hostmetrics:
     collection_interval: 1s
@@ -80,9 +92,120 @@ receivers:
 
   nop:
 
-  # apache: #removed as now using auto discovery
-  #   endpoint: "http://localhost/server-status?auto"
-  #   collection_interval: 10s
+  ### File Logs Receivers - Start ###
+  # MySQL server error log. Contains critical errors that occurred during the
+  # server's operation, table corruption, start and stop information.
+  # When running under Systemd, error logging goes to journald. To enable
+  # logging to a file, use the log_error variable.
+  # See https://mariadb.com/kb/en/error-log/
+  filelog/mysql-error:
+    include: [ "/var/log/mysql/error.log" ]
+    multiline:
+      # e.g. "2023-10-09 13:40:48 0 [Note] ..."
+      line_start_pattern: '^[\w-]+ [\d:.]+ \w+ \[\w+\]'
+    operators:
+      - type: regex_parser
+        regex: '^(?P<time>.+?) \d+ \[(?P<level>\w+)\] (?P<log>[\s\S]*)$'
+        timestamp:
+          parse_from: attributes.time
+          layout: '%Y-%m-%d %H:%M:%S'
+        severity:
+          parse_from: attributes.level
+      - type: move
+        from: attributes.log
+        to: body
+      - type: retain
+        fields:
+          - attributes["log.file.path"]
+    include_file_name: false
+    include_file_path: true
+    storage: file_storage/filelogs
+
+  # MySQL general query log. Contains a log of every SQL query received from a
+  # client, as well as each client connect and disconnect.
+  # Disabled by default. To enable, use the general_log_file variable.
+  # See https://mariadb.com/kb/en/general-query-log/
+  filelog/mysql-query:
+    include: ["/var/log/mysql/query.log", "/var/log/mysql/mysql.log"]
+    operators:
+      - type: regex_parser
+        regex: '^(?P<time>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(?P<id>\d+)\s+(?P<type>\w+)\s+(?P<log>.+)$'
+        timestamp:
+          parse_from: attributes.time
+          layout: '%Y-%m-%dT%H:%M:%S.%fZ'
+      - type: move
+        from: attributes.log
+        to: body
+      - type: retain
+        fields:
+          - attributes["log.file.path"]
+          - attributes.id
+          - attributes.type
+    include_file_name: false
+    include_file_path: true
+    storage: file_storage/filelogs
+  
+  # MySQL slow query log. Contains a log of SQL queries that took a long time to perform.
+  # Disabled by default. To enable, use the slow_query_log variable.
+  # See https://mariadb.com/kb/en/slow-query-log/
+  filelog/mysql-slow_query:
+    include: [ "/var/log/mysql/mysql-slow.log" ]
+    multiline:
+      line_start_pattern: '^# Time: '
+    include_file_name: false
+    include_file_path: true
+    storage: file_storage/filelogs
+
+  # Syslog and messages log files.
+  # These are not in the RFC3164 format.
+  filelog/syslog:
+    include: [ "/var/log/syslog"]
+    operators:
+      - type: regex_parser
+        regex: '^(?P<time>.+?) (?P<hostname>\S+) (?P<program>[^ :\[]+)\[?(?P<pid>\d+)?\]?: (?P<log>.*)$'
+        timestamp:
+          parse_from: attributes.time
+          layout: '%b %e %H:%M:%S'
+      - type: move
+        from: attributes.log
+        to: body
+      - type: retain
+        fields:
+          - attributes.program
+          - attributes["log.file.path"]
+    include_file_name: false
+    include_file_path: true
+    storage: file_storage/filelogs
+
+  ### File Logs Receivers - End ###
+
+  
+        
+# ## MySQL Specific Receivers - removed as now using auto discovery
+#   smartagent/mysql:
+#     type: collectd/mysql
+#     host: 127.0.0.1
+#     port: 3306
+#     databases:
+#       - name:
+#     username: ${MYSQL_USER}
+#     password: ${MYSQL_USER_PWD}
+
+#   mysql:
+#     endpoint: localhost:3306
+#     username: ${MYSQL_USER}
+#     password: ${MYSQL_USER_PWD}
+#     collection_interval: 10s
+#     initial_delay: 1s
+#     statement_events:
+#       digest_text_limit: 120
+#       time_limit: 24h
+#       limit: 250
+#     metrics:
+#       mysql.query.slow.count:
+#         enabled: true
+#       mysql.query.count:
+#         enabled: true
 
 processors:
   batch:
@@ -122,6 +245,23 @@ processors:
       - action: insert
         value: "agent"
         key: otelcol.service.mode
+
+  metricstransform:
+    transforms:
+      - include: ^mysql\.
+        match_type: regexp
+        action: update
+        operations:
+          - action: add_label
+            new_label: version
+            new_value: opentelemetry collector {{version}}
+      - include: ^system\.
+        match_type: regexp
+        action: update
+        operations:
+          - action: add_label
+            new_label: version
+            new_value: opentelemetry collector {{version}}
 
 exporters:
   # Traces
@@ -180,16 +320,10 @@ exporters:
     verbosity: detailed
 
 service:
-  telemetry:
-    logs:
-      encoding: json
-      level: "debug"
-      output_paths: [/media/data/logs/otel/collector.log]
-      error_output_paths: [/media/data/logs/otel/collector.log]
-
   extensions:
   - headers_setter
   - health_check
+  - file_storage/filelogs
   - http_forwarder
   - zpages
   - smartagent
@@ -215,11 +349,14 @@ service:
       - hostmetrics
       - otlp
       - signalfx
-      # - apache #removed as now using auto discovery
+      # MySql Specific Receivers
+      # - smartagent/mysql # removed as now using auto discovery
+      # - mysql # removed as now using auto discovery
       processors:
       - memory_limiter
       - batch
       - resourcedetection
+      - metricstransform
       exporters:
       # - signalfx
       # Use instead when sending to gateway
@@ -264,13 +401,17 @@ service:
     logs:
       receivers:
       - otlp
+      - filelog/mysql-error
+      - filelog/mysql-query
+      - filelog/mysql-slow_query
+      - filelog/syslog
       processors:
       - memory_limiter
       - batch
       - resourcedetection
       #- resource/add_environment
       exporters:
-      # - splunk_hec
+      - splunk_hec
       # - splunk_hec/profiling
       # Use instead when sending to gateway
-      - otlp_http/gateway
+      # - otlp_http/gateway

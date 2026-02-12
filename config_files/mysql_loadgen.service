@@ -1,0 +1,16 @@
+[Unit]
+Description=mysql_loadgen service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/bin/bash /home/ubuntu/mysql_loadgen_start.sh
+ExecStop=/bin/bash /home/ubuntu/mysql_loadgen_stop.sh
+Restart=always
+RestartSec=5
+TimeoutSec=60
+RuntimeMaxSec=infinity
+PIDFile=/tmp/mysql_loadgen.pid
+
+[Install]
+WantedBy=multi-user.target
