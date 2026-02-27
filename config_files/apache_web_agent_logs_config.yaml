@@ -83,12 +83,6 @@ receivers:
 
   smartagent/processlist:
     type: processlist
-  
-  signalfx:
-    endpoint: "${SPLUNK_LISTEN_INTERFACE}:9943"
-    # Whether to preserve incoming access token and use instead of exporter token
-    # default = false
-    #access_token_passthrough: true
 
   nop:
 
@@ -164,7 +158,7 @@ receivers:
     include_file_path: true
     storage: file_storage/filelogs
 
-  ### File Logs Receivers - End ###
+ ### File Logs Receivers - End ###
 
 processors:
   batch:
@@ -205,6 +199,35 @@ processors:
         value: "agent"
         key: otelcol.service.mode
 
+  metricstransform:
+    transforms:
+      - include: ^apache\.
+        match_type: regexp
+        action: update
+        operations:
+          - action: add_label
+            new_label: agent_version
+            new_value: version {{version}}
+      - include: ^system\.
+        match_type: regexp
+        action: update
+        operations:
+          - action: add_label
+            new_label: agent_version
+            new_value: version {{version}}
+
+  transform/splunk_metadata:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          - set(log.attributes["com.splunk.sourcetype"], "apache:plus:access") where log.attributes["log.file.path"] == "/var/log/apache2/access.log"
+          - set(log.attributes["com.splunk.sourcetype"], "apache:plus:error") where log.attributes["log.file.path"] == "/var/log/apache2/error.log"
+          - set(log.attributes["com.splunk.sourcetype"], "syslog") where log.attributes["log.file.path"] == "/var/log/syslog"
+          
+          # Map the log.file.path to the Splunk 'source' field
+          - set(log.attributes["com.splunk.source"], log.attributes["log.file.path"]) where log.attributes["log.file.path"] != nil
+
 exporters:
   # Traces
   otlp_http:
@@ -236,8 +259,25 @@ exporters:
   splunk_hec:
     token: "${SPLUNK_HEC_TOKEN}"
     endpoint: "${SPLUNK_HEC_URL}"
-    source: "otel"
-    sourcetype: "otel"
+    # source: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.source" attribute set by the transform processor
+    # sourcetype: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.sourcetype" attribute set by the transform processor
+    # index: "main" # Optional: specify the index to send logs to. If not set, it will go to the default index configured in HEC.
+    # host: "otel-collector" # Optional: specify the host field for incoming logs. If not set, it will use the host from which the log was sent or "unknown" if not available.
+    # batch_max_size: 1024 # Optional: maximum number of logs to include in a batch before sending to HEC. Default is 1024.
+    # batch_timeout: 5s # Optional: maximum amount of time to wait before sending a batch of logs to HEC. Default is 5s.
+    # retry_on_failure: true # Optional: whether to retry sending logs to HEC if the initial attempt fails. Default is true.
+    # max_retries: 3 # Optional: maximum number of retry attempts if sending logs to HEC fails. Default is 3.
+    # retry_delay: 5s # Optional: amount of time to wait between retry attempts if sending logs to HEC fails. Default is 5s.
+    # tls:
+    #   insecure: true # Optional: whether to skip TLS certificate verification when sending logs to HEC. Default is false.  
+    profiling_data_enabled: false
+
+  # HEC Metrics
+  splunk_hec/metrics:
+    token: "${SPLUNK_HEC_METRICS_TOKEN}"
+    endpoint: "${SPLUNK_HEC_URL}"
+    #source: "otel"
+    #sourcetype: "otel"
     profiling_data_enabled: false
 
   # Profiling
@@ -249,6 +289,10 @@ exporters:
   # Send to gateway
   otlp_http/gateway:
     endpoint: http://${SPLUNK_GATEWAY_URL}:4318
+    headers:
+      "X-SF-Token": "${SPLUNK_ACCESS_TOKEN}"
+    auth:
+      authenticator: headers_setter
 
   otlp_grpc/gateway:
     endpoint: "${SPLUNK_GATEWAY_URL}:4317"
@@ -297,17 +341,18 @@ service:
       receivers:
       - hostmetrics
       - otlp
-      - signalfx
       # - apache #removed as now using auto discovery
       processors:
       - memory_limiter
       - batch
       - resourcedetection
+      - metricstransform
       exporters:
       # - signalfx
       # Use instead when sending to gateway
       - otlp_http/gateway
-      # - splunk_hec # sends metrics to Splunk Enterprise via HEC
+      # Also send metrics to Splunk if splunk_hec_metrics_enabled = true (gets enabled in terraform config and script)
+      # - splunk_hec/metrics
 
     metrics/internal:
       receivers:
@@ -324,7 +369,6 @@ service:
 
     logs/signalfx:
       receivers:
-      - signalfx
       - smartagent/processlist
       processors:
       - memory_limiter
@@ -342,7 +386,9 @@ service:
       - batch
       - resourcedetection
       exporters:
-      - otlp_http/entities
+      # - otlp_http/entities
+      # Use instead when sending to gateway
+      - otlp_http/gateway
 
     logs:
       receivers:
@@ -354,6 +400,7 @@ service:
       - memory_limiter
       - batch
       - resourcedetection
+      - transform/splunk_metadata
       #- resource/add_environment
       exporters:
       - splunk_hec

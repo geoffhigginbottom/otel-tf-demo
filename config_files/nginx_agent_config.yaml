@@ -19,7 +19,9 @@ extensions:
     collectd:
       configDir: "${SPLUNK_COLLECTD_DIR}"
   zpages:
-    endpoint: "${SPLUNK_LISTEN_INTERFACE}:55679"
+    #endpoint: "${SPLUNK_LISTEN_INTERFACE}:55679"
+    expvar:
+      enabled: true
 
 receivers:
   hostmetrics:
@@ -69,12 +71,6 @@ receivers:
 
   smartagent/processlist:
     type: processlist
-  
-  signalfx:
-    endpoint: "${SPLUNK_LISTEN_INTERFACE}:9943"
-    # Whether to preserve incoming access token and use instead of exporter token
-    # default = false
-    #access_token_passthrough: true
 
   nop:
 
@@ -129,19 +125,19 @@ processors:
         action: update
         operations:
           - action: add_label
-            new_label: version
-            new_value: opentelemetry collector {{version}}
+            new_label: agent_version
+            new_value: version {{version}}
       - include: ^system\.
         match_type: regexp
         action: update
         operations:
           - action: add_label
-            new_label: version
-            new_value: opentelemetry collector {{version}}
+            new_label: agent_version
+            new_value: version {{version}}
 
 exporters:
   # Traces
-  otlphttp:
+  otlp_http:
     traces_endpoint: "${SPLUNK_INGEST_URL}/v2/trace/otlp"
     headers:
       "X-SF-Token": "${SPLUNK_ACCESS_TOKEN}"
@@ -159,7 +155,7 @@ exporters:
     correlation:
 
   # Entities (applicable only if discovery mode is enabled)
-  otlphttp/entities:
+  otlp_http/entities:
     logs_endpoint: "${SPLUNK_INGEST_URL}/v3/event"
     headers:
       "X-SF-Token": "${SPLUNK_ACCESS_TOKEN}"
@@ -174,6 +170,14 @@ exporters:
     sourcetype: "otel"
     profiling_data_enabled: false
 
+  # HEC Metrics
+  splunk_hec/metrics:
+    token: "${SPLUNK_HEC_METRICS_TOKEN}"
+    endpoint: "${SPLUNK_HEC_URL}"
+    #source: "otel"
+    #sourcetype: "otel"
+    profiling_data_enabled: false
+
   # Profiling
   splunk_hec/profiling:
     token: "${SPLUNK_ACCESS_TOKEN}"
@@ -181,10 +185,14 @@ exporters:
     log_data_enabled: false
 
   # Send to gateway
-  otlphttp/gateway:
+  otlp_http/gateway:
     endpoint: http://${SPLUNK_GATEWAY_URL}:4318
+    headers:
+      "X-SF-Token": "${SPLUNK_ACCESS_TOKEN}"
+    auth:
+      authenticator: headers_setter
 
-  otlp/gateway:
+  otlp_grpc/gateway:
     endpoint: "${SPLUNK_GATEWAY_URL}:4317"
     tls:
       insecure: true
@@ -213,17 +221,16 @@ service:
       - resourcedetection
       #- resource/add_environment
       exporters:
-      # - otlphttp
+      # - otlp_http
       # - signalfx
       # Use instead when sending to gateway
-      - otlphttp/gateway
+      - otlp_http/gateway
       - signalfx
 
     metrics:
       receivers:
       - hostmetrics
       - otlp
-      - signalfx
       # - nginx # Disabled as using auto discovery
       processors:
       - memory_limiter
@@ -233,8 +240,9 @@ service:
       exporters:
       # - signalfx
       # Use instead when sending to gateway
-      - otlphttp/gateway
-      # - splunk_hec # sends metrics to Splunk Enterprise via HEC
+      - otlp_http/gateway
+      # Also send metrics to Splunk if splunk_hec_metrics_enabled = true (gets enabled in terraform config and script)
+      # - splunk_hec/metrics
 
     metrics/internal:
       receivers:
@@ -251,7 +259,6 @@ service:
 
     logs/signalfx:
       receivers:
-      - signalfx
       - smartagent/processlist
       processors:
       - memory_limiter
@@ -269,7 +276,9 @@ service:
       - batch
       - resourcedetection
       exporters:
-      - otlphttp/entities
+      # - otlp_http/entities
+      # Use instead when sending to gateway
+      - otlp_http/gateway
 
     logs:
       receivers:
@@ -283,4 +292,4 @@ service:
       # - splunk_hec
       # - splunk_hec/profiling
       # Use instead when sending to gateway
-      - otlphttp/gateway
+      - otlp_http/gateway

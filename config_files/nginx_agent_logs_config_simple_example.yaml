@@ -74,31 +74,17 @@ receivers:
 
   nop:
 
-# ## MySQL Specific Receivers - removed as now using auto discovery
-#   smartagent/mysql:
-#     type: collectd/mysql
-#     host: 127.0.0.1
-#     port: 3306
-#     databases:
-#       - name:
-#     username: ${MYSQL_USER}
-#     password: ${MYSQL_USER_PWD}
+  ## Disabled as using auto discovery
+  # nginx:
+  #   endpoint: "http://localhost:8080/nginx_status"
+  #   collection_interval: 10s
 
-#   mysql:
-#     endpoint: localhost:3306
-#     username: ${MYSQL_USER}
-#     password: ${MYSQL_USER_PWD}
-#     collection_interval: 10s
-#     initial_delay: 1s
-#     statement_events:
-#       digest_text_limit: 120
-#       time_limit: 24h
-#       limit: 250
-#     metrics:
-#       mysql.query.slow.count:
-#         enabled: true
-#       mysql.query.count:
-#         enabled: true
+  filelog:
+    include_file_path: true
+    include:
+      - /var/log/nginx/access.log
+      - /var/log/nginx/error.log
+      - /var/log/syslog
 
 processors:
   batch:
@@ -141,20 +127,37 @@ processors:
 
   metricstransform:
     transforms:
-      - include: ^mysql\.
+      - include: ^nginx\.
         match_type: regexp
         action: update
         operations:
           - action: add_label
             new_label: agent_version
-            new_value: {{version}}
+            new_value: version {{version}}
       - include: ^system\.
         match_type: regexp
         action: update
         operations:
           - action: add_label
             new_label: agent_version
-            new_value: {{version}}
+            new_value: version {{version}}
+
+  transform/logs:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          # Nginx Access Logs
+          - set(log.attributes["com.splunk.sourcetype"], "nginx:plus:access") where log.attributes["log.file.name"] == "access.log"
+
+          # Nginx Error Logs
+          - set(log.attributes["com.splunk.sourcetype"], "nginx:plus:error") where log.attributes["log.file.name"] == "error.log"
+          
+          # Syslog
+          - set(log.attributes["com.splunk.sourcetype"], "syslog") where log.attributes["log.file.name"] == "syslog"
+          
+          # Set the Splunk 'source' field to the full file path for all logs
+          - set(log.attributes["com.splunk.source"], log.attributes["log.file.path"])
 
 exporters:
   # Traces
@@ -187,8 +190,16 @@ exporters:
   splunk_hec:
     token: "${SPLUNK_HEC_TOKEN}"
     endpoint: "${SPLUNK_HEC_URL}"
-    source: "otel"
-    sourcetype: "otel"
+    # source: "otel"
+    # sourcetype: "otel"
+    profiling_data_enabled: false
+
+  # HEC Metrics
+  splunk_hec/metrics:
+    token: "${SPLUNK_HEC_METRICS_TOKEN}"
+    endpoint: "${SPLUNK_HEC_URL}"
+    #source: "otel"
+    #sourcetype: "otel"
     profiling_data_enabled: false
 
   # Profiling
@@ -244,9 +255,7 @@ service:
       receivers:
       - hostmetrics
       - otlp
-      # MySql Specific Receivers
-      # - smartagent/mysql # removed as now using auto discovery
-      # - mysql # removed as now using auto discovery
+      # - nginx # Disabled as using auto discovery
       processors:
       - memory_limiter
       - batch
@@ -256,6 +265,8 @@ service:
       # - signalfx
       # Use instead when sending to gateway
       - otlp_http/gateway
+      # Also send metrics to Splunk if splunk_hec_metrics_enabled = true (gets enabled in terraform config and script)
+      # - splunk_hec/metrics
 
     metrics/internal:
       receivers:
@@ -296,13 +307,15 @@ service:
     logs:
       receivers:
       - otlp
+      - filelog
       processors:
       - memory_limiter
       - batch
       - resourcedetection
+      - transform/logs
       #- resource/add_environment
       exporters:
-      # - splunk_hec
+      - splunk_hec
       # - splunk_hec/profiling
       # Use instead when sending to gateway
-      - otlp_http/gateway
+      # - otlp_http/gateway

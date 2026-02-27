@@ -123,9 +123,6 @@ resource "aws_instance" "mysql" {
       "sudo chmod +x /tmp/update_splunk_otel_collector.sh",
       "sudo /tmp/update_splunk_otel_collector.sh $LBURL $MYSQLUSER $MYSQLPWD",
 
-    ## If splunk_ent_count = 0 then set a default value to prevent terraform errors
-      # "SPLUNK_IP=${length(aws_instance.splunk_ent) > 0 ? aws_instance.splunk_ent[0].private_ip : "127.0.0.1"}",
-
    ## Deploy UF for Splunk Ent, but only if splunk_ent_count = 1 AND otel_logs_enabled is false
     <<EOT
     if [ ${var.splunk_ent_count} -eq 1 ] && [ "${var.otel_logs_enabled}" = "false" ]; then
@@ -171,12 +168,10 @@ resource "aws_instance" "mysql" {
       ,
           
       ## Enable Metrics to Splunk, but only if splunk_hec_metrics_enabled = true
-      "HEC_TOKEN=\"${local.hec_metrics_token}\"",
       <<EOT
       if [ "${var.splunk_hec_metrics_enabled}" = "true" ]; then
         sudo chmod +x /tmp/update_splunk_hec_metrics.sh
-        SPLUNK_IP=${var.splunk_private_ip}
-        sudo /tmp/update_splunk_hec_metrics.sh $SPLUNK_IP $HEC_TOKEN
+        sudo /tmp/update_splunk_hec_metrics.sh ${var.fqdn} ${local.hec_metrics_token}
       else
         echo "Skipping as splunk_hec_metrics_enabled is false"
       fi

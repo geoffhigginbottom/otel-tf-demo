@@ -71,12 +71,6 @@ receivers:
 
   smartagent/processlist:
     type: processlist
-  
-  signalfx:
-    endpoint: "${SPLUNK_LISTEN_INTERFACE}:9943"
-    # Whether to preserve incoming access token and use instead of exporter token
-    # default = false
-    #access_token_passthrough: true
 
   nop:
 
@@ -123,6 +117,23 @@ processors:
         value: "agent"
         key: otelcol.service.mode
 
+  metricstransform:
+    transforms:
+      - include: ^apache\.
+        match_type: regexp
+        action: update
+        operations:
+          - action: add_label
+            new_label: agent_version
+            new_value: {{version}}
+      - include: ^system\.
+        match_type: regexp
+        action: update
+        operations:
+          - action: add_label
+            new_label: agent_version
+            new_value: {{version}}
+
 exporters:
   # Traces
   otlp_http:
@@ -167,6 +178,10 @@ exporters:
   # Send to gateway
   otlp_http/gateway:
     endpoint: http://${SPLUNK_GATEWAY_URL}:4318
+    headers:
+      "X-SF-Token": "${SPLUNK_ACCESS_TOKEN}"
+    auth:
+      authenticator: headers_setter
 
   otlp_grpc/gateway:
     endpoint: "${SPLUNK_GATEWAY_URL}:4317"
@@ -214,17 +229,16 @@ service:
       receivers:
       - hostmetrics
       - otlp
-      - signalfx
       # - apache #removed as now using auto discovery
       processors:
       - memory_limiter
       - batch
       - resourcedetection
+      - metricstransform
       exporters:
       # - signalfx
       # Use instead when sending to gateway
       - otlp_http/gateway
-      # - splunk_hec # sends metrics to Splunk Enterprise via HEC
 
     metrics/internal:
       receivers:
@@ -241,7 +255,6 @@ service:
 
     logs/signalfx:
       receivers:
-      - signalfx
       - smartagent/processlist
       processors:
       - memory_limiter
@@ -259,7 +272,9 @@ service:
       - batch
       - resourcedetection
       exporters:
-      - otlp_http/entities
+      # - otlp_http/entities
+      # Use instead when sending to gateway
+      - otlp_http/gateway
 
     logs:
       receivers:

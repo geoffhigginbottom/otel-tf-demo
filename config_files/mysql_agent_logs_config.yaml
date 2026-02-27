@@ -83,16 +83,10 @@ receivers:
 
   smartagent/processlist:
     type: processlist
-  
-  signalfx:
-    endpoint: "${SPLUNK_LISTEN_INTERFACE}:9943"
-    # Whether to preserve incoming access token and use instead of exporter token
-    # default = false
-    #access_token_passthrough: true
 
   nop:
 
-  ### File Logs Receivers - Start ###
+### File Logs Receivers - Start ###
   # MySQL server error log. Contains critical errors that occurred during the
   # server's operation, table corruption, start and stop information.
   # When running under Systemd, error logging goes to journald. To enable
@@ -101,14 +95,14 @@ receivers:
   filelog/mysql-error:
     include: [ "/var/log/mysql/error.log" ]
     multiline:
-      # e.g. "2023-10-09 13:40:48 0 [Note] ..."
       line_start_pattern: '^[\w-]+ [\d:.]+ \w+ \[\w+\]'
     operators:
       - type: regex_parser
-        regex: '^(?P<time>.+?) \d+ \[(?P<level>\w+)\] (?P<log>[\s\S]*)$'
+        # Adjusted regex to handle potential sub-seconds
+        regex: '^(?P<time>[\d-]+\s[\d:.]+)\s+\d+\s+\[(?P<level>\w+)\]\s+(?P<log>[\s\S]*)$'
         timestamp:
           parse_from: attributes.time
-          layout: '%Y-%m-%d %H:%M:%S'
+          layout: '%Y-%m-%d %H:%M:%S.%f' # Added .%f for sub-second precision
         severity:
           parse_from: attributes.level
       - type: move
@@ -126,7 +120,7 @@ receivers:
   # Disabled by default. To enable, use the general_log_file variable.
   # See https://mariadb.com/kb/en/general-query-log/
   filelog/mysql-query:
-    include: ["/var/log/mysql/query.log", "/var/log/mysql/mysql.log"]
+    include: ["/var/log/mysql/query.log",]
     operators:
       - type: regex_parser
         regex: '^(?P<time>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(?P<id>\d+)\s+(?P<type>\w+)\s+(?P<log>.+)$'
@@ -150,11 +144,33 @@ receivers:
   # See https://mariadb.com/kb/en/slow-query-log/
   filelog/mysql-slow_query:
     include: [ "/var/log/mysql/mysql-slow.log" ]
+    # Break on '# User@Host:' because it is guaranteed for every entry, 
+    # whereas '# Time:' is optional.
     multiline:
-      line_start_pattern: '^# Time: '
+      line_start_pattern: '^# User@Host: '
+    operators:
+      - type: regex_parser
+        # This regex handles the standard MySQL/MariaDB slow query format
+        regex: '^# User@Host: (?P<user>[^\[]+)\[(?P<user_alt>[^\]]+)\] @ (?P<host>[^ ]+) \[(?P<ip>[^\]]*)\]\s+Id:\s+(?P<id>\d+)\n# Query_time: (?P<query_time>[\d.]+)  Lock_time: (?P<lock_time>[\d.]+) Rows_sent: (?P<rows_sent>\d+)  Rows_examined: (?P<rows_examined>\d+)\n(?:SET timestamp=(?P<timestamp>\d+);\n)?(?P<query>[\s\S]*)$'
+        timestamp:
+          parse_from: attributes.timestamp
+          layout: '%s' # Parses Unix epoch from the 'SET timestamp' line
+      - type: move
+        from: attributes.query
+        to: body
+      - type: retain
+        fields:
+          - attributes["log.file.path"]
+          - attributes.user
+          - attributes.host
+          - attributes.query_time
+          - attributes.lock_time
+          - attributes.rows_sent
+          - attributes.rows_examined
     include_file_name: false
     include_file_path: true
     storage: file_storage/filelogs
+
 
   # Syslog and messages log files.
   # These are not in the RFC3164 format.
@@ -177,7 +193,7 @@ receivers:
     include_file_path: true
     storage: file_storage/filelogs
 
-  ### File Logs Receivers - End ###
+ ### File Logs Receivers - End ###
 
   
         
@@ -253,15 +269,40 @@ processors:
         action: update
         operations:
           - action: add_label
-            new_label: version
-            new_value: opentelemetry collector {{version}}
+            new_label: agent_version
+            new_value: version {{version}}
       - include: ^system\.
         match_type: regexp
         action: update
         operations:
           - action: add_label
-            new_label: version
-            new_value: opentelemetry collector {{version}}
+            new_label: agent_version
+            new_value: version {{version}}
+
+  transform/splunk_metadata:
+    error_mode: ignore
+    log_statements:
+      - context: log
+        statements:
+          - set(log.attributes["com.splunk.sourcetype"], "mysql:plus:error") where log.attributes["log.file.path"] == "/var/log/mysql/error.log"
+          - set(log.attributes["com.splunk.sourcetype"], "mysql:plus:query") where log.attributes["log.file.path"] == "/var/log/mysql/query.log"
+          - set(log.attributes["com.splunk.sourcetype"], "mysql:plus:mysql-slow") where log.attributes["log.file.path"] == "/var/log/mysql/mysql-slow.log"
+          - set(log.attributes["com.splunk.sourcetype"], "syslog") where log.attributes["log.file.path"] == "/var/log/syslog"
+          
+          # Map the log.file.path to the Splunk 'source' field
+          - set(log.attributes["com.splunk.source"], log.attributes["log.file.path"]) where log.attributes["log.file.path"] != nil
+
+  # transform/splunk_metadata:
+  #   error_mode: ignore
+  #   log_statements:
+  #     - context: log
+  #       statements:
+  #         - set(cache, ExtractPatterns(log.attributes["log.file.name"], "(?P<temp_filename>\\w+)"))
+  #         - set(log.attributes["com.splunk.sourcetype"], Concat(["mysql:plus:", cache["temp_filename"]], "")) where IsMatch(log.attributes["log.file.path"], "/var/log/mysql/")
+  #         - set(log.attributes["com.splunk.sourcetype"], "syslog") where log.attributes["log.file.path"] == "/var/log/syslog"
+
+  #       # Map the log.file.path to the Splunk 'source' field
+  #         - set(log.attributes["com.splunk.source"], log.attributes["log.file.path"]) where log.attributes["log.file.path"] != nil
 
 exporters:
   # Traces
@@ -294,8 +335,25 @@ exporters:
   splunk_hec:
     token: "${SPLUNK_HEC_TOKEN}"
     endpoint: "${SPLUNK_HEC_URL}"
-    source: "otel"
-    sourcetype: "otel"
+    # source: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.source" attribute set by the transform processor
+    # sourcetype: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.sourcetype" attribute set by the transform processor
+    # index: "main" # Optional: specify the index to send logs to. If not set, it will go to the default index configured in HEC.
+    # host: "otel-collector" # Optional: specify the host field for incoming logs. If not set, it will use the host from which the log was sent or "unknown" if not available.
+    # batch_max_size: 1024 # Optional: maximum number of logs to include in a batch before sending to HEC. Default is 1024.
+    # batch_timeout: 5s # Optional: maximum amount of time to wait before sending a batch of logs to HEC. Default is 5s.
+    # retry_on_failure: true # Optional: whether to retry sending logs to HEC if the initial attempt fails. Default is true.
+    # max_retries: 3 # Optional: maximum number of retry attempts if sending logs to HEC fails. Default is 3.
+    # retry_delay: 5s # Optional: amount of time to wait between retry attempts if sending logs to HEC fails. Default is 5s.
+    # tls:
+    #   insecure: true # Optional: whether to skip TLS certificate verification when sending logs to HEC. Default is false.  
+    profiling_data_enabled: false
+
+  # HEC Metrics
+  splunk_hec/metrics:
+    token: "${SPLUNK_HEC_METRICS_TOKEN}"
+    endpoint: "${SPLUNK_HEC_URL}"
+    #source: "otel"
+    #sourcetype: "otel"
     profiling_data_enabled: false
 
   # Profiling
@@ -307,6 +365,10 @@ exporters:
   # Send to gateway
   otlp_http/gateway:
     endpoint: http://${SPLUNK_GATEWAY_URL}:4318
+    headers:
+      "X-SF-Token": "${SPLUNK_ACCESS_TOKEN}"
+    auth:
+      authenticator: headers_setter
 
   otlp_grpc/gateway:
     endpoint: "${SPLUNK_GATEWAY_URL}:4317"
@@ -348,7 +410,6 @@ service:
       receivers:
       - hostmetrics
       - otlp
-      - signalfx
       # MySql Specific Receivers
       # - smartagent/mysql # removed as now using auto discovery
       # - mysql # removed as now using auto discovery
@@ -361,7 +422,8 @@ service:
       # - signalfx
       # Use instead when sending to gateway
       - otlp_http/gateway
-      # - splunk_hec # sends metrics to Splunk Enterprise via HEC
+      # Also send metrics to Splunk if splunk_hec_metrics_enabled = true (gets enabled in terraform config and script)
+      # - splunk_hec/metrics
 
     metrics/internal:
       receivers:
@@ -378,7 +440,6 @@ service:
 
     logs/signalfx:
       receivers:
-      - signalfx
       - smartagent/processlist
       processors:
       - memory_limiter
@@ -396,7 +457,9 @@ service:
       - batch
       - resourcedetection
       exporters:
-      - otlp_http/entities
+      # - otlp_http/entities
+      # Use instead when sending to gateway
+      - otlp_http/gateway
 
     logs:
       receivers:
@@ -409,6 +472,7 @@ service:
       - memory_limiter
       - batch
       - resourcedetection
+      - transform/splunk_metadata
       #- resource/add_environment
       exporters:
       - splunk_hec

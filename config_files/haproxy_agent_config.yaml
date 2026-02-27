@@ -137,15 +137,15 @@ processors:
         action: update
         operations:
           - action: add_label
-            new_label: version
-            new_value: opentelemetry collector {{version}}
+            new_label: agent_version
+            new_value: {{version}}
       - include: ^system\.
         match_type: regexp
         action: update
         operations:
           - action: add_label
-            new_label: version
-            new_value: opentelemetry collector {{version}}
+            new_label: agent_version
+            new_value: {{version}}
 
 exporters:
   # Traces
