@@ -142,22 +142,21 @@ processors:
             new_label: agent_version
             new_value: version {{version}}
 
-  transform/logs:
+  transform/splunk_metadata:
     error_mode: ignore
     log_statements:
       - context: log
         statements:
-          # Nginx Access Logs
-          - set(log.attributes["com.splunk.sourcetype"], "nginx:plus:access") where log.attributes["log.file.name"] == "access.log"
+          - set(log.attributes["com.splunk.sourcetype"], "nginx:plus:access") where log.attributes["log.file.path"] == "/var/log/nginx/access.log"
+          - set(log.attributes["com.splunk.sourcetype"], "nginx:plus:error") where log.attributes["log.file.path"] == "/var/log/nginx/error.log"
+          - set(log.attributes["com.splunk.sourcetype"], "syslog") where log.attributes["log.file.path"] == "/var/log/syslog"
 
-          # Nginx Error Logs
-          - set(log.attributes["com.splunk.sourcetype"], "nginx:plus:error") where log.attributes["log.file.name"] == "error.log"
+          - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/syslog"
+          - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/nginx/access.log"
+          - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/nginx/error.log"
           
-          # Syslog
-          - set(log.attributes["com.splunk.sourcetype"], "syslog") where log.attributes["log.file.name"] == "syslog"
-          
-          # Set the Splunk 'source' field to the full file path for all logs
-          - set(log.attributes["com.splunk.source"], log.attributes["log.file.path"])
+          # Map the log.file.path to the Splunk 'source' field
+          - set(log.attributes["com.splunk.source"], log.attributes["log.file.path"]) where log.attributes["log.file.path"] != nil
 
 exporters:
   # Traces
@@ -190,9 +189,15 @@ exporters:
   splunk_hec:
     token: "${SPLUNK_HEC_TOKEN}"
     endpoint: "${SPLUNK_HEC_URL}"
-    # source: "otel"
-    # sourcetype: "otel"
     profiling_data_enabled: false
+
+  otlp_http/logs:
+    endpoint: "http://splunk.geoffh.co.uk:4318"
+    
+  otlp_grpc/logs:
+    endpoint: "splunk.geoffh.co.uk:4317"
+    tls:
+      insecure: true
 
   # HEC Metrics
   splunk_hec/metrics:
@@ -312,10 +317,12 @@ service:
       - memory_limiter
       - batch
       - resourcedetection
-      - transform/logs
+      - transform/splunk_metadata
       #- resource/add_environment
       exporters:
-      - splunk_hec
+      # - splunk_hec
+      - otlp_http/logs
+      # - otlp_grpc/logs
       # - splunk_hec/profiling
       # Use instead when sending to gateway
       # - otlp_http/gateway
