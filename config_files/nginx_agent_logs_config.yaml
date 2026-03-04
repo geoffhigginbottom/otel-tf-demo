@@ -229,18 +229,6 @@ processors:
           # Map the log.file.path to the Splunk 'source' field
           - set(log.attributes["com.splunk.source"], log.attributes["log.file.path"]) where log.attributes["log.file.path"] != nil
 
-  # transform/splunk_metadata:
-  #   error_mode: ignore
-  #   log_statements:
-  #     - context: log
-  #       statements:
-  #         - set(cache, ExtractPatterns(log.attributes["log.file.name"], "(?P<temp_filename>\\w+)"))
-  #         - set(log.attributes["com.splunk.sourcetype"], Concat(["nginx:plus:", cache["temp_filename"]], "")) where IsMatch(log.attributes["log.file.path"], "/var/log/nginx/")
-  #         - set(log.attributes["com.splunk.sourcetype"], "syslog") where log.attributes["log.file.path"] == "/var/log/syslog"
-
-  #       # Map the log.file.path to the Splunk 'source' field
-  #         - set(log.attributes["com.splunk.source"], log.attributes["log.file.path"]) where log.attributes["log.file.path"] != nil
-
 exporters:
   # Traces
   otlp_http:
@@ -285,8 +273,8 @@ exporters:
     #   insecure: true # Optional: whether to skip TLS certificate verification when sending logs to HEC. Default is false.  
     profiling_data_enabled: false
 
-  # otlp_http/logs:
-    # endpoint: "http://splunk.geoffh.co.uk:4318"
+  otlp_http/logs:
+    endpoint: "http://splunk.geoffh.co.uk:4318"
     
   otlp_grpc/logs:
     endpoint: "splunk.geoffh.co.uk:4317"
@@ -366,7 +354,7 @@ service:
       # Use instead when sending to gateway
       - otlp_http/gateway
       # Also send metrics to Splunk if splunk_hec_metrics_enabled = true (gets enabled in terraform config and script)
-      - splunk_hec/metrics
+      # - splunk_hec/metrics
 
     metrics/internal:
       receivers:
@@ -418,8 +406,8 @@ service:
       #- resource/add_environment
       exporters:
       # - splunk_hec
-      # - otlp_http/logs
-      - otlp_grpc/logs
+      - otlp_http/logs
+      # - otlp_grpc/logs
       # - splunk_hec/profiling
       # Use instead when sending to gateway
       # - otlp_http/gateway
