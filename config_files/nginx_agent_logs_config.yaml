@@ -274,10 +274,10 @@ exporters:
     profiling_data_enabled: false
 
   otlp_http/logs:
-    endpoint: "http://splunk.geoffh.co.uk:4318"
+    endpoint: "http://${SPLUNK_OTLP_URL}:4318"
     
   otlp_grpc/logs:
-    endpoint: "splunk.geoffh.co.uk:4317"
+    endpoint: "${SPLUNK_OTLP_URL}:4317"
     tls:
       insecure: true
 
