@@ -281,13 +281,13 @@ exporters:
     tls:
       insecure: true
 
-  # HEC Metrics
-  splunk_hec/metrics:
-    token: "${SPLUNK_HEC_METRICS_TOKEN}"
-    endpoint: "${SPLUNK_HEC_URL}"
-    #source: "otel"
-    #sourcetype: "otel"
-    profiling_data_enabled: false
+  # # HEC Metrics
+  # splunk_hec/metrics:
+  #   token: "${SPLUNK_HEC_METRICS_TOKEN}"
+  #   endpoint: "${SPLUNK_HEC_URL}"
+  #   #source: "otel"
+  #   #sourcetype: "otel"
+  #   profiling_data_enabled: false
 
   # Profiling
   splunk_hec/profiling:

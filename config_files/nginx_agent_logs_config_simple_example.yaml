@@ -189,6 +189,17 @@ exporters:
   splunk_hec:
     token: "${SPLUNK_HEC_TOKEN}"
     endpoint: "${SPLUNK_HEC_URL}"
+    # source: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.source" attribute set by the transform processor
+    # sourcetype: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.sourcetype" attribute set by the transform processor
+    # index: "main" # Optional: specify the index to send logs to. If not set, it will go to the default index configured in HEC.
+    # host: "otel-collector" # Optional: specify the host field for incoming logs. If not set, it will use the host from which the log was sent or "unknown" if not available.
+    # batch_max_size: 1024 # Optional: maximum number of logs to include in a batch before sending to HEC. Default is 1024.
+    # batch_timeout: 5s # Optional: maximum amount of time to wait before sending a batch of logs to HEC. Default is 5s.
+    # retry_on_failure: true # Optional: whether to retry sending logs to HEC if the initial attempt fails. Default is true.
+    # max_retries: 3 # Optional: maximum number of retry attempts if sending logs to HEC fails. Default is 3.
+    # retry_delay: 5s # Optional: amount of time to wait between retry attempts if sending logs to HEC fails. Default is 5s.
+    # tls:
+    #   insecure: true # Optional: whether to skip TLS certificate verification when sending logs to HEC. Default is false.  
     profiling_data_enabled: false
 
   otlp_http/logs:
@@ -199,13 +210,13 @@ exporters:
     tls:
       insecure: true
 
-  # HEC Metrics
-  splunk_hec/metrics:
-    token: "${SPLUNK_HEC_METRICS_TOKEN}"
-    endpoint: "${SPLUNK_HEC_URL}"
-    #source: "otel"
-    #sourcetype: "otel"
-    profiling_data_enabled: false
+  # # HEC Metrics
+  # splunk_hec/metrics:
+  #   token: "${SPLUNK_HEC_METRICS_TOKEN}"
+  #   endpoint: "${SPLUNK_HEC_URL}"
+  #   #source: "otel"
+  #   #sourcetype: "otel"
+  #   profiling_data_enabled: false
 
   # Profiling
   splunk_hec/profiling:
