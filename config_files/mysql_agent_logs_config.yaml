@@ -288,21 +288,14 @@ processors:
           - set(log.attributes["com.splunk.sourcetype"], "mysql:plus:query") where log.attributes["log.file.path"] == "/var/log/mysql/query.log"
           - set(log.attributes["com.splunk.sourcetype"], "mysql:plus:mysql-slow") where log.attributes["log.file.path"] == "/var/log/mysql/mysql-slow.log"
           - set(log.attributes["com.splunk.sourcetype"], "syslog") where log.attributes["log.file.path"] == "/var/log/syslog"
+
+          - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/syslog"
+          - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/mysql/error.log"
+          - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/mysql/query.log"
+          - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/mysql/mysql-slow.log"
           
           # Map the log.file.path to the Splunk 'source' field
           - set(log.attributes["com.splunk.source"], log.attributes["log.file.path"]) where log.attributes["log.file.path"] != nil
-
-  # transform/splunk_metadata:
-  #   error_mode: ignore
-  #   log_statements:
-  #     - context: log
-  #       statements:
-  #         - set(cache, ExtractPatterns(log.attributes["log.file.name"], "(?P<temp_filename>\\w+)"))
-  #         - set(log.attributes["com.splunk.sourcetype"], Concat(["mysql:plus:", cache["temp_filename"]], "")) where IsMatch(log.attributes["log.file.path"], "/var/log/mysql/")
-  #         - set(log.attributes["com.splunk.sourcetype"], "syslog") where log.attributes["log.file.path"] == "/var/log/syslog"
-
-  #       # Map the log.file.path to the Splunk 'source' field
-  #         - set(log.attributes["com.splunk.source"], log.attributes["log.file.path"]) where log.attributes["log.file.path"] != nil
 
 exporters:
   # Traces
@@ -348,13 +341,21 @@ exporters:
     #   insecure: true # Optional: whether to skip TLS certificate verification when sending logs to HEC. Default is false.  
     profiling_data_enabled: false
 
-  # HEC Metrics
-  splunk_hec/metrics:
-    token: "${SPLUNK_HEC_METRICS_TOKEN}"
-    endpoint: "${SPLUNK_HEC_URL}"
-    #source: "otel"
-    #sourcetype: "otel"
-    profiling_data_enabled: false
+  otlp_http/logs:
+    endpoint: "http://${SPLUNK_OTLP_URL}:4318"
+    
+  otlp_grpc/logs:
+    endpoint: "${SPLUNK_OTLP_URL}:4317"
+    tls:
+      insecure: true
+
+  # # HEC Metrics
+  # splunk_hec/metrics:
+  #   token: "${SPLUNK_HEC_METRICS_TOKEN}"
+  #   endpoint: "${SPLUNK_HEC_URL}"
+  #   #source: "otel"
+  #   #sourcetype: "otel"
+  #   profiling_data_enabled: false
 
   # Profiling
   splunk_hec/profiling:
@@ -475,7 +476,9 @@ service:
       - transform/splunk_metadata
       #- resource/add_environment
       exporters:
-      - splunk_hec
+      # - splunk_hec
+      - otlp_http/logs
+      # - otlp_grpc/logs
       # - splunk_hec/profiling
       # Use instead when sending to gateway
       # - otlp_http/gateway
