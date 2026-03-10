@@ -125,14 +125,14 @@ processors:
         operations:
           - action: add_label
             new_label: agent_version
-            new_value: {{version}}
+            new_value: version {{version}}
       - include: ^system\.
         match_type: regexp
         action: update
         operations:
           - action: add_label
             new_label: agent_version
-            new_value: {{version}}
+            new_value: version {{version}}
 
 exporters:
   # Traces
@@ -239,6 +239,8 @@ service:
       # - signalfx
       # Use instead when sending to gateway
       - otlp_http/gateway
+      # Also send metrics to Splunk if splunk_hec_metrics_enabled = true (gets enabled in terraform config and script)
+      # - splunk_hec/metrics
 
     metrics/internal:
       receivers:
