@@ -11,6 +11,8 @@ RestartSec=5
 TimeoutSec=60
 RuntimeMaxSec=infinity
 PIDFile=/tmp/mysql_loadgen.pid
+StandardOutput=null
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

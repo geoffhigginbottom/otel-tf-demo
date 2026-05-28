@@ -1,3 +1,16 @@
+# Default configuration file for the Linux (deb/rpm) and Windows MSI collector packages
+
+# If the collector is installed without the Linux/Windows installer script, the following
+# environment variables are required to be manually defined or configured below:
+# - SPLUNK_ACCESS_TOKEN: The Splunk access token to authenticate requests
+# - SPLUNK_API_URL: The Splunk API URL, e.g. https://api.us0.observability.splunkcloud.com
+# - SPLUNK_BUNDLE_DIR: The path to the Smart Agent bundle, e.g. /usr/lib/splunk-otel-collector/agent-bundle
+# - SPLUNK_COLLECTD_DIR: The path to the collectd config directory for the Smart Agent, e.g. /usr/lib/splunk-otel-collector/agent-bundle/run/collectd
+# - SPLUNK_HEC_TOKEN: The Splunk HEC authentication token
+# - SPLUNK_HEC_URL: The Splunk HEC endpoint URL, e.g. https://http-inputs-acme.splunkcloud.com/services/collector
+# - SPLUNK_INGEST_URL: The Splunk ingest URL, e.g. https://ingest.us0.observability.splunkcloud.com
+# - SPLUNK_LISTEN_INTERFACE: The network interface the agent receivers listen on.
+
 extensions:
   headers_setter:
     headers:
@@ -24,6 +37,8 @@ extensions:
       enabled: true
 
 receivers:
+  fluentforward:
+    endpoint: "${SPLUNK_LISTEN_INTERFACE}:8006"
   hostmetrics:
     collection_interval: 1s
     scrapers:
@@ -40,7 +55,16 @@ receivers:
       processes:
       # System processes metrics, disabled by default
       # process:
-
+  jaeger:
+    protocols:
+      grpc:
+        endpoint: "${SPLUNK_LISTEN_INTERFACE}:14250"
+      thrift_binary:
+        endpoint: "${SPLUNK_LISTEN_INTERFACE}:6832"
+      thrift_compact:
+        endpoint: "${SPLUNK_LISTEN_INTERFACE}:6831"
+      thrift_http:
+        endpoint: "${SPLUNK_LISTEN_INTERFACE}:14268"
   otlp:
     protocols:
       grpc:
@@ -62,6 +86,14 @@ receivers:
         static_configs:
         - targets: ["0.0.0.0:8888"]
         metric_relabel_configs:
+          - source_labels: [ service_name ]
+            target_label: service.name
+          - source_labels: [ service_instance_id ]
+            target_label: service.instance.id
+          - source_labels: [ service_version ]
+            target_label: service.version
+          - regex: service_name|service_instance_id|service_version
+            action: labeldrop
           - source_labels: [ __name__ ]
             regex: 'promhttp_metric_handler_errors.*'
             action: drop
@@ -72,17 +104,10 @@ receivers:
   smartagent/processlist:
     type: processlist
 
-  nop:
+  zipkin:
+    endpoint: "${SPLUNK_LISTEN_INTERFACE}:9411"
 
-# ## MySQL Specific Receivers - removed as now using auto discovery
-#   smartagent/mysql:
-#     type: collectd/mysql
-#     host: 127.0.0.1
-#     port: 3306
-#     databases:
-#       - name:
-#     username: ${MYSQL_USER}
-#     password: ${MYSQL_USER_PWD}
+  nop:
 
 #   mysql:
 #     endpoint: localhost:3306
@@ -187,8 +212,8 @@ exporters:
   splunk_hec:
     token: "${SPLUNK_HEC_TOKEN}"
     endpoint: "${SPLUNK_HEC_URL}"
-    # source: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.source" attribute set by the transform processor
-    # sourcetype: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.sourcetype" attribute set by the transform processor
+    source: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.source" attribute set by the transform processor
+    sourcetype: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.sourcetype" attribute set by the transform processor
     # index: "main" # Optional: specify the index to send logs to. If not set, it will go to the default index configured in HEC.
     # host: "otel-collector" # Optional: specify the host field for incoming logs. If not set, it will use the host from which the log was sent or "unknown" if not available.
     # batch_max_size: 1024 # Optional: maximum number of logs to include in a batch before sending to HEC. Default is 1024.
@@ -234,6 +259,17 @@ exporters:
     verbosity: detailed
 
 service:
+  telemetry:
+    logs:
+      level: ${env:SPLUNK_COLLECTOR_LOG_LEVEL:-info}
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: '127.0.0.1'
+                port: 8888
+
   extensions:
   - headers_setter
   - health_check
@@ -244,7 +280,9 @@ service:
   pipelines:
     traces:
       receivers:
+      - jaeger
       - otlp
+      - zipkin
       processors:
       - memory_limiter
       - batch
@@ -261,9 +299,6 @@ service:
       receivers:
       - hostmetrics
       - otlp
-      # MySql Specific Receivers
-      # - smartagent/mysql # removed as now using auto discovery
-      # - mysql # removed as now using auto discovery
       processors:
       - memory_limiter
       - batch
@@ -314,6 +349,7 @@ service:
 
     logs:
       receivers:
+      - fluentforward
       - otlp
       processors:
       - memory_limiter
