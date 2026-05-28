@@ -4,7 +4,10 @@ resource "null_resource" "sync_config_files" {
   }
 
   triggers = {
-    folder_hash = md5(join("", [for f in fileset("./config_files/", "**") : filesha1("./config_files/${f}")]))
+    content_hash = md5(join("", concat(
+      [for f in fileset("./config_files/", "**") : filemd5("./config_files/${f}")],
+      [for f in fileset("./config_files/", "**") : f]  # Include filenames for add/delete detection
+    )))
   }
 }
 
@@ -14,7 +17,10 @@ resource "null_resource" "sync_scripts" {
   }
 
   triggers = {
-    folder_hash = md5(join("", [for f in fileset("./scripts/", "**") : filesha1("./scripts/${f}")]))
+    content_hash = md5(join("", concat(
+      [for f in fileset("./scripts/", "**") : filemd5("./scripts/${f}")],
+      [for f in fileset("./scripts/", "**") : f]
+    )))
   }
 }
 
@@ -24,6 +30,9 @@ resource "null_resource" "sync_non_pub_files" {
   }
 
   triggers = {
-    folder_hash = md5(join("", [for f in fileset("./non_public_files/", "**") : filesha1("./non_public_files/${f}")]))
+    content_hash = md5(join("", concat(
+      [for f in fileset("./non_public_files/", "**") : filemd5("./non_public_files/${f}")],
+      [for f in fileset("./non_public_files/", "**") : f]
+    )))
   }
 }

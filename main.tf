@@ -200,6 +200,7 @@ module "instances" {
   gateway_count                                     = var.gateway_count
   haproxy_count                                     = var.haproxy_count
   nginx_count                                       = var.nginx_count
+  logs_workshop_count                               = var.logs_workshop_count
   mysql_count                                       = var.mysql_count
   mysql_user                                        = var.ms_sql_user
   mysql_user_pwd                                    = var.ms_sql_user_pwd
@@ -229,6 +230,7 @@ module "instances" {
   splunk_private_ip                                 = var.splunk_private_ip
   splunk_itsi_license_filename                      = var.splunk_itsi_license_filename
   splunk_ai_toolkit_filename                        = var.splunk_ai_toolkit_filename
+  splunk_connect_for_otlp_filename                  = var.splunk_connect_for_otlp_filename
   splunk_app_for_content_packs_filename             = var.splunk_app_for_content_packs_filename
   splunk_it_service_intelligence_filename           = var.splunk_it_service_intelligence_filename
   splunk_infrastructure_monitoring_add_on_filename  = var.splunk_infrastructure_monitoring_add_on_filename
@@ -251,6 +253,7 @@ module "instances" {
 output "OTEL_Gateway_Servers" {value = var.instances_enabled && var.gateway_count > 0 ? module.instances.*.gateway_details : null}
 output "HAProxy_Servers" {value = var.instances_enabled && var.haproxy_count > 0 ? module.instances.*.haproxy_details : null}
 output "NGINX_Servers" {value = var.instances_enabled && var.nginx_count > 0 ? module.instances.*.nginx_details : null}
+output "Logs_Workshop_Servers" {value = var.instances_enabled && var.logs_workshop_count > 0 ? module.instances.*.logs_workshop_details : null}
 output "MySQL_Servers" {value = var.instances_enabled && var.mysql_count > 0 ? module.instances.*.mysql_details : null}
 output "MS_SQL_Servers" {value = var.instances_enabled && var.ms_sql_count > 0 ? module.instances.*.ms_sql_details : null}
 output "Apache_Web_Servers" {value = var.instances_enabled && var.apache_web_count > 0 ? module.instances.*.apache_web_details : null}

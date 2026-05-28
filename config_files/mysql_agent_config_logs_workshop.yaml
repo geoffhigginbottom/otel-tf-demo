@@ -27,27 +27,6 @@ extensions:
       # endpoint: "${SPLUNK_API_URL}"
       # Use instead when sending to gateway
       endpoint: "${SPLUNK_GATEWAY_URL}"
-  http_forwarder/opamp_splunk_o11y:
-    ingress:
-      endpoint: "${SPLUNK_LISTEN_INTERFACE}:4320"
-    egress:
-      endpoint: "${SPLUNK_INGEST_URL}"
-      # Use instead when sending to gateway
-      #endpoint: "${SPLUNK_GATEWAY_URL}:4320"
-  # opamp/splunk_o11y is included in the default config, but startup removes it
-  # from service.extensions unless --feature-gates=+splunk.opamp.enabled is set.
-  opamp/splunk_o11y:
-    agent_description:
-      # Include the Collector's resource attributes as OpAMP non-identifying attributes.
-      include_resource_attributes: true
-    server:
-      http:
-        endpoint: "${SPLUNK_INGEST_URL}/v1/opamp"
-        # Use instead when sending to gateway (assuming the gateway is running http_forwarder/signalfx on port 4320)
-        #endpoint: "${SPLUNK_GATEWAY_URL}:4320/v1/opamp"
-        polling_interval: 30s
-        headers:
-          X-SF-Token: "${SPLUNK_ACCESS_TOKEN}"
   smartagent:
     bundleDir: "${SPLUNK_BUNDLE_DIR}"
     collectd:
@@ -57,23 +36,11 @@ extensions:
     expvar:
       enabled: true
 
-  # Storage extension for storing filelog checkpoints.
-  # Checkpoints allow the receiver to pick up where it left off in the case of a
-  # collector restart.
-  file_storage/filelogs:
-    # Location where checkpoint files are stored. This directory must be writable
-    # by the collector.
-    directory: "${SPLUNK_FILE_STORAGE_EXTENSION_PATH}"
-    compaction:
-      on_start: true
-      directory: /tmp/
-    create_directory: true
-
 receivers:
-  fluent_forward:
+  fluentforward:
     endpoint: "${SPLUNK_LISTEN_INTERFACE}:8006"
-  host_metrics:
-    collection_interval: 1s
+  hostmetrics:
+    collection_interval: 10s
     scrapers:
       cpu:
       disk:
@@ -119,6 +86,14 @@ receivers:
         static_configs:
         - targets: ["0.0.0.0:8888"]
         metric_relabel_configs:
+          - source_labels: [ service_name ]
+            target_label: service.name
+          - source_labels: [ service_instance_id ]
+            target_label: service.instance.id
+          - source_labels: [ service_version ]
+            target_label: service.version
+          - regex: service_name|service_instance_id|service_version
+            action: labeldrop
           - source_labels: [ __name__ ]
             regex: 'promhttp_metric_handler_errors.*'
             action: drop
@@ -128,82 +103,9 @@ receivers:
 
   smartagent/processlist:
     type: processlist
-
   zipkin:
     endpoint: "${SPLUNK_LISTEN_INTERFACE}:9411"
-
   nop:
-
-  ## Disabled as using auto discovery
-  # nginx:
-  #   endpoint: "http://localhost:8080/nginx_status"
-  #   collection_interval: 10s
-
-### File Logs Receivers - Start ###
-  # Nginx access log.
-  # By default, client requests are logged in the standard NCSA Common Log Format.
-  # See https://docs.nginx.com/nginx/admin-guide/monitoring/logging/
-  file_log/nginx-access:
-    include: [ "/var/log/nginx/access.log" ]
-    operators:
-      - type: regex_parser
-        regex: '^(?P<host>.+) (?P<remote_logname>.+) (?P<user>.+) \[(?P<time>.+)\] "(?P<method>.+) (?P<path>.+) (?P<protocol>.+)" (?P<code>\d+) (?P<size>\d+) "(?P<referer>.+)" "(?P<agent>.+)"$'
-        timestamp:
-          parse_from: attributes.time
-          layout: '%d/%b/%Y:%H:%M:%S %z'
-    include_file_name: false
-    include_file_path: true
-    storage: file_storage/filelogs
-
-  # Nginx error log.
-  # See https://docs.nginx.com/nginx/admin-guide/monitoring/logging/
-  file_log/nginx-error:
-    include: [ "/var/log/nginx/error.log" ]
-    operators:
-      - type: regex_parser
-        regex: '^(?P<time>.+?) \[(?P<level>\w+)\] (?P<pid>\d+)#(?P<tid>\d+): (?P<log>.*)$'
-        timestamp:
-          parse_from: attributes.time
-          layout: '%Y/%m/%d %H:%M:%S'
-        severity:
-          parse_from: attributes.level
-          mapping:
-            fatal: emerg
-            error3: alert
-            error2: crit
-            info2: notice
-      - type: move
-        from: attributes.log
-        to: body
-      - type: retain
-        fields:
-          - attributes["log.file.path"]
-    include_file_name: false
-    include_file_path: true
-    storage: file_storage/filelogs
-
-  # Syslog and messages log files.
-  # These are not in the RFC3164 format.
-  file_log/syslog:
-    include: [ "/var/log/syslog"]
-    operators:
-      - type: regex_parser
-        regex: '^(?P<time>.+?) (?P<hostname>\S+) (?P<program>[^ :\[]+)\[?(?P<pid>\d+)?\]?: (?P<log>.*)$'
-        timestamp:
-          parse_from: attributes.time
-          layout: '%b %e %H:%M:%S'
-      - type: move
-        from: attributes.log
-        to: body
-      - type: retain
-        fields:
-          - attributes.program
-          - attributes["log.file.path"]
-    include_file_name: false
-    include_file_path: true
-    storage: file_storage/filelogs
-
- ### File Logs Receivers - End ###
 
 processors:
   batch:
@@ -224,7 +126,8 @@ processors:
   # libraries can send wrong values from container environments.
   # https://docs.splunk.com/Observability/gdi/opentelemetry/components/resourcedetection-processor.html#ordering-considerations
   resourcedetection:
-    detectors: [gcp, ecs, ec2, azure, system]
+    # detectors: [gcp, ecs, ec2, azure, system]
+    detectors: [system]
     override: true
 
   # Optional: The following processor can be used to add a default "deployment.environment" attribute to the logs and
@@ -243,39 +146,6 @@ processors:
       - action: insert
         value: "agent"
         key: otelcol.service.mode
-
-  metricstransform:
-    transforms:
-      - include: ^nginx\.
-        match_type: regexp
-        action: update
-        operations:
-          - action: add_label
-            new_label: agent_version
-            new_value: version {{version}}
-      - include: ^system\.
-        match_type: regexp
-        action: update
-        operations:
-          - action: add_label
-            new_label: agent_version
-            new_value: version {{version}}
-
-  transform/splunk_metadata:
-    error_mode: ignore
-    log_statements:
-      - context: log
-        statements:
-          - set(log.attributes["com.splunk.sourcetype"], "nginx:plus:access") where log.attributes["log.file.path"] == "/var/log/nginx/access.log"
-          - set(log.attributes["com.splunk.sourcetype"], "nginx:plus:error") where log.attributes["log.file.path"] == "/var/log/nginx/error.log"
-          - set(log.attributes["com.splunk.sourcetype"], "syslog") where log.attributes["log.file.path"] == "/var/log/syslog"
-
-          - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/syslog"
-          - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/nginx/access.log"
-          - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/nginx/error.log"
-          
-          # Map the log.file.path to the Splunk 'source' field
-          - set(log.attributes["com.splunk.source"], log.attributes["log.file.path"]) where log.attributes["log.file.path"] != nil
 
 exporters:
   # Traces
@@ -308,46 +178,9 @@ exporters:
   splunk_hec:
     token: "${SPLUNK_HEC_TOKEN}"
     endpoint: "${SPLUNK_HEC_URL}"
-    # source: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.source" attribute set by the transform processor
-    # sourcetype: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.sourcetype" attribute set by the transform processor
-    # index: "main" # Optional: specify the index to send logs to. If not set, it will go to the default index configured in HEC.
-    # host: "otel-collector" # Optional: specify the host field for incoming logs. If not set, it will use the host from which the log was sent or "unknown" if not available.
-    # batch_max_size: 1024 # Optional: maximum number of logs to include in a batch before sending to HEC. Default is 1024.
-    # batch_timeout: 5s # Optional: maximum amount of time to wait before sending a batch of logs to HEC. Default is 5s.
-    # retry_on_failure: true # Optional: whether to retry sending logs to HEC if the initial attempt fails. Default is true.
-    # max_retries: 3 # Optional: maximum number of retry attempts if sending logs to HEC fails. Default is 3.
-    # retry_delay: 5s # Optional: amount of time to wait between retry attempts if sending logs to HEC fails. Default is 5s.
-    # tls:
-    #   insecure: true # Optional: whether to skip TLS certificate verification when sending logs to HEC. Default is false.  
+    source: "otel"
+    sourcetype: "otel"
     profiling_data_enabled: false
-    retry_on_failure:
-      enabled: true
-      max_elapsed_time: 0 # <--- Changes "5 minutes" to "Forever"
-    sending_queue:
-      enabled: true
-      storage: file_storage/filelogs # <--- This links the queue to your disk storage extension
-      num_consumers: 10 # Optional: number of concurrent consumers processing the sending queue. Default is 10.
-      queue_size: 10000 # Optional: maximum number of log entries that can be stored in the sending queue. Default is 10000.
-
-  otlp_http/logs:
-    endpoint: "http://${SPLUNK_OTLP_URL}:4318"
-    headers:
-      authorization: "Splunk ${SPLUNK_HEC_TOKEN}"
-
-  otlp_grpc/logs:
-    endpoint: "${SPLUNK_OTLP_URL}:4317"
-    tls:
-      insecure: true
-    headers:
-      authorization: "Splunk ${SPLUNK_HEC_TOKEN}"
-
-  # # HEC Metrics
-  # splunk_hec/metrics:
-  #   token: "${SPLUNK_HEC_METRICS_TOKEN}"
-  #   endpoint: "${SPLUNK_HEC_URL}"
-  #   #source: "otel"
-  #   #sourcetype: "otel"
-  #   profiling_data_enabled: false
 
   # Profiling
   splunk_hec/profiling:
@@ -378,13 +211,6 @@ service:
   telemetry:
     logs:
       level: ${env:SPLUNK_COLLECTOR_LOG_LEVEL:-info}
-    # Resource attributes attached to the Collector's internal telemetry. These
-    # are also exposed via OpAMP when the opamp/splunk_o11y extension is enabled
-    # with agent_description.include_resource_attributes set to true.
-    resource:
-      attributes:
-        - name: otelcol.service.mode
-          value: agent
     metrics:
       readers:
         - pull:
@@ -396,13 +222,10 @@ service:
   extensions:
   - headers_setter
   - health_check
-  - file_storage/filelogs
   - http_forwarder
-  - http_forwarder/opamp_splunk_o11y
-  - opamp/splunk_o11y
   - zpages
   - smartagent
-
+  
   pipelines:
     traces:
       receivers:
@@ -423,19 +246,16 @@ service:
 
     metrics:
       receivers:
-      - host_metrics
+      - hostmetrics
       - otlp
       processors:
       - memory_limiter
       - batch
       - resourcedetection
-      - metricstransform
       exporters:
       # - signalfx
       # Use instead when sending to gateway
       - otlp_http/gateway
-      # Also send metrics to Splunk if splunk_hec_metrics_enabled = true (gets enabled in terraform config and script)
-      # - splunk_hec/metrics
 
     metrics/internal:
       receivers:
@@ -475,20 +295,15 @@ service:
 
     logs:
       receivers:
+      - fluentforward
       - otlp
-      - file_log/nginx-access
-      - file_log/nginx-error
-      - file_log/syslog
       processors:
       - memory_limiter
       - batch
       - resourcedetection
-      - transform/splunk_metadata
       #- resource/add_environment
       exporters:
-      - splunk_hec
-      # - otlp_http/logs
-      # - otlp_grpc/logs
-      - splunk_hec/profiling
+      # - splunk_hec
+      # - splunk_hec/profiling
       # Use instead when sending to gateway
-      # - otlp_http/gateway
+      - otlp_http/gateway

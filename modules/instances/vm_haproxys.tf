@@ -43,8 +43,11 @@ resource "aws_instance" "haproxy" {
 
   provisioner "remote-exec" {
     inline = [
+      ## Set Hostname
       "sudo sed -i 's/127.0.0.1.*/127.0.0.1 ${self.tags.Name}.local ${self.tags.Name} localhost/' /etc/hosts",
       "sudo hostnamectl set-hostname ${self.tags.Name}",
+      "echo '${var.splunk_private_ip} ${var.fqdn}' | sudo tee -a /etc/hosts > /dev/null",
+      
       "sudo apt-get update",
       "sudo apt-get upgrade -y",
 
@@ -63,12 +66,15 @@ resource "aws_instance" "haproxy" {
 
       ## Sync Required Files
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/update_splunk_otel_collector.sh /tmp/update_splunk_otel_collector.sh",
-      "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_haproxy.sh /tmp/install_haproxy.sh",
+      "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_haproxy_2026.sh /tmp/install_haproxy.sh",
+      "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_haproxy_2026_logs.sh /tmp/install_haproxy_2026_logs.sh",
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_splunk_universal_forwarder_haproxy.sh /tmp/install_splunk_universal_forwarder.sh",
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_splunk_universal_forwarder_haproxy_splunk_cloud.sh /tmp/install_splunk_universal_forwarder_splunk_cloud.sh",
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/update_splunk_hec_metrics.sh /tmp/update_splunk_hec_metrics.sh",
+      "aws s3 cp s3://${var.s3_bucket_name}/scripts/update_splunk_otel_logs.sh /tmp/update_splunk_otel_logs.sh",
       
       "aws s3 cp s3://${var.s3_bucket_name}/config_files/haproxy_agent_config.yaml /tmp/agent_config.yaml",
+      "aws s3 cp s3://${var.s3_bucket_name}/config_files/haproxy_agent_logs_config.yaml /tmp/agent_logs_config.yaml",
       
       "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/splunkclouduf.spl /tmp/splunkclouduf.spl",
 
@@ -82,26 +88,30 @@ resource "aws_instance" "haproxy" {
 
     ## Install HA Proxy
       "sudo chmod +x /tmp/install_haproxy.sh",
-      "sudo /tmp/install_haproxy.sh",
+      "sudo chmod +x /tmp/install_haproxy_2026_logs.sh",
+      # "sudo /tmp/install_haproxy.sh",
+      "sudo /tmp/${var.otel_logs_enabled ? "install_haproxy_2026_logs.sh" : "install_haproxy.sh"}", # Conditional to run different install script if otel_logs_enabled is true or false
 
     ## Install Otel Agent
       "sudo curl -sSL https://dl.signalfx.com/splunk-otel-collector.sh > /tmp/splunk-otel-collector.sh",
       "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --collector-version ${var.collector_version} --discovery",
 
       "sudo mv /etc/otel/collector/agent_config.yaml /etc/otel/collector/agent_config.bak",
-      "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml",
-      "sudo chown splunk-otel-collector:splunk-otel-collector agent_config.yaml",
+      # "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml",
+      "sudo mv /tmp/${var.otel_logs_enabled ? "agent_logs_config.yaml" : "agent_config.yaml"} /etc/otel/collector/agent_config.yaml", # Conditional to use different config if otel_logs_enabled is true or false
+      "sudo chown splunk-otel-collector:splunk-otel-collector /etc/otel/collector/agent_config.yaml",
       "sudo chmod +x /tmp/update_splunk_otel_collector.sh",
       "sudo /tmp/update_splunk_otel_collector.sh $LBURL",
       "sudo chown splunk-otel-collector:splunk-otel-collector -R /media/data/logs",
       "sudo systemctl restart splunk-otel-collector",
+    
+    # ## Install HA Proxy
+    #   "sudo chmod +x /tmp/install_haproxy.sh",
+    #   "sudo /tmp/install_haproxy.sh",
 
-    ## If splunk_ent_count = 0 then set a default value to prevent terraform errors
-      # "SPLUNK_IP=${length(aws_instance.splunk_ent) > 0 ? aws_instance.splunk_ent[0].private_ip : "127.0.0.1"}",
-
-    ## Deploy UF for Splunk Ent, but only if splunk_ent_count = 1
+   ## Deploy UF for Splunk Ent, but only if splunk_ent_count = 1 AND otel_logs_enabled is false
       <<EOT
-      if [ ${var.splunk_ent_count} -eq 1 ]; then
+    if [ ${var.splunk_ent_count} -eq 1 ] && [ "${var.otel_logs_enabled}" = "false" ]; then
         sudo chmod +x /tmp/install_splunk_universal_forwarder.sh
         UNIVERSAL_FORWARDER_FILENAME=${var.universalforwarder_filename}
         UNIVERSAL_FORWARDER_VERSION=${var.universalforwarder_version}
@@ -117,17 +127,17 @@ resource "aws_instance" "haproxy" {
         echo $SPLUNK_IP > /tmp/SPLUNK_IP
         echo $PRIVATE_DNS > /tmp/PRIVATE_DNS
       else
-        echo "Skipping as splunk_ent_count is 0"
+      echo "Skipping: splunk_ent_count is ${var.splunk_ent_count} or otel_logs_enabled is ${var.otel_logs_enabled}"
       fi
       EOT
       ,
 
-    ## Deploy UF for Splunk Cloud, but only if splunk_cloud_enabled = true
+    ## Deloy UF for Splunk Cloud, but only if splunk_cloud_enabled = true AND otel_logs_enabled is false 
       <<EOT
-      if [ "${var.splunk_cloud_enabled}" = "true" ]; then
+      if [ ${var.splunk_cloud_enabled} = "true" ] && [ "${var.otel_logs_enabled}" = "false" ]; then
         sudo chmod +x /tmp/install_splunk_universal_forwarder_splunk_cloud.sh
         UNIVERSAL_FORWARDER_FILENAME=${var.universalforwarder_filename}
-        UNIVERSAL_FORWARDER_VERSION=${var.universalforwarder_version},
+        UNIVERSAL_FORWARDER_VERSION=${var.universalforwarder_version}
         PASSWORD=${var.splunk_admin_pwd}
         PRIVATE_DNS=${self.private_dns}
         /tmp/install_splunk_universal_forwarder_splunk_cloud.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_VERSION $PASSWORD $PRIVATE_DNS
@@ -144,14 +154,23 @@ resource "aws_instance" "haproxy" {
       ,
 
       ## Enable Metrics to Splunk, but only if splunk_hec_metrics_enabled = true
-      "HEC_TOKEN=\"${local.hec_metrics_token}\"",
       <<EOT
       if [ "${var.splunk_hec_metrics_enabled}" = "true" ]; then
         sudo chmod +x /tmp/update_splunk_hec_metrics.sh
-        SPLUNK_IP=${var.splunk_private_ip}
-        sudo /tmp/update_splunk_hec_metrics.sh $SPLUNK_IP $HEC_TOKEN
+        sudo /tmp/update_splunk_hec_metrics.sh ${var.fqdn} ${local.hec_metrics_token}
       else
         echo "Skipping as splunk_hec_metrics_enabled is false"
+      fi
+      EOT
+      ,
+
+      ## Enable OTel Logs Collection, but only if otel_logs_enabled = true
+      <<EOT
+      if [ "${var.otel_logs_enabled}" = "true" ]; then
+        sudo chmod +x /tmp/update_splunk_otel_logs.sh
+        sudo /tmp/update_splunk_otel_logs.sh ${var.fqdn} ${local.hec_otel_token}
+      else
+        echo "Skipping as otel_logs_enabled is false"
       fi
       EOT
       ,

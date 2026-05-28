@@ -74,6 +74,7 @@ resource "aws_instance" "splunk_ent" {
       "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/${var.splunk_it_service_intelligence_filename} /tmp/${var.splunk_it_service_intelligence_filename}",
       "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/${var.splunk_infrastructure_monitoring_add_on_filename} /tmp/${var.splunk_infrastructure_monitoring_add_on_filename}",
       "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/${var.splunk_ai_toolkit_filename} /tmp/${var.splunk_ai_toolkit_filename}",
+      "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/${var.splunk_connect_for_otlp_filename} /tmp/${var.splunk_connect_for_otlp_filename}",
       # "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/itsi-installer.sh /tmp/itsi-installer.sh",
 
     ## Create Splunk Ent Vars
@@ -88,7 +89,7 @@ resource "aws_instance" "splunk_ent" {
       "SPLUNK_ENTERPRISE_LICENSE_FILE=${var.splunk_enterprise_license_filename}",
       "ADD_ITSI=${var.add_itsi_splunk_enterprise}",
       "SPLUNK_AI_TOOLKIT_FILENAME=${var.splunk_ai_toolkit_filename}",
-
+      "SPLUNK_CONNECT_FOR_OTLP_FILENAME=${var.splunk_connect_for_otlp_filename}",
     ## Write env vars to file (used for debugging)
       "echo $SPLUNK_PASSWORD > /tmp/splunk_password",
       "echo $LO_CONNECT_PASSWORD > /tmp/lo_connect_password",
@@ -114,6 +115,7 @@ resource "aws_instance" "splunk_ent" {
     ## Install Apps
       "sudo tar -xvf /tmp/${var.splunk_infrastructure_monitoring_add_on_filename} -C /opt/splunk/etc/apps",
       "sudo tar -xvf /tmp/${var.splunk_ai_toolkit_filename} -C /opt/splunk/etc/apps",
+      "sudo tar -xvf /tmp/${var.splunk_connect_for_otlp_filename} -C /opt/splunk/etc/apps",
       "sudo chown -R splunk:splunk /opt/splunk/etc/apps",
       "sudo systemctl restart Splunkd",
 

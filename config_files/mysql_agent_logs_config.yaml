@@ -1,3 +1,16 @@
+# Default configuration file for the Linux (deb/rpm) and Windows MSI collector packages
+
+# If the collector is installed without the Linux/Windows installer script, the following
+# environment variables are required to be manually defined or configured below:
+# - SPLUNK_ACCESS_TOKEN: The Splunk access token to authenticate requests
+# - SPLUNK_API_URL: The Splunk API URL, e.g. https://api.us0.observability.splunkcloud.com
+# - SPLUNK_BUNDLE_DIR: The path to the Smart Agent bundle, e.g. /usr/lib/splunk-otel-collector/agent-bundle
+# - SPLUNK_COLLECTD_DIR: The path to the collectd config directory for the Smart Agent, e.g. /usr/lib/splunk-otel-collector/agent-bundle/run/collectd
+# - SPLUNK_HEC_TOKEN: The Splunk HEC authentication token
+# - SPLUNK_HEC_URL: The Splunk HEC endpoint URL, e.g. https://http-inputs-acme.splunkcloud.com/services/collector
+# - SPLUNK_INGEST_URL: The Splunk ingest URL, e.g. https://ingest.us0.observability.splunkcloud.com
+# - SPLUNK_LISTEN_INTERFACE: The network interface the agent receivers listen on.
+
 extensions:
   headers_setter:
     headers:
@@ -36,6 +49,8 @@ extensions:
     create_directory: true
 
 receivers:
+  fluentforward:
+    endpoint: "${SPLUNK_LISTEN_INTERFACE}:8006"
   hostmetrics:
     collection_interval: 1s
     scrapers:
@@ -52,7 +67,16 @@ receivers:
       processes:
       # System processes metrics, disabled by default
       # process:
-
+  jaeger:
+    protocols:
+      grpc:
+        endpoint: "${SPLUNK_LISTEN_INTERFACE}:14250"
+      thrift_binary:
+        endpoint: "${SPLUNK_LISTEN_INTERFACE}:6832"
+      thrift_compact:
+        endpoint: "${SPLUNK_LISTEN_INTERFACE}:6831"
+      thrift_http:
+        endpoint: "${SPLUNK_LISTEN_INTERFACE}:14268"
   otlp:
     protocols:
       grpc:
@@ -74,6 +98,14 @@ receivers:
         static_configs:
         - targets: ["0.0.0.0:8888"]
         metric_relabel_configs:
+          - source_labels: [ service_name ]
+            target_label: service.name
+          - source_labels: [ service_instance_id ]
+            target_label: service.instance.id
+          - source_labels: [ service_version ]
+            target_label: service.version
+          - regex: service_name|service_instance_id|service_version
+            action: labeldrop
           - source_labels: [ __name__ ]
             regex: 'promhttp_metric_handler_errors.*'
             action: drop
@@ -84,6 +116,9 @@ receivers:
   smartagent/processlist:
     type: processlist
 
+  zipkin:
+    endpoint: "${SPLUNK_LISTEN_INTERFACE}:9411"
+
   nop:
 
 ### File Logs Receivers - Start ###
@@ -92,17 +127,17 @@ receivers:
   # When running under Systemd, error logging goes to journald. To enable
   # logging to a file, use the log_error variable.
   # See https://mariadb.com/kb/en/error-log/
-  filelog/mysql-error:
+  file_log/mysql-error:
     include: [ "/var/log/mysql/error.log" ]
     multiline:
+      # e.g. "2023-10-09 13:40:48 0 [Note] ..."
       line_start_pattern: '^[\w-]+ [\d:.]+ \w+ \[\w+\]'
     operators:
       - type: regex_parser
-        # Adjusted regex to handle potential sub-seconds
-        regex: '^(?P<time>[\d-]+\s[\d:.]+)\s+\d+\s+\[(?P<level>\w+)\]\s+(?P<log>[\s\S]*)$'
+        regex: '^(?P<time>.+?) \d+ \[(?P<level>\w+)\] (?P<log>[\s\S]*)$'
         timestamp:
           parse_from: attributes.time
-          layout: '%Y-%m-%d %H:%M:%S.%f' # Added .%f for sub-second precision
+          layout: '%Y-%m-%d %H:%M:%S'
         severity:
           parse_from: attributes.level
       - type: move
@@ -119,54 +154,38 @@ receivers:
   # client, as well as each client connect and disconnect.
   # Disabled by default. To enable, use the general_log_file variable.
   # See https://mariadb.com/kb/en/general-query-log/
-  filelog/mysql-query:
-    include: ["/var/log/mysql/query.log",]
+  file_log/mysql-query:
+    include: [ "/var/log/mysql.log", "/var/log/mysql/mysql.log" ]
+    multiline:
+      line_start_pattern: '^\d{6} [\d:.]+'
     operators:
+      - type: router
+        routes:
+          - output: parse_query_log
+            expr: 'body matches "^\\d+"'
       - type: regex_parser
-        regex: '^(?P<time>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z)\s+(?P<id>\d+)\s+(?P<type>\w+)\s+(?P<log>.+)$'
+        id: parse_query_log
+        regex: '^(?P<time>\d{6} [\d:.]+)\s+(?P<log>[\s\S]*)$'
         timestamp:
           parse_from: attributes.time
-          layout: '%Y-%m-%dT%H:%M:%S.%fZ'
+          layout: '%y%m%d %H:%M:%S'
       - type: move
         from: attributes.log
         to: body
       - type: retain
         fields:
           - attributes["log.file.path"]
-          - attributes.id
-          - attributes.type
     include_file_name: false
     include_file_path: true
     storage: file_storage/filelogs
-  
+
   # MySQL slow query log. Contains a log of SQL queries that took a long time to perform.
   # Disabled by default. To enable, use the slow_query_log variable.
   # See https://mariadb.com/kb/en/slow-query-log/
-  filelog/mysql-slow_query:
-    include: [ "/var/log/mysql/mysql-slow.log" ]
-    # Break on '# User@Host:' because it is guaranteed for every entry, 
-    # whereas '# Time:' is optional.
+  file_log/mysql-slow_query:
+    include: [ "/var/log/mysql/mysql-slow.log", "/var/log/mysql/mariadb-slow.log" ]
     multiline:
-      line_start_pattern: '^# User@Host: '
-    operators:
-      - type: regex_parser
-        # This regex handles the standard MySQL/MariaDB slow query format
-        regex: '^# User@Host: (?P<user>[^\[]+)\[(?P<user_alt>[^\]]+)\] @ (?P<host>[^ ]+) \[(?P<ip>[^\]]*)\]\s+Id:\s+(?P<id>\d+)\n# Query_time: (?P<query_time>[\d.]+)  Lock_time: (?P<lock_time>[\d.]+) Rows_sent: (?P<rows_sent>\d+)  Rows_examined: (?P<rows_examined>\d+)\n(?:SET timestamp=(?P<timestamp>\d+);\n)?(?P<query>[\s\S]*)$'
-        timestamp:
-          parse_from: attributes.timestamp
-          layout: '%s' # Parses Unix epoch from the 'SET timestamp' line
-      - type: move
-        from: attributes.query
-        to: body
-      - type: retain
-        fields:
-          - attributes["log.file.path"]
-          - attributes.user
-          - attributes.host
-          - attributes.query_time
-          - attributes.lock_time
-          - attributes.rows_sent
-          - attributes.rows_examined
+      line_start_pattern: '^# Time: '
     include_file_name: false
     include_file_path: true
     storage: file_storage/filelogs
@@ -174,7 +193,7 @@ receivers:
 
   # Syslog and messages log files.
   # These are not in the RFC3164 format.
-  filelog/syslog:
+  file_log/syslog:
     include: [ "/var/log/syslog"]
     operators:
       - type: regex_parser
@@ -285,13 +304,13 @@ processors:
       - context: log
         statements:
           - set(log.attributes["com.splunk.sourcetype"], "mysql:plus:error") where log.attributes["log.file.path"] == "/var/log/mysql/error.log"
-          - set(log.attributes["com.splunk.sourcetype"], "mysql:plus:query") where log.attributes["log.file.path"] == "/var/log/mysql/query.log"
+          - set(log.attributes["com.splunk.sourcetype"], "mysql:plus:query") where log.attributes["log.file.path"] == "/var/log/mysql/mysql.log"
           - set(log.attributes["com.splunk.sourcetype"], "mysql:plus:mysql-slow") where log.attributes["log.file.path"] == "/var/log/mysql/mysql-slow.log"
           - set(log.attributes["com.splunk.sourcetype"], "syslog") where log.attributes["log.file.path"] == "/var/log/syslog"
 
           - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/syslog"
           - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/mysql/error.log"
-          - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/mysql/query.log"
+          - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/mysql/mysql.log"
           - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/mysql/mysql-slow.log"
           
           # Map the log.file.path to the Splunk 'source' field
@@ -328,8 +347,8 @@ exporters:
   splunk_hec:
     token: "${SPLUNK_HEC_TOKEN}"
     endpoint: "${SPLUNK_HEC_URL}"
-    # source: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.source" attribute set by the transform processor
-    # sourcetype: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.sourcetype" attribute set by the transform processor
+    source: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.source" attribute set by the transform processor
+    sourcetype: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.sourcetype" attribute set by the transform processor
     # index: "main" # Optional: specify the index to send logs to. If not set, it will go to the default index configured in HEC.
     # host: "otel-collector" # Optional: specify the host field for incoming logs. If not set, it will use the host from which the log was sent or "unknown" if not available.
     # batch_max_size: 1024 # Optional: maximum number of logs to include in a batch before sending to HEC. Default is 1024.
@@ -343,11 +362,15 @@ exporters:
 
   otlp_http/logs:
     endpoint: "http://${SPLUNK_OTLP_URL}:4318"
-    
+    headers:
+      authorization: "Splunk ${SPLUNK_HEC_TOKEN}"
+
   otlp_grpc/logs:
     endpoint: "${SPLUNK_OTLP_URL}:4317"
     tls:
       insecure: true
+    headers:
+      authorization: "Splunk ${SPLUNK_HEC_TOKEN}"
 
   # # HEC Metrics
   # splunk_hec/metrics:
@@ -383,18 +406,31 @@ exporters:
     verbosity: detailed
 
 service:
+  telemetry:
+    logs:
+      level: ${env:SPLUNK_COLLECTOR_LOG_LEVEL:-info}
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: '127.0.0.1'
+                port: 8888
+  
   extensions:
   - headers_setter
   - health_check
-  - file_storage/filelogs
   - http_forwarder
   - zpages
   - smartagent
+  - file_storage/filelogs
 
   pipelines:
     traces:
       receivers:
+      - jaeger
       - otlp
+      - zipkin
       processors:
       - memory_limiter
       - batch
@@ -411,9 +447,6 @@ service:
       receivers:
       - hostmetrics
       - otlp
-      # MySql Specific Receivers
-      # - smartagent/mysql # removed as now using auto discovery
-      # - mysql # removed as now using auto discovery
       processors:
       - memory_limiter
       - batch
@@ -464,11 +497,12 @@ service:
 
     logs:
       receivers:
+      - fluentforward
       - otlp
-      - filelog/mysql-error
-      - filelog/mysql-query
-      - filelog/mysql-slow_query
-      - filelog/syslog
+      - file_log/mysql-error
+      - file_log/mysql-query
+      - file_log/mysql-slow_query
+      - file_log/syslog
       processors:
       - memory_limiter
       - batch
@@ -476,9 +510,9 @@ service:
       - transform/splunk_metadata
       #- resource/add_environment
       exporters:
-      # - splunk_hec
-      - otlp_http/logs
+      - splunk_hec
+      # - otlp_http/logs
       # - otlp_grpc/logs
-      # - splunk_hec/profiling
+      - splunk_hec/profiling
       # Use instead when sending to gateway
       # - otlp_http/gateway

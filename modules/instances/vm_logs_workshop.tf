@@ -1,11 +1,27 @@
-resource "aws_instance" "mysql" {
-  count                     = var.mysql_count
+resource "random_string" "ubuntu_password" {
+  count            = var.logs_workshop_count
+  length           = 12
+  special          = false
+  # override_special = "@£$"
+}
+
+resource "aws_instance" "logs_workshop" {
+  count                     = var.logs_workshop_count
   ami                       = var.ami
   instance_type             = var.mysql_instance_type
   subnet_id                 = "${var.public_subnet_ids[ count.index % length(var.public_subnet_ids) ]}"
   key_name                  = var.key_name
   vpc_security_group_ids    = [aws_security_group.instances_sg.id]
   iam_instance_profile      = var.ec2_instance_profile_name
+
+  user_data = <<-EOF
+  #!/bin/bash
+  sudo sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  # sudo sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  sudo sed -i 's/^KbdInteractiveAuthentication no/KbdInteractiveAuthentication yes/' /etc/ssh/sshd_config
+  echo "ubuntu:${random_string.ubuntu_password[count.index].result}" | chpasswd
+  systemctl restart ssh
+  EOF
 
   root_block_device {
     volume_size = 16
@@ -14,14 +30,14 @@ resource "aws_instance" "mysql" {
     delete_on_termination = true
 
     tags = {
-      Name                          = lower(join("-", [var.environment, "mysql", count.index + 1, "root"]))
+      Name                          = lower(join("-", ["logsworkshop", count.index + 1, "root"]))
       splunkit_environment_type     = "non-prd"
       splunkit_data_classification  = "private"
     }
   }
-  
+
   tags = {
-    Name = lower(join("-",[var.environment, "mysql", count.index + 1]))
+    Name = lower(join("-",["logsworkshop", count.index + 1]))
     Environment = lower(var.environment)
     splunkit_environment_type = "non-prd"
     splunkit_data_classification = "private"
@@ -52,15 +68,14 @@ resource "aws_instance" "mysql" {
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/mysql_loadgen_stop.sh /home/ubuntu/mysql_loadgen_stop.sh",
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_splunk_universal_forwarder_mysql.sh /tmp/install_splunk_universal_forwarder.sh",
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_splunk_universal_forwarder_mysql_splunk_cloud.sh /tmp/install_splunk_universal_forwarder_splunk_cloud.sh",
-      "aws s3 cp s3://${var.s3_bucket_name}/scripts/update_splunk_hec_metrics.sh /tmp/update_splunk_hec_metrics.sh",
-      "aws s3 cp s3://${var.s3_bucket_name}/scripts/update_splunk_otel_logs.sh /tmp/update_splunk_otel_logs.sh",
-
+      
       "aws s3 cp s3://${var.s3_bucket_name}/config_files/mysqld.cnf /tmp/mysqld.cnf",
       "aws s3 cp s3://${var.s3_bucket_name}/config_files/mysql_loadgen.service /tmp/mysql_loadgen.service",
-      "aws s3 cp s3://${var.s3_bucket_name}/config_files/mysql_agent_config.yaml /tmp/agent_config.yaml",
-      "aws s3 cp s3://${var.s3_bucket_name}/config_files/mysql_agent_logs_config.yaml /tmp/agent_logs_config.yaml",
+      "aws s3 cp s3://${var.s3_bucket_name}/config_files/mysql_agent_config_logs_workshop.yaml /tmp/agent_config.yaml",
 
       "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/splunkclouduf.spl /tmp/splunkclouduf.spl",
+
+      "aws s3 cp s3://${var.s3_bucket_name}/logs_workshop/1_fix_syslog.sh /home/ubuntu/1_fix_syslog.sh",
 
       # "aws s3 cp s3://${var.s3_bucket_name}/scripts/xxx /tmp/xxx",
       # "aws s3 cp s3://${var.s3_bucket_name}/config_files/xxx /tmp/xxx",
@@ -70,7 +85,7 @@ resource "aws_instance" "mysql" {
       "HOSTNAME=${self.tags.Name}",
       "LBURL=${aws_lb.gateway-lb.dns_name}",
       "MYSQLUSER=${var.mysql_user}",
-      "MYSQLPWD=${var.mysql_user_pwd}",
+      "MYSQLPWD=${var.mysql_user_pwd}",      
 
     ## Install MySQL
       "sudo chmod +x /tmp/install_mysql.sh",
@@ -102,80 +117,36 @@ resource "aws_instance" "mysql" {
       # Update MySql Logging 
       "sudo cp /tmp/mysqld.cnf /etc/mysql/mysql.conf.d/mysqld.cnf",
       "sudo systemctl restart mysql",
-
+    
     ## Install Otel Agent
       "sudo curl -sSL https://dl.signalfx.com/splunk-otel-collector.sh > /tmp/splunk-otel-collector.sh",
       "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --collector-version ${var.collector_version} --discovery",
 
-      "sudo mv /etc/otel/collector/agent_config.yaml /etc/otel/collector/agent_config.bak",
-      # "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml",
-      "sudo mv /tmp/${var.otel_logs_enabled ? "agent_logs_config.yaml" : "agent_config.yaml"} /etc/otel/collector/agent_config.yaml", # Conditional to use different config if otel_logs_enabled is true or false
+      "sudo mv /etc/otel/collector/agent_config.yaml /etc/otel/collector/agent_config.default",
+      "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml",
       "sudo chown splunk-otel-collector:splunk-otel-collector /etc/otel/collector/agent_config.yaml",
       "sudo chmod +x /tmp/update_splunk_otel_collector.sh",
       "sudo /tmp/update_splunk_otel_collector.sh $LBURL $MYSQLUSER $MYSQLPWD",
 
    ## Deploy UF for Splunk Ent, but only if splunk_ent_count = 1 AND otel_logs_enabled is false
-    <<EOT
-    if [ ${var.splunk_ent_count} -eq 1 ] && [ "${var.otel_logs_enabled}" = "false" ]; then
-      sudo chmod +x /tmp/install_splunk_universal_forwarder.sh
-      UNIVERSAL_FORWARDER_FILENAME=${var.universalforwarder_filename}
-      UNIVERSAL_FORWARDER_VERSION=${var.universalforwarder_version}
-      PASSWORD=${var.splunk_admin_pwd}
-      SPLUNK_IP=${var.splunk_private_ip}
-      PRIVATE_DNS=${self.private_dns}
-      /tmp/install_splunk_universal_forwarder.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_VERSION $PASSWORD $SPLUNK_IP $PRIVATE_DNS
-
-      ## Write env vars to file (used for debugging)
-      echo $UNIVERSAL_FORWARDER_FILENAME > /tmp/UNIVERSAL_FORWARDER_FILENAME
-      echo $UNIVERSAL_FORWARDER_VERSION > /tmp/UNIVERSAL_FORWARDER_VERSION
-      echo $PASSWORD > /tmp/UNIVERSAL_FORWARDER_PASSWORD
-      echo $SPLUNK_IP > /tmp/SPLUNK_IP
-      echo $PRIVATE_DNS > /tmp/PRIVATE_DNS
-    else
-      echo "Skipping: splunk_ent_count is ${var.splunk_ent_count} or otel_logs_enabled is ${var.otel_logs_enabled}"
-    fi
-    EOT
-    ,
-
-    ## Deloy UF for Splunk Cloud, but only if splunk_cloud_enabled = true AND otel_logs_enabled is false 
       <<EOT
-      if [ ${var.splunk_cloud_enabled} = "true" ] && [ "${var.otel_logs_enabled}" = "false" ]; then
-        sudo chmod +x /tmp/install_splunk_universal_forwarder_splunk_cloud.sh
+    if [ ${var.splunk_ent_count} -eq 1 ] && [ "${var.otel_logs_enabled}" = "false" ]; then
+        sudo chmod +x /tmp/install_splunk_universal_forwarder.sh
         UNIVERSAL_FORWARDER_FILENAME=${var.universalforwarder_filename}
         UNIVERSAL_FORWARDER_VERSION=${var.universalforwarder_version}
         PASSWORD=${var.splunk_admin_pwd}
+        SPLUNK_IP=${var.splunk_private_ip}
         PRIVATE_DNS=${self.private_dns}
-        /tmp/install_splunk_universal_forwarder_splunk_cloud.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_VERSION $PASSWORD $PRIVATE_DNS
+        /tmp/install_splunk_universal_forwarder.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_VERSION $PASSWORD $SPLUNK_IP $PRIVATE_DNS
 
         ## Write env vars to file (used for debugging)
         echo $UNIVERSAL_FORWARDER_FILENAME > /tmp/UNIVERSAL_FORWARDER_FILENAME
         echo $UNIVERSAL_FORWARDER_VERSION > /tmp/UNIVERSAL_FORWARDER_VERSION
         echo $PASSWORD > /tmp/UNIVERSAL_FORWARDER_PASSWORD
+        echo $SPLUNK_IP > /tmp/SPLUNK_IP
         echo $PRIVATE_DNS > /tmp/PRIVATE_DNS
       else
-        echo "Skipping as splunk_cloud_enabled is false"
-      fi
-      EOT
-      ,
-          
-      ## Enable Metrics to Splunk, but only if splunk_hec_metrics_enabled = true
-      <<EOT
-      if [ "${var.splunk_hec_metrics_enabled}" = "true" ]; then
-        sudo chmod +x /tmp/update_splunk_hec_metrics.sh
-        sudo /tmp/update_splunk_hec_metrics.sh ${var.fqdn} ${local.hec_metrics_token}
-      else
-        echo "Skipping as splunk_hec_metrics_enabled is false"
-      fi
-      EOT
-      ,
-
-      ## Enable OTel Logs Collection, but only if otel_logs_enabled = true
-      <<EOT
-      if [ "${var.otel_logs_enabled}" = "true" ]; then
-        sudo chmod +x /tmp/update_splunk_otel_logs.sh
-        sudo /tmp/update_splunk_otel_logs.sh ${var.fqdn} ${local.hec_otel_token}
-      else
-        echo "Skipping as otel_logs_enabled is false"
+      echo "Skipping: splunk_ent_count is ${var.splunk_ent_count} or otel_logs_enabled is ${var.otel_logs_enabled}"
       fi
       EOT
       ,
@@ -184,6 +155,12 @@ resource "aws_instance" "mysql" {
       "sudo systemctl daemon-reload",
       "sudo systemctl restart mysql_loadgen",
 
+    ## Logs Workshop
+      "sudo chmod +x /home/ubuntu/1_fix_syslog.sh",
+      "HEC_OTEL_TOKEN=${local.hec_otel_token}",
+      "echo $HEC_OTEL_TOKEN > /home/ubuntu/HEC_OTEL_TOKEN",
+      "SPLUNK_HEC_URL=https://${var.fqdn}:8088/services/collector",
+      "echo $SPLUNK_HEC_URL > /home/ubuntu/SPLUNK_HEC_URL",
     ]
   }
 
@@ -197,10 +174,11 @@ resource "aws_instance" "mysql" {
   }
 }
 
-output "mysql_details" {
+output "logs_workshop_details" {
   value =  formatlist(
-    "%s, %s", 
-    aws_instance.mysql.*.tags.Name,
-    aws_instance.mysql.*.public_ip,
+    "%s, %s, %s", 
+    aws_instance.logs_workshop.*.tags.Name,
+    aws_instance.logs_workshop.*.public_ip,
+    random_string.ubuntu_password[*].result,
   )
 }

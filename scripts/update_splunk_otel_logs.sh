@@ -13,6 +13,7 @@ fi
 
 # Path to the config file
 CONFIG_FILE="/etc/otel/collector/splunk-otel-collector.conf"
+EXTENSION_PATH="/var/lib/otelcol/filelogs"
 
 # Create backup of the original configuration file
 cp /etc/otel/collector/splunk-otel-collector.conf /etc/otel/collector/splunk-otel-collector.otel_logs_bak
@@ -26,7 +27,7 @@ sed -i "s|^SPLUNK_HEC_TOKEN=.*|SPLUNK_HEC_TOKEN=${HEC_TOKEN}|" "$CONFIG_FILE"
 
 
 # Append additional configuration lines
-echo "SPLUNK_FILE_STORAGE_EXTENSION_PATH=/tmp" >> "$CONFIG_FILE"
+echo "SPLUNK_FILE_STORAGE_EXTENSION_PATH=${EXTENSION_PATH}" >> "$CONFIG_FILE"
 echo "SPLUNK_OTLP_URL=${SPLUNK_FQDN}" >> "$CONFIG_FILE"
 
 # Restart the Splunk OpenTelemetry Collector service to apply changes

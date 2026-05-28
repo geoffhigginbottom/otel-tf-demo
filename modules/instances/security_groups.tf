@@ -51,6 +51,15 @@ resource "aws_security_group" "instances_sg" {
     # cidr_blocks = var.insecure_sg_rules ? ["0.0.0.0/0"] : ["${var.my_public_ip}/32"]
   }
 
+  #   ingress {
+  #   from_port   = 8080
+  #   to_port     = 8080
+  #   protocol    = "tcp"
+  #   # cidr_blocks = ["${var.my_public_ip}/32"]
+  #   # cidr_blocks = ["0.0.0.0/0"]
+  #   cidr_blocks = var.insecure_sg_rules ? ["0.0.0.0/0"] : ["${var.my_public_ip}/32"]
+  # }
+
   ## Allow all egress traffic
   egress {
     from_port   = 0

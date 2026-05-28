@@ -1,6 +1,12 @@
+# import mysql.connector
+# import random
+# import time
+
 import mysql.connector
+from mysql.connector import pooling
 import random
 import time
+import threading
 
 # MySQL server connection parameters
 db_config = {
@@ -10,41 +16,74 @@ db_config = {
     "database": "loadgen"
 }
 
-# Number of queries to execute
-num_queries = 10000
+NUM_THREADS = 5
+QUERIES_PER_THREAD = 2000
+SLOW_QUERY_PROBABILITY = 0.1  # 10% of queries will be slow
 
-# List of example SQL queries
-sql_queries = [
-    "INSERT INTO users (username, email) VALUES ('user3', 'user3@example.com')",
-    "UPDATE users SET username = 'user3a' WHERE email = 'user3@example.com'",
-    "DELETE FROM users WHERE username = 'user3a'"
-]
+# Connection pool
+pool = pooling.MySQLConnectionPool(
+    pool_name="mypool",
+    pool_size=NUM_THREADS,
+    **db_config
+)
 
-# Create a MySQL connection
-conn = mysql.connector.connect(**db_config)
+def generate_user():
+    user_id = random.randint(1, 1000000)
+    username = f"user{user_id}"
+    email = f"user{user_id}@example.com"
+    return username, email
 
-# Function to execute queries sequentially
-def execute_next_query(query_index):
-    if query_index < len(sql_queries):
-        query = sql_queries[query_index]
-        cursor = conn.cursor()
-        cursor.execute(query)
-        conn.commit()
-        print(f"Query {query_index + 1} executed.")
-        return query_index + 1
-    else:
-        return query_index
+def worker(thread_id):
+    conn = pool.get_connection()
+    cursor = conn.cursor(buffered=True)
 
-# Generate load by executing queries in order
-try:
-    for i in range(num_queries):
-        current_query_index = 0
-        while current_query_index < len(sql_queries):
-            current_query_index = execute_next_query(current_query_index)
-            # time.sleep(0.1)  # Add a fixed delay between queries
-            time.sleep(random.uniform(1, 5))  # Add some random delay
-except Exception as e:
-    print(f"Error: {e}")
-finally:
+    for i in range(QUERIES_PER_THREAD):
+        username, email = generate_user()
+
+        # Decide if this will be a slow query
+        if random.random() < SLOW_QUERY_PROBABILITY:
+            query = "SELECT SLEEP(3)"
+            params = ()
+            query_type = "SLOW"
+        else:
+            queries = [
+                ("INSERT INTO users (username, email) VALUES (%s, %s)", (username, email), "INSERT"),
+                ("UPDATE users SET username = %s WHERE email = %s", (username + "a", email), "UPDATE"),
+                ("DELETE FROM users WHERE email = %s", (email,), "DELETE"),
+                ("SELECT * FROM users WHERE email = %s", (email,), "SELECT"),
+            ]
+
+            query, params, query_type = random.choice(queries)
+
+        try:
+            cursor.execute(query, params)
+
+            # Only commit for writes
+            if query_type in ["INSERT", "UPDATE", "DELETE"]:
+                conn.commit()
+
+            print(f"[Thread {thread_id}] {query_type}")
+
+        except Exception as e:
+            print(f"[Thread {thread_id}] Error: {e}")
+
+        # Small jitter between queries
+        time.sleep(random.uniform(0.05, 0.3))
+
+    cursor.close()
     conn.close()
-    print("Load generation complete.")
+    print(f"[Thread {thread_id}] Finished")
+
+# Start threads
+threads = []
+
+for i in range(NUM_THREADS):
+    t = threading.Thread(target=worker, args=(i,))
+    t.start()
+    threads.append(t)
+
+# Wait for all threads
+for t in threads:
+    t.join()
+
+print("Load generation complete.")

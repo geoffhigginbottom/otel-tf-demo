@@ -131,57 +131,18 @@ receivers:
 
   zipkin:
     endpoint: "${SPLUNK_LISTEN_INTERFACE}:9411"
-
   nop:
 
-  ## Disabled as using auto discovery
-  # nginx:
-  #   endpoint: "http://localhost:8080/nginx_status"
-  #   collection_interval: 10s
+  smartagent/processes:
+    type: collectd/processes
+    processes:
+      - haproxy
 
-### File Logs Receivers - Start ###
-  # Nginx access log.
-  # By default, client requests are logged in the standard NCSA Common Log Format.
-  # See https://docs.nginx.com/nginx/admin-guide/monitoring/logging/
-  file_log/nginx-access:
-    include: [ "/var/log/nginx/access.log" ]
-    operators:
-      - type: regex_parser
-        regex: '^(?P<host>.+) (?P<remote_logname>.+) (?P<user>.+) \[(?P<time>.+)\] "(?P<method>.+) (?P<path>.+) (?P<protocol>.+)" (?P<code>\d+) (?P<size>\d+) "(?P<referer>.+)" "(?P<agent>.+)"$'
-        timestamp:
-          parse_from: attributes.time
-          layout: '%d/%b/%Y:%H:%M:%S %z'
-    include_file_name: false
-    include_file_path: true
-    storage: file_storage/filelogs
+  haproxy:
+    endpoint: http://127.0.0.1:9000/stats
+    collection_interval: 10s
 
-  # Nginx error log.
-  # See https://docs.nginx.com/nginx/admin-guide/monitoring/logging/
-  file_log/nginx-error:
-    include: [ "/var/log/nginx/error.log" ]
-    operators:
-      - type: regex_parser
-        regex: '^(?P<time>.+?) \[(?P<level>\w+)\] (?P<pid>\d+)#(?P<tid>\d+): (?P<log>.*)$'
-        timestamp:
-          parse_from: attributes.time
-          layout: '%Y/%m/%d %H:%M:%S'
-        severity:
-          parse_from: attributes.level
-          mapping:
-            fatal: emerg
-            error3: alert
-            error2: crit
-            info2: notice
-      - type: move
-        from: attributes.log
-        to: body
-      - type: retain
-        fields:
-          - attributes["log.file.path"]
-    include_file_name: false
-    include_file_path: true
-    storage: file_storage/filelogs
-
+  ### File Logs Receivers - Start ###
   # Syslog and messages log files.
   # These are not in the RFC3164 format.
   file_log/syslog:
@@ -246,7 +207,7 @@ processors:
 
   metricstransform:
     transforms:
-      - include: ^nginx\.
+      - include: ^haproxy\.
         match_type: regexp
         action: update
         operations:
@@ -266,13 +227,9 @@ processors:
     log_statements:
       - context: log
         statements:
-          - set(log.attributes["com.splunk.sourcetype"], "nginx:plus:access") where log.attributes["log.file.path"] == "/var/log/nginx/access.log"
-          - set(log.attributes["com.splunk.sourcetype"], "nginx:plus:error") where log.attributes["log.file.path"] == "/var/log/nginx/error.log"
           - set(log.attributes["com.splunk.sourcetype"], "syslog") where log.attributes["log.file.path"] == "/var/log/syslog"
 
           - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/syslog"
-          - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/nginx/access.log"
-          - set(log.attributes["com.splunk.index"], "otel-logs") where log.attributes["log.file.path"] == "/var/log/nginx/error.log"
           
           # Map the log.file.path to the Splunk 'source' field
           - set(log.attributes["com.splunk.source"], log.attributes["log.file.path"]) where log.attributes["log.file.path"] != nil
@@ -320,14 +277,6 @@ exporters:
     # tls:
     #   insecure: true # Optional: whether to skip TLS certificate verification when sending logs to HEC. Default is false.  
     profiling_data_enabled: false
-    retry_on_failure:
-      enabled: true
-      max_elapsed_time: 0 # <--- Changes "5 minutes" to "Forever"
-    sending_queue:
-      enabled: true
-      storage: file_storage/filelogs # <--- This links the queue to your disk storage extension
-      num_consumers: 10 # Optional: number of concurrent consumers processing the sending queue. Default is 10.
-      queue_size: 10000 # Optional: maximum number of log entries that can be stored in the sending queue. Default is 10000.
 
   otlp_http/logs:
     endpoint: "http://${SPLUNK_OTLP_URL}:4318"
@@ -425,6 +374,8 @@ service:
       receivers:
       - host_metrics
       - otlp
+      - smartagent/processes
+      - haproxy
       processors:
       - memory_limiter
       - batch
@@ -475,9 +426,8 @@ service:
 
     logs:
       receivers:
+      - fluent_forward
       - otlp
-      - file_log/nginx-access
-      - file_log/nginx-error
       - file_log/syslog
       processors:
       - memory_limiter

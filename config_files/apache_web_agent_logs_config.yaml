@@ -1,3 +1,16 @@
+# Default configuration file for the Linux (deb/rpm) and Windows MSI collector packages
+
+# If the collector is installed without the Linux/Windows installer script, the following
+# environment variables are required to be manually defined or configured below:
+# - SPLUNK_ACCESS_TOKEN: The Splunk access token to authenticate requests
+# - SPLUNK_API_URL: The Splunk API URL, e.g. https://api.us0.observability.splunkcloud.com
+# - SPLUNK_BUNDLE_DIR: The path to the Smart Agent bundle, e.g. /usr/lib/splunk-otel-collector/agent-bundle
+# - SPLUNK_COLLECTD_DIR: The path to the collectd config directory for the Smart Agent, e.g. /usr/lib/splunk-otel-collector/agent-bundle/run/collectd
+# - SPLUNK_HEC_TOKEN: The Splunk HEC authentication token
+# - SPLUNK_HEC_URL: The Splunk HEC endpoint URL, e.g. https://http-inputs-acme.splunkcloud.com/services/collector
+# - SPLUNK_INGEST_URL: The Splunk ingest URL, e.g. https://ingest.us0.observability.splunkcloud.com
+# - SPLUNK_LISTEN_INTERFACE: The network interface the agent receivers listen on.
+
 extensions:
   headers_setter:
     headers:
@@ -14,6 +27,27 @@ extensions:
       # endpoint: "${SPLUNK_API_URL}"
       # Use instead when sending to gateway
       endpoint: "${SPLUNK_GATEWAY_URL}"
+  http_forwarder/opamp_splunk_o11y:
+    ingress:
+      endpoint: "${SPLUNK_LISTEN_INTERFACE}:4320"
+    egress:
+      endpoint: "${SPLUNK_INGEST_URL}"
+      # Use instead when sending to gateway
+      #endpoint: "${SPLUNK_GATEWAY_URL}:4320"
+  # opamp/splunk_o11y is included in the default config, but startup removes it
+  # from service.extensions unless --feature-gates=+splunk.opamp.enabled is set.
+  opamp/splunk_o11y:
+    agent_description:
+      # Include the Collector's resource attributes as OpAMP non-identifying attributes.
+      include_resource_attributes: true
+    server:
+      http:
+        endpoint: "${SPLUNK_INGEST_URL}/v1/opamp"
+        # Use instead when sending to gateway (assuming the gateway is running http_forwarder/signalfx on port 4320)
+        #endpoint: "${SPLUNK_GATEWAY_URL}:4320/v1/opamp"
+        polling_interval: 30s
+        headers:
+          X-SF-Token: "${SPLUNK_ACCESS_TOKEN}"
   smartagent:
     bundleDir: "${SPLUNK_BUNDLE_DIR}"
     collectd:
@@ -36,7 +70,9 @@ extensions:
     create_directory: true
 
 receivers:
-  hostmetrics:
+  fluent_forward:
+    endpoint: "${SPLUNK_LISTEN_INTERFACE}:8006"
+  host_metrics:
     collection_interval: 1s
     scrapers:
       cpu:
@@ -52,7 +88,16 @@ receivers:
       processes:
       # System processes metrics, disabled by default
       # process:
-
+  jaeger:
+    protocols:
+      grpc:
+        endpoint: "${SPLUNK_LISTEN_INTERFACE}:14250"
+      thrift_binary:
+        endpoint: "${SPLUNK_LISTEN_INTERFACE}:6832"
+      thrift_compact:
+        endpoint: "${SPLUNK_LISTEN_INTERFACE}:6831"
+      thrift_http:
+        endpoint: "${SPLUNK_LISTEN_INTERFACE}:14268"
   otlp:
     protocols:
       grpc:
@@ -84,6 +129,9 @@ receivers:
   smartagent/processlist:
     type: processlist
 
+  zipkin:
+    endpoint: "${SPLUNK_LISTEN_INTERFACE}:9411"
+
   nop:
 
   # apache: #removed as now using auto discovery
@@ -95,7 +143,7 @@ receivers:
   # Configured using the LogFormat directive.
   # By default, date and time are in the 'day/Month/year:hour:minute:second zone' format.
   # See https://httpd.apache.org/docs/current/mod/mod_log_config.html#logformat
-  filelog/apache-access:
+  file_log/apache-access:
     include: [ "/var/log/apache2/access.log" ]
     operators:
       - type: regex_parser
@@ -111,7 +159,7 @@ receivers:
   # Configured using the ErrorLogFormat directive.
   # By default, date and time are in the locale-specific representation (%c in strftime).
   # See https://httpd.apache.org/docs/current/mod/core.html#errorlogformat
-  filelog/apache-error:
+  file_log/apache-error:
     include: [ "/var/log/apache2/error.log" ]
     operators:
       - type: regex_parser
@@ -139,7 +187,7 @@ receivers:
 
   # Syslog and messages log files.
   # These are not in the RFC3164 format.
-  filelog/syslog:
+  file_log/syslog:
     include: [ "/var/log/syslog"]
     operators:
       - type: regex_parser
@@ -278,11 +326,15 @@ exporters:
 
   otlp_http/logs:
     endpoint: "http://${SPLUNK_OTLP_URL}:4318"
-    
+    headers:
+      authorization: "Splunk ${SPLUNK_HEC_TOKEN}"
+
   otlp_grpc/logs:
     endpoint: "${SPLUNK_OTLP_URL}:4317"
     tls:
       insecure: true
+    headers:
+      authorization: "Splunk ${SPLUNK_HEC_TOKEN}"
 
   # # HEC Metrics
   # splunk_hec/metrics:
@@ -320,23 +372,38 @@ exporters:
 service:
   telemetry:
     logs:
-      encoding: json
-      level: "debug"
-      output_paths: [/media/data/logs/otel/collector.log]
-      error_output_paths: [/media/data/logs/otel/collector.log]
+      level: ${env:SPLUNK_COLLECTOR_LOG_LEVEL:-info}
+    # Resource attributes attached to the Collector's internal telemetry. These
+    # are also exposed via OpAMP when the opamp/splunk_o11y extension is enabled
+    # with agent_description.include_resource_attributes set to true.
+    resource:
+      attributes:
+        - name: otelcol.service.mode
+          value: agent
+    metrics:
+      readers:
+        - pull:
+            exporter:
+              prometheus:
+                host: '127.0.0.1'
+                port: 8888
 
   extensions:
   - headers_setter
   - health_check
   - file_storage/filelogs
   - http_forwarder
+  - http_forwarder/opamp_splunk_o11y
+  - opamp/splunk_o11y
   - zpages
   - smartagent
 
   pipelines:
     traces:
       receivers:
+      - jaeger
       - otlp
+      - zipkin
       processors:
       - memory_limiter
       - batch
@@ -351,9 +418,8 @@ service:
 
     metrics:
       receivers:
-      - hostmetrics
+      - host_metrics
       - otlp
-      # - apache #removed as now using auto discovery
       processors:
       - memory_limiter
       - batch
@@ -404,10 +470,11 @@ service:
 
     logs:
       receivers:
+      - fluent_forward
       - otlp
-      - filelog/apache-access
-      - filelog/apache-error
-      - filelog/syslog
+      - file_log/apache-access
+      - file_log/apache-error
+      - file_log/syslog
       processors:
       - memory_limiter
       - batch
@@ -415,9 +482,9 @@ service:
       - transform/splunk_metadata
       #- resource/add_environment
       exporters:
-      # - splunk_hec
-      - otlp_http/logs
+      - splunk_hec
+      # - otlp_http/logs
       # - otlp_grpc/logs
-      # - splunk_hec/profiling
+      - splunk_hec/profiling
       # Use instead when sending to gateway
       # - otlp_http/gateway

@@ -94,16 +94,24 @@ variable "environment" {
   default = []
 }
 variable "gateway_count" {
-  default = {}
+  type = number
+  default = 1
 }
 variable "haproxy_count" {
-  default = {}
+  type = number
+  default = 0
 }
 variable "nginx_count" {
   type = number
+  default = 0
+}
+variable "logs_workshop_count" {
+  type = number
+  default = 0
 }
 variable "mysql_count" {
-  default = {}
+  type = number
+  default = 0
 }
 variable "mysql_user" {
   default = []
@@ -112,7 +120,8 @@ variable "mysql_user_pwd" {
   default = []
 }
 variable "ms_sql_count" {
-  default = {}
+  type = number
+  default = 0
 }
 variable "ms_sql_user" {
   default = []
@@ -121,13 +130,15 @@ variable "ms_sql_user_pwd" {
   default = []
 }
 variable "iis_server_count" {
-  default = {}
+  type = number
+  default = 0
 }
 variable "windows_server_administrator_pwd" {
   default =[]
 }
 variable "apache_web_count" {
-  default = {}
+  type = number
+  default = 0
 }
 variable "branch" {
   default = []
@@ -191,12 +202,17 @@ variable "splunk_app_for_content_packs_filename" {
 variable "splunk_it_service_intelligence_filename" {
   default = {}
 }
+
+### Splunk Apps ###
 variable "splunk_infrastructure_monitoring_add_on_filename" {
   default = {}
 }
 variable "splunk_ai_toolkit_filename" {
   default = {}
-} 
+}
+variable "splunk_connect_for_otlp_filename" {
+  default = {}
+}
 
 
 ### Certificate Vars ###
