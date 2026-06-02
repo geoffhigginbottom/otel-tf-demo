@@ -1,3 +1,41 @@
+# =============================================================================
+# Persistent export queues (agent DaemonSet only)
+# =============================================================================
+# Queues are written to disk on each node (hostPath) so agent pod restarts on
+# the same node do not drop unsent data. Requires splunkPlatform endpoint when
+# using HEC; O11y exporters below reuse the same file_storage extension.
+#
+# PROTECTED on agent restart (splunk-otel-collector-agent):
+#   - Container/pod logs        -> Splunk Platform (HEC)     [platform_logs]
+#   - Host/node metrics         -> Splunk Observability      [signalfx]
+#   - App OTLP metrics          -> Splunk Observability      [signalfx]
+#   - App traces                -> Splunk Observability      [otlp_http, signalfx]
+#   - Secure app logs           -> Splunk Observability      [otlp_http/secureapp]
+#   - Discovery/receiver_creator metrics -> O11y               [signalfx]
+#
+# NOT protected (cluster receiver Deployment — in-memory queues only):
+#   - Kubernetes cluster metrics (k8s_cluster receiver)     -> O11y [signalfx]
+#   - Kubernetes events (eventsEnabled)                       -> HEC / O11y
+#   - Kubernetes object watch logs (k8sObjects pods/events)   -> HEC / O11y
+#   - SQL Server DB metrics (sqlserver/* receivers)           -> O11y [signalfx]
+#   - SQL Server DBMON events (logs/dbmon pipeline)         -> O11y [otlp_http/dbmon]
+#   On force restart: unsent queue data is lost AND there is a collection gap
+#   (missed events/scrapes are not backfilled). Container logs on nodes are
+#   unaffected — those are collected by the agent DaemonSet, not here.
+#
+# Demo tip: log-generator / HEC log tests use agents. Restarting the cluster
+# receiver does not simulate container log loss; restarting agents does.
+# =============================================================================
+splunkPlatform:
+  sendingQueue:
+    queueSize: 5000
+    persistentQueue:
+      enabled: true
+      storagePath: "/var/addon/splunk/exporter_queue"
+
+# Cluster receiver: single-replica Deployment — persistent queue not supported
+# by the chart (pod may reschedule to a different node; hostPath would not follow).
+# See header comment for data at risk if this pod is force restarted.
 clusterReceiver:
   extraEnvs:
   - name: WORKSHOP_REALM
@@ -123,8 +161,8 @@ clusterReceiver:
           sqlserver.database.latency:
             enabled: true  
     exporters:
-      # Exports dbmon events as logs
-      otlphttp/dbmon:
+      # NOT disk-backed — cluster receiver queues are in-memory only.
+      otlp_http/dbmon:
         headers:
           X-SF-Token: ${eks_access_token} # GH Modified
           X-splunk-instrumentation-library: dbmon
@@ -167,8 +205,12 @@ clusterReceiver:
             - resource/add_collector_k8s
             - transform/dbmon
           exporters:
-            - otlphttp/dbmon                
+            - otlp_http/dbmon
 agent:
+  # 1Gi recommended by Splunk chart when persistentQueue is enabled.
+  resources:
+    limits:
+      memory: 1Gi
   extraEnvs:
   - name: WORKSHOP_ENVIRONMENT
     valueFrom:
@@ -176,6 +218,17 @@ agent:
         name: workshop-secret
         key: instance
   config:
+    exporters:
+      # Disk-backed sending queues for agent export paths (see header comment).
+      signalfx:
+        sending_queue:
+          storage: file_storage/persistent_queue
+      otlp_http:
+        sending_queue:
+          storage: file_storage/persistent_queue
+      otlp_http/secureapp:
+        sending_queue:
+          storage: file_storage/persistent_queue
     receivers:
       receiver_creator:
         receivers:
@@ -210,11 +263,11 @@ agent:
       pipelines:
         metrics:
           exporters: [signalfx]
-          processors: [memory_limiter, k8sattributes, batch, resourcedetection, resource]
-          receivers: [hostmetrics, kubeletstats, otlp, receiver_creator]
+          processors: [memory_limiter, k8s_attributes, batch, resourcedetection, resource]
+          receivers: [host_metrics, kubeletstats, otlp, receiver_creator]
         traces:
-          exporters: [signalfx, otlphttp]
-          processors: [memory_limiter,  filter/drop_flagd, k8sattributes, batch, resourcedetection, resource, resource/add_environment]
+          exporters: [signalfx, otlp_http]
+          processors: [memory_limiter,  filter/drop_flagd, k8s_attributes, batch, resourcedetection, resource, resource/add_environment]
           receivers: [otlp, jaeger, zipkin]
 
 # logsCollection:
