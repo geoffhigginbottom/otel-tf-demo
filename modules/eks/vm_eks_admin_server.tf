@@ -102,6 +102,11 @@ resource "aws_instance" "eks_admin_server" {
   }
 
   provisioner "file" {
+    source      = "${path.module}/config_files/log-generator.yaml"
+    destination = "/home/ubuntu/log-generator.yaml"
+  }
+
+  provisioner "file" {
     content = templatefile("${path.module}/config_files/splunk-astronomy-shop-1.4.0-values.yaml.tpl", {
       eks_access_token   = var.eks_access_token
       realm              = var.realm

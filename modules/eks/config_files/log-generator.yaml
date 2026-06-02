@@ -1,0 +1,72 @@
+# Log generator for testing Kubernetes log collection (Splunk OTel Collector / HEC).
+#
+# Manual deploy (from admin server or anywhere with kubeconfig):
+#   kubectl apply -f log-generator.yaml
+#
+# Verify logs:
+#   kubectl logs -l app=log-generator -f
+#   kubectl get pods -l app=log-generator
+#
+# Remove:
+#   kubectl delete -f log-generator.yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-generator
+  namespace: default
+  labels:
+    app: log-generator
+    app.kubernetes.io/name: log-generator
+    app.kubernetes.io/component: log-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: log-generator
+  template:
+    metadata:
+      labels:
+        app: log-generator
+        app.kubernetes.io/name: log-generator
+        app.kubernetes.io/component: log-test
+    spec:
+      containers:
+        - name: log-generator
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: LOG_INTERVAL_SECONDS
+              value: "5"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          command:
+            - /bin/sh
+            - -c
+            - |
+              counter=0
+              interval="${LOG_INTERVAL_SECONDS:-5}"
+              while true; do
+                counter=$((counter + 1))
+                ts="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                printf '{"timestamp":"%s","level":"INFO","message":"Test log record from EKS log generator","counter":%s,"source":"log-generator","pod":"%s","namespace":"%s","node":"%s"}\n' \
+                  "$ts" "$counter" "$POD_NAME" "$POD_NAMESPACE" "$NODE_NAME"
+                sleep "$interval"
+              done
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 50m
+              memory: 32Mi
