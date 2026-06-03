@@ -38,6 +38,7 @@ variables.tfvars
 terraform.tfvars
 splunkclouduf.spl
 /non_public_files/
+/default_agent_files/
 
 retail*
 lambda.zip
