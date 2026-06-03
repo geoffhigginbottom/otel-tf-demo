@@ -18,6 +18,7 @@ resource "null_resource" "astro_shop_deploy" {
   triggers = {
     admin_ip         = var.eks_admin_server_eip
     private_key_path = var.private_key_path
+    manifest_hash    = filemd5("${path.root}/config_files/eks/splunk-astronomy-shop.yaml")
   }
 
   depends_on = [

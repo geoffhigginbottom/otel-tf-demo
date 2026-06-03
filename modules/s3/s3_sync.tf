@@ -1,6 +1,6 @@
 resource "null_resource" "sync_config_files" {
   provisioner "local-exec" {
-    command = "aws s3 sync ./config_files/ s3://${var.s3_bucket_name}/config_files/ --delete"
+    command = "aws s3 sync ./config_files/ s3://${var.s3_bucket_name}/config_files/ --delete --exclude '*.tpl' --exclude '*.ignore'"
   }
 
   triggers = {

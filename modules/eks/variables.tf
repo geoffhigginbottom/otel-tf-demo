@@ -173,3 +173,13 @@ variable "eks_otel_gateway_memory_limit" {
   type        = string
   default     = "2Gi"
 }
+
+variable "s3_access_policy_arn" {
+  description = "IAM policy ARN for the Terraform S3 bucket (from module.s3). Same access as other EC2 instances."
+  type        = string
+}
+
+variable "s3_bucket_name" {
+  description = "S3 bucket for EKS config sync (rendered YAML under non_public_files/eks/, static files under config_files/eks/)."
+  type        = string
+}

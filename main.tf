@@ -102,6 +102,8 @@ module "eks" {
   eks_otel_gateway_memory_request = var.eks_otel_gateway_memory_request
   eks_otel_gateway_cpu_limit      = var.eks_otel_gateway_cpu_limit
   eks_otel_gateway_memory_limit   = var.eks_otel_gateway_memory_limit
+  s3_access_policy_arn            = module.s3.s3_access_policy_arn
+  s3_bucket_name                  = var.s3_bucket_name
 }
 
 module "eks_fargate" {

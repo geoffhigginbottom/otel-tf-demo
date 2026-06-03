@@ -3,6 +3,9 @@ terraform {
     aws = {
       source = "hashicorp/aws"
     }
+    local = {
+      source = "hashicorp/local"
+    }
     signalfx = {
       source = "splunk-terraform/signalfx"
     }

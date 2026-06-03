@@ -175,6 +175,13 @@ resource "aws_iam_policy_attachment" "eks_client_full_access_attach" {
   policy_arn = aws_iam_policy.eks_client_full_access.arn
 }
 
+# Same S3 bucket access as instances module (aws s3 cp s3://<bucket>/...)
+# No count: policy ARN from module.s3 is unknown until apply on first run.
+resource "aws_iam_role_policy_attachment" "eks_client_s3_access" {
+  role       = aws_iam_role.eks_client_role.name
+  policy_arn = var.s3_access_policy_arn
+}
+
 # Instance profile to attach the role to EC2
 resource "aws_iam_instance_profile" "eks_client_profile" {
   name = "eks-client-profile"
