@@ -105,11 +105,6 @@ resource "aws_instance" "eks_admin_server" {
   }
 
   provisioner "file" {
-    source      = "${path.module}/config_files/TEST-splunk-astronomy-shop-1.4.0-test.yaml"
-    destination = "/home/ubuntu/splunk-astronomy-shop.yaml"
-  }
-
-  provisioner "file" {
     source      = "${path.module}/config_files/log-generator.yaml"
     destination = "/home/ubuntu/log-generator.yaml"
   }
