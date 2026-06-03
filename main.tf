@@ -1,10 +1,10 @@
 # AWS Auth Configuration
 provider "aws" {
-  region     = lookup(var.aws_region, var.region)
+  region = lookup(var.aws_region, var.region)
   default_tags {
     tags = {
-      splunkit_environment_type     = "non-prd"
-      splunkit_data_classification  = "private"
+      splunkit_environment_type    = "non-prd"
+      splunkit_data_classification = "private"
     }
   }
 }
@@ -33,18 +33,18 @@ module "detectors" {
 }
 
 module "vpc" {
-  source                = "./modules/vpc"
-  vpc_name              = var.environment
-  vpc_cidr_block        = var.vpc_cidr_block
-  subnet_count          = var.subnet_count
-  region                = lookup(var.aws_region, var.region)
-  environment           = var.environment
+  source         = "./modules/vpc"
+  vpc_name       = var.environment
+  vpc_cidr_block = var.vpc_cidr_block
+  subnet_count   = var.subnet_count
+  region         = lookup(var.aws_region, var.region)
+  environment    = var.environment
 }
 
 module "s3" {
-  source                    = "./modules/s3"
-  s3_bucket_name            = var.s3_bucket_name
-  environment               = var.environment
+  source         = "./modules/s3"
+  s3_bucket_name = var.s3_bucket_name
+  environment    = var.environment
 }
 
 module "aws_ecs" {
@@ -65,34 +65,43 @@ module "aws_ecs" {
 }
 
 module "eks" {
-  source                = "./modules/eks"
-  depends_on            = [module.vpc]
-  count                 = var.eks_cluster_enabled ? 1 : 0
-  region                = lookup(var.aws_region, var.region)
-  environment           = var.environment
-  access_token          = var.access_token
-  rum_access_token      = var.rum_access_token
-  realm                 = var.realm
-  vpc_id                = module.vpc.vpc_id
-  vpc_cidr_block        = var.vpc_cidr_block
-  public_subnet_ids     = module.vpc.public_subnet_ids
-  instance_type         = var.instance_type
-  eks_instance_type     = var.eks_instance_type
-  eks_ami_type          = var.eks_ami_type
-  ami                   = data.aws_ami.latest-ubuntu.id
-  key_name              = var.key_name
-  private_key_path      = var.private_key_path
-  eks_cluster_name      = join("-", [var.environment, "eks-cluster"])
-  eks_access_token      = var.eks_access_token
-  hec_otel_k8s_token    = var.splunk_ent_count > 0 ? try(module.instances[0].hec_otel_k8s_token, "faketoken") : "faketoken"
-  eks_splunk_index      = var.eks_splunk_index
-  fqdn                  = var.fqdn
-  eks_admin_server_eip  = var.eks_admin_server_eip
-  splunk_private_ip     = var.splunk_private_ip
-  my_public_ip          = "${chomp(data.http.my_public_ip.response_body)}"
-  insecure_sg_rules     = var.insecure_sg_rules
-  splunk_ent_count      = var.splunk_ent_count
-  instances_enabled     = var.instances_enabled
+  source                          = "./modules/eks"
+  depends_on                      = [module.vpc]
+  count                           = var.eks_cluster_enabled ? 1 : 0
+  region                          = lookup(var.aws_region, var.region)
+  environment                     = var.environment
+  access_token                    = var.access_token
+  rum_access_token                = var.rum_access_token
+  realm                           = var.realm
+  vpc_id                          = module.vpc.vpc_id
+  vpc_cidr_block                  = var.vpc_cidr_block
+  public_subnet_ids               = module.vpc.public_subnet_ids
+  instance_type                   = var.instance_type
+  eks_instance_type               = var.eks_instance_type
+  eks_ami_type                    = var.eks_ami_type
+  ami                             = data.aws_ami.latest-ubuntu.id
+  key_name                        = var.key_name
+  private_key_path                = var.private_key_path
+  eks_cluster_name                = join("-", [var.environment, "eks-cluster"])
+  eks_access_token                = var.eks_access_token
+  hec_otel_k8s_token              = var.splunk_ent_count > 0 ? try(module.instances[0].hec_otel_k8s_token, "faketoken") : "faketoken"
+  eks_splunk_index                = var.eks_splunk_index
+  fqdn                            = var.fqdn
+  eks_admin_server_eip            = var.eks_admin_server_eip
+  splunk_private_ip               = var.splunk_private_ip
+  my_public_ip                    = chomp(data.http.my_public_ip.response_body)
+  insecure_sg_rules               = var.insecure_sg_rules
+  splunk_ent_count                = var.splunk_ent_count
+  instances_enabled               = var.instances_enabled
+  eks_node_group_desired_size     = var.eks_node_group_desired_size
+  eks_node_group_min_size         = var.eks_node_group_min_size
+  eks_node_group_max_size         = var.eks_node_group_max_size
+  eks_otel_gateway_enabled        = var.eks_otel_gateway_enabled
+  eks_otel_gateway_replica_count  = var.eks_otel_gateway_replica_count
+  eks_otel_gateway_cpu_request    = var.eks_otel_gateway_cpu_request
+  eks_otel_gateway_memory_request = var.eks_otel_gateway_memory_request
+  eks_otel_gateway_cpu_limit      = var.eks_otel_gateway_cpu_limit
+  eks_otel_gateway_memory_limit   = var.eks_otel_gateway_memory_limit
 }
 
 module "eks_fargate" {
@@ -125,22 +134,22 @@ module "eks_fargate" {
 # }
 
 module "lambda_sqs_dynamodb" {
-  source                = "./modules/lambda_sqs_dynamodb"
-  count                 = var.lambda_sqs_dynamodb_enabled ? 1 : 0
+  source                    = "./modules/lambda_sqs_dynamodb"
+  count                     = var.lambda_sqs_dynamodb_enabled ? 1 : 0
   region_wrapper_splunk_apm = lookup(var.region_wrapper_splunk_apm, var.region)
-  access_token          = var.access_token
-  region                = lookup(var.aws_region, var.region)
-  vpc_id                = module.vpc.vpc_id
-  vpc_cidr_block        = var.vpc_cidr_block
-  environment           = var.environment
-  realm                 = var.realm
-  key_name              = var.key_name
-  private_key_path      = var.private_key_path
-  instance_type         = var.instance_type
-  public_subnet_ids     = module.vpc.public_subnet_ids
-  ami                   = data.aws_ami.latest-ubuntu.id
-  my_public_ip          = "${chomp(data.http.my_public_ip.response_body)}"
-  collector_version     = var.collector_version
+  access_token              = var.access_token
+  region                    = lookup(var.aws_region, var.region)
+  vpc_id                    = module.vpc.vpc_id
+  vpc_cidr_block            = var.vpc_cidr_block
+  environment               = var.environment
+  realm                     = var.realm
+  key_name                  = var.key_name
+  private_key_path          = var.private_key_path
+  instance_type             = var.instance_type
+  public_subnet_ids         = module.vpc.public_subnet_ids
+  ami                       = data.aws_ami.latest-ubuntu.id
+  my_public_ip              = chomp(data.http.my_public_ip.response_body)
+  collector_version         = var.collector_version
 }
 
 module "proxied_instances" {
@@ -173,127 +182,127 @@ module "proxied_instances" {
   windows_server_ami               = data.aws_ami.windows-server.id
   collector_version                = var.collector_version
   proxy_server_count               = var.proxy_server_count
-  my_public_ip                     = "${chomp(data.http.my_public_ip.response_body)}"
+  my_public_ip                     = chomp(data.http.my_public_ip.response_body)
   insecure_sg_rules                = var.insecure_sg_rules
 }
 
 module "instances" {
-  source                                            = "./modules/instances"
-  depends_on                                        = [module.vpc]
-  count                                             = var.instances_enabled ? 1 : 0
-  access_token                                      = var.access_token
-  rum_access_token                                  = var.rum_access_token
-  api_url                                           = var.api_url
-  realm                                             = var.realm
-  environment                                       = var.environment
-  region                                            = lookup(var.aws_region, var.region)
-  collector_version                                 = var.collector_version
-  vpc_id                                            = module.vpc.vpc_id
-  vpc_cidr_block                                    = var.vpc_cidr_block
-  public_subnet_ids                                 = module.vpc.public_subnet_ids
-  key_name                                          = var.key_name
-  private_key_path                                  = var.private_key_path
-  instance_type                                     = var.instance_type
-  mysql_instance_type                               = var.mysql_instance_type
-  gateway_instance_type                             = var.gateway_instance_type
-  ami                                               = data.aws_ami.latest-ubuntu.id
-  gateway_count                                     = var.gateway_count
-  haproxy_count                                     = var.haproxy_count
-  nginx_count                                       = var.nginx_count
-  logs_workshop_count                               = var.logs_workshop_count
-  mysql_count                                       = var.mysql_count
-  mysql_user                                        = var.ms_sql_user
-  mysql_user_pwd                                    = var.ms_sql_user_pwd
-  ms_sql_count                                      = var.ms_sql_count
-  ms_sql_user                                       = var.ms_sql_user
-  ms_sql_user_pwd                                   = var.ms_sql_user_pwd
-  ms_sql_instance_type                              = var.ms_sql_instance_type
-  ms_sql_ami                                        = data.aws_ami.ms-sql-server.id
-  iis_server_count                                  = var.iis_server_count
-  windows_server_administrator_pwd                  = var.windows_server_administrator_pwd
-  windows_server_instance_type                      = var.windows_server_instance_type
-  windows_server_ami                                = data.aws_ami.windows-server.id
-  apache_web_count                                  = var.apache_web_count
-  ec2_instance_profile_name                         = module.s3.ec2_instance_profile_name
-  s3_bucket_name                                    = var.s3_bucket_name
-  splunk_cloud_enabled                              = var.splunk_cloud_enabled
-  splunk_admin_pwd                                  = var.splunk_admin_pwd
-  splunk_ent_count                                  = var.splunk_ent_count
-  splunk_ent_version                                = var.splunk_ent_version
-  splunk_ent_filename                               = var.splunk_ent_filename
-  splunk_enterprise_license_filename                = var.splunk_enterprise_license_filename
-  splunk_ent_inst_type                              = var.splunk_ent_inst_type
-  add_itsi_splunk_enterprise                        = var.add_itsi_splunk_enterprise
-  splunk_hec_metrics_enabled                        = var.splunk_hec_metrics_enabled
-  otel_logs_enabled                                 = var.otel_logs_enabled
-  splunk_ent_eip                                    = var.splunk_ent_eip
-  splunk_private_ip                                 = var.splunk_private_ip
-  splunk_itsi_license_filename                      = var.splunk_itsi_license_filename
-  splunk_ai_toolkit_filename                        = var.splunk_ai_toolkit_filename
-  splunk_connect_for_otlp_filename                  = var.splunk_connect_for_otlp_filename
-  splunk_app_for_content_packs_filename             = var.splunk_app_for_content_packs_filename
-  splunk_it_service_intelligence_filename           = var.splunk_it_service_intelligence_filename
-  splunk_infrastructure_monitoring_add_on_filename  = var.splunk_infrastructure_monitoring_add_on_filename
-  universalforwarder_filename                       = var.universalforwarder_filename
-  universalforwarder_version                        = var.universalforwarder_version
-  universalforwarder_url_windows                    = var.universalforwarder_url_windows
-  my_public_ip                                      = "${chomp(data.http.my_public_ip.response_body)}"
-  insecure_sg_rules                                 = var.insecure_sg_rules
-  slo_certpath                                      = var.slo_certpath
-  le_certpath                                       = var.le_certpath
-  passphrase                                        = var.passphrase
-  fqdn                                              = var.fqdn
-  country                                           = var.country
-  state                                             = var.state
-  location                                          = var.location
-  org                                               = var.org
+  source                                           = "./modules/instances"
+  depends_on                                       = [module.vpc]
+  count                                            = var.instances_enabled ? 1 : 0
+  access_token                                     = var.access_token
+  rum_access_token                                 = var.rum_access_token
+  api_url                                          = var.api_url
+  realm                                            = var.realm
+  environment                                      = var.environment
+  region                                           = lookup(var.aws_region, var.region)
+  collector_version                                = var.collector_version
+  vpc_id                                           = module.vpc.vpc_id
+  vpc_cidr_block                                   = var.vpc_cidr_block
+  public_subnet_ids                                = module.vpc.public_subnet_ids
+  key_name                                         = var.key_name
+  private_key_path                                 = var.private_key_path
+  instance_type                                    = var.instance_type
+  mysql_instance_type                              = var.mysql_instance_type
+  gateway_instance_type                            = var.gateway_instance_type
+  ami                                              = data.aws_ami.latest-ubuntu.id
+  gateway_count                                    = var.gateway_count
+  haproxy_count                                    = var.haproxy_count
+  nginx_count                                      = var.nginx_count
+  logs_workshop_count                              = var.logs_workshop_count
+  mysql_count                                      = var.mysql_count
+  mysql_user                                       = var.ms_sql_user
+  mysql_user_pwd                                   = var.ms_sql_user_pwd
+  ms_sql_count                                     = var.ms_sql_count
+  ms_sql_user                                      = var.ms_sql_user
+  ms_sql_user_pwd                                  = var.ms_sql_user_pwd
+  ms_sql_instance_type                             = var.ms_sql_instance_type
+  ms_sql_ami                                       = data.aws_ami.ms-sql-server.id
+  iis_server_count                                 = var.iis_server_count
+  windows_server_administrator_pwd                 = var.windows_server_administrator_pwd
+  windows_server_instance_type                     = var.windows_server_instance_type
+  windows_server_ami                               = data.aws_ami.windows-server.id
+  apache_web_count                                 = var.apache_web_count
+  ec2_instance_profile_name                        = module.s3.ec2_instance_profile_name
+  s3_bucket_name                                   = var.s3_bucket_name
+  splunk_cloud_enabled                             = var.splunk_cloud_enabled
+  splunk_admin_pwd                                 = var.splunk_admin_pwd
+  splunk_ent_count                                 = var.splunk_ent_count
+  splunk_ent_version                               = var.splunk_ent_version
+  splunk_ent_filename                              = var.splunk_ent_filename
+  splunk_enterprise_license_filename               = var.splunk_enterprise_license_filename
+  splunk_ent_inst_type                             = var.splunk_ent_inst_type
+  add_itsi_splunk_enterprise                       = var.add_itsi_splunk_enterprise
+  splunk_hec_metrics_enabled                       = var.splunk_hec_metrics_enabled
+  otel_logs_enabled                                = var.otel_logs_enabled
+  splunk_ent_eip                                   = var.splunk_ent_eip
+  splunk_private_ip                                = var.splunk_private_ip
+  splunk_itsi_license_filename                     = var.splunk_itsi_license_filename
+  splunk_ai_toolkit_filename                       = var.splunk_ai_toolkit_filename
+  splunk_connect_for_otlp_filename                 = var.splunk_connect_for_otlp_filename
+  splunk_app_for_content_packs_filename            = var.splunk_app_for_content_packs_filename
+  splunk_it_service_intelligence_filename          = var.splunk_it_service_intelligence_filename
+  splunk_infrastructure_monitoring_add_on_filename = var.splunk_infrastructure_monitoring_add_on_filename
+  universalforwarder_filename                      = var.universalforwarder_filename
+  universalforwarder_version                       = var.universalforwarder_version
+  universalforwarder_url_windows                   = var.universalforwarder_url_windows
+  my_public_ip                                     = chomp(data.http.my_public_ip.response_body)
+  insecure_sg_rules                                = var.insecure_sg_rules
+  slo_certpath                                     = var.slo_certpath
+  le_certpath                                      = var.le_certpath
+  passphrase                                       = var.passphrase
+  fqdn                                             = var.fqdn
+  country                                          = var.country
+  state                                            = var.state
+  location                                         = var.location
+  org                                              = var.org
 }
 
 ### Instances Outputs ###
-output "OTEL_Gateway_Servers" {value = var.instances_enabled && var.gateway_count > 0 ? module.instances.*.gateway_details : null}
-output "HAProxy_Servers" {value = var.instances_enabled && var.haproxy_count > 0 ? module.instances.*.haproxy_details : null}
-output "NGINX_Servers" {value = var.instances_enabled && var.nginx_count > 0 ? module.instances.*.nginx_details : null}
-output "Logs_Workshop_Servers" {value = var.instances_enabled && var.logs_workshop_count > 0 ? module.instances.*.logs_workshop_details : null}
-output "MySQL_Servers" {value = var.instances_enabled && var.mysql_count > 0 ? module.instances.*.mysql_details : null}
-output "MS_SQL_Servers" {value = var.instances_enabled && var.ms_sql_count > 0 ? module.instances.*.ms_sql_details : null}
-output "Apache_Web_Servers" {value = var.instances_enabled && var.apache_web_count > 0 ? module.instances.*.apache_web_details : null}
-output "IIS_Servers" {value = var.instances_enabled && var.iis_server_count > 0 ? module.instances.*.iis_server_details : null}
+output "OTEL_Gateway_Servers" { value = var.instances_enabled && var.gateway_count > 0 ? module.instances.*.gateway_details : null }
+output "HAProxy_Servers" { value = var.instances_enabled && var.haproxy_count > 0 ? module.instances.*.haproxy_details : null }
+output "NGINX_Servers" { value = var.instances_enabled && var.nginx_count > 0 ? module.instances.*.nginx_details : null }
+output "Logs_Workshop_Servers" { value = var.instances_enabled && var.logs_workshop_count > 0 ? module.instances.*.logs_workshop_details : null }
+output "MySQL_Servers" { value = var.instances_enabled && var.mysql_count > 0 ? module.instances.*.mysql_details : null }
+output "MS_SQL_Servers" { value = var.instances_enabled && var.ms_sql_count > 0 ? module.instances.*.ms_sql_details : null }
+output "Apache_Web_Servers" { value = var.instances_enabled && var.apache_web_count > 0 ? module.instances.*.apache_web_details : null }
+output "IIS_Servers" { value = var.instances_enabled && var.iis_server_count > 0 ? module.instances.*.iis_server_details : null }
 
 # output "collector_lb_dns" {value = var.instances_enabled ? module.instances.*.gateway_lb_int_dns : null}
-output "SQS_Test_Server" {value = var.lambda_sqs_dynamodb_enabled ? module.lambda_sqs_dynamodb.*.sqs_test_server_details : null}
+output "SQS_Test_Server" { value = var.lambda_sqs_dynamodb_enabled ? module.lambda_sqs_dynamodb.*.sqs_test_server_details : null }
 
 ### Proxied Instances Outputs ###
-output "Proxied_Apache_Web_Servers" {value = var.proxied_instances_enabled && var.proxied_apache_web_count > 0? module.proxied_instances.*.proxied_apache_web_details : null}
-output "Proxied_MySQL_Servers" {value = var.proxied_instances_enabled && var.proxied_mysql_count > 0? module.proxied_instances.*.proxied_mysql_details : null}
-output "Proxied_Windows_Servers" {value = var.proxied_instances_enabled && var.proxied_windows_server_count > 0 ? module.proxied_instances.*.proxied_windows_server_details : null}
-output "Proxy_Server" {value = var.proxied_instances_enabled ? module.proxied_instances.*.proxy_server_details : null}
+output "Proxied_Apache_Web_Servers" { value = var.proxied_instances_enabled && var.proxied_apache_web_count > 0 ? module.proxied_instances.*.proxied_apache_web_details : null }
+output "Proxied_MySQL_Servers" { value = var.proxied_instances_enabled && var.proxied_mysql_count > 0 ? module.proxied_instances.*.proxied_mysql_details : null }
+output "Proxied_Windows_Servers" { value = var.proxied_instances_enabled && var.proxied_windows_server_count > 0 ? module.proxied_instances.*.proxied_windows_server_details : null }
+output "Proxy_Server" { value = var.proxied_instances_enabled ? module.proxied_instances.*.proxy_server_details : null }
 
 # ### Phone Shop Outputs ###
 # output "Phone_Shop_Server" {value = var.phone_shop_enabled ? module.phone_shop.*.phone_shop_server_details : null}
 
 ### ECS Outputs ###
-output "ECS_ALB_hostname" {value = var.ecs_cluster_enabled ? module.aws_ecs.*.ecs_alb_hostname : null}
+output "ECS_ALB_hostname" { value = var.ecs_cluster_enabled ? module.aws_ecs.*.ecs_alb_hostname : null }
 
 ### Splunk Enterprise Outputs ###
 # output "splunk_password" {value = (var.instances_enabled && var.splunk_ent_count > 0 || var.splunk_cloud_enabled == true) ? module.instances.*.splunk_password : null}
-output "lo_connect_password" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.lo_connect_password : null}
+output "lo_connect_password" { value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.lo_connect_password : null }
 # output "splunk_enterprise_private_ip" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_enterprise_private_ip : null}
-output "splunk_url" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url : null}
-output "splunk_url_fqdn" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url_fqdn : null}
-output "splunk_ent_url_hec" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url_hec : null}
-output "splunk_ent_url_hec_local" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url_hec_local : null}
-output "splunk_ent_details" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_details : null}
+output "splunk_url" { value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url : null }
+output "splunk_url_fqdn" { value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url_fqdn : null }
+output "splunk_ent_url_hec" { value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url_hec : null }
+output "splunk_ent_url_hec_local" { value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_url_hec_local : null }
+output "splunk_ent_details" { value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.splunk_ent_details : null }
 
-output "hec_metrics_token" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_metrics_token : null}
-output "hec_otel_token" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_otel_token : null}
-output "hec_otel_k8s_token" {value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_otel_k8s_token : null}
+output "hec_metrics_token" { value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_metrics_token : null }
+output "hec_otel_token" { value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_otel_token : null }
+output "hec_otel_k8s_token" { value = var.instances_enabled && var.splunk_ent_count > 0 ? module.instances.*.hec_otel_k8s_token : null }
 
 ### Detector Outputs
-output "detector_promoting_tags_id" {value = var.detectors_enabled ? module.detectors.*.detector_promoting_tags_id : null}
+output "detector_promoting_tags_id" { value = var.detectors_enabled ? module.detectors.*.detector_promoting_tags_id : null }
 
 ### EKS Outputs ###
-output "eks_admin_server" {value = var.eks_cluster_enabled ? module.eks.*.eks_admin_server_details : null}
+output "eks_admin_server" { value = var.eks_cluster_enabled ? module.eks.*.eks_admin_server_details : null }
 # output "aws_eks_node_group_name" {value = var.eks_cluster_enabled ? module.eks.*.aws_eks_node_group_name : null}
 # output "aws_lb_target_group_arn" {value = var.eks_cluster_enabled ? module.eks.*.aws_lb_target_group_arn : null}
-output "astro_shop_url" {value = var.eks_cluster_enabled ? module.eks.*.astro_shop_url : null}
-output "astro_shop_config_url" {value = var.eks_cluster_enabled ? module.eks.*.astro_shop_config_url : null}
+output "astro_shop_url" { value = var.eks_cluster_enabled ? module.eks.*.astro_shop_url : null }
+output "astro_shop_config_url" { value = var.eks_cluster_enabled ? module.eks.*.astro_shop_config_url : null }

@@ -6,7 +6,7 @@ resource "aws_lb" "frontend_proxy_lb" {
   subnets            = var.public_subnet_ids
 
   tags = {
-    Name = "${var.environment}-frontend-proxy-lb"
+    Name                         = "${var.environment}-frontend-proxy-lb"
     splunkit_environment_type    = "non-prd"
     splunkit_data_classification = "private"
   }

@@ -6,12 +6,12 @@ resource "aws_lb_target_group" "frontend_proxy_tg" {
   target_type = "instance"
 
   health_check {
-    protocol = "HTTP"
-    path     = "/"
-    port     = "30080"
-    matcher  = "200-399"
-    interval = 10
-    timeout  = 3
+    protocol            = "HTTP"
+    path                = "/"
+    port                = "30080"
+    matcher             = "200-399"
+    interval            = 10
+    timeout             = 3
     healthy_threshold   = 2
     unhealthy_threshold = 2
   }

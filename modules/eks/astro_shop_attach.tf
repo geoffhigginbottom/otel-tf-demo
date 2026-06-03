@@ -7,8 +7,8 @@ resource "null_resource" "astro_shop_attach_nodes" {
   }
 
   triggers = {
-    admin_ip          = var.eks_admin_server_eip
-    private_key_path  = var.private_key_path
+    admin_ip         = var.eks_admin_server_eip
+    private_key_path = var.private_key_path
   }
 
   depends_on = [

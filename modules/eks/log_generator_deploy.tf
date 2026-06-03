@@ -7,7 +7,7 @@ resource "null_resource" "log_generator_deploy" {
   }
 
   provisioner "local-exec" {
-    when = destroy
+    when    = destroy
     command = <<EOT
       ssh -o StrictHostKeyChecking=no -i ${self.triggers.private_key_path} ubuntu@${self.triggers.admin_ip} \
       'kubectl delete -f /home/ubuntu/log-generator.yaml --ignore-not-found'

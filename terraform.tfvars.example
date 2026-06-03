@@ -123,3 +123,16 @@ eks_instance_type       = "t3.large" # x86
 eks_ami_type            = "AL2023_x86_64_STANDARD" # x86
 # eks_instance_type       = "m6g.xlarge" # ARM
 # eks_ami_type            = "AL2_ARM_64" # ARM
+
+# EKS node group autoscaling (worker nodes)
+# eks_node_group_desired_size = 3
+# eks_node_group_min_size     = 1
+# eks_node_group_max_size     = 6
+
+# Splunk OTel collector gateway (production-style HA)
+# eks_otel_gateway_enabled       = true
+# eks_otel_gateway_replica_count = 3
+# eks_otel_gateway_cpu_request    = "500m"
+# eks_otel_gateway_memory_request = "1Gi"
+# eks_otel_gateway_cpu_limit      = "2"
+# eks_otel_gateway_memory_limit   = "2Gi"   # use "8Gi" with r6i.xlarge+ dedicated gateway nodes

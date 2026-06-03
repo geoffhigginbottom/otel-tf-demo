@@ -108,7 +108,7 @@ variable "splunk_private_ip" {
   default = ""
 }
 variable "my_public_ip" {
-  type = string
+  type    = string
   default = ""
 }
 variable "insecure_sg_rules" {
@@ -118,4 +118,58 @@ variable "insecure_sg_rules" {
 }
 variable "instances_enabled" {
   type = bool
+}
+
+variable "eks_node_group_desired_size" {
+  description = "Desired number of worker nodes in the EKS node group."
+  type        = number
+  default     = 3
+}
+
+variable "eks_node_group_min_size" {
+  description = "Minimum number of worker nodes in the EKS node group."
+  type        = number
+  default     = 1
+}
+
+variable "eks_node_group_max_size" {
+  description = "Maximum number of worker nodes in the EKS node group."
+  type        = number
+  default     = 6
+}
+
+variable "eks_otel_gateway_enabled" {
+  description = "Enable Splunk OTel collector gateway Deployment (production-style agent -> gateway -> backend)."
+  type        = bool
+  default     = true
+}
+
+variable "eks_otel_gateway_replica_count" {
+  description = "Number of Splunk OTel collector gateway pod replicas."
+  type        = number
+  default     = 3
+}
+
+variable "eks_otel_gateway_cpu_request" {
+  description = "CPU request for each Splunk OTel gateway pod."
+  type        = string
+  default     = "500m"
+}
+
+variable "eks_otel_gateway_memory_request" {
+  description = "Memory request for each Splunk OTel gateway pod."
+  type        = string
+  default     = "1Gi"
+}
+
+variable "eks_otel_gateway_cpu_limit" {
+  description = "CPU limit for each Splunk OTel gateway pod."
+  type        = string
+  default     = "2"
+}
+
+variable "eks_otel_gateway_memory_limit" {
+  description = "Memory limit for each Splunk OTel gateway pod. Chart default is 8Gi (needs r6i.xlarge+ nodes); use 2Gi on t3.large demo clusters."
+  type        = string
+  default     = "2Gi"
 }

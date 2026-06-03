@@ -1,41 +1,23 @@
 # =============================================================================
-# Persistent export queues (agent DaemonSet only)
+# Splunk OTel Collector — Astronomy Shop demo Helm values overlay
 # =============================================================================
-# Queues are written to disk on each node (hostPath) so agent pod restarts on
-# the same node do not drop unsent data. Requires splunkPlatform endpoint when
-# using HEC; O11y exporters below reuse the same file_storage extension.
+# Apply AFTER splunk-otel-collector-values.yaml (this file overrides duplicate keys):
+#   helm install|upgrade ... \
+#     -f splunk-otel-collector-values.yaml \
+#     -f splunk-astronomy-shop-collector-values.yaml
 #
-# PROTECTED on agent restart (splunk-otel-collector-agent):
-#   - Container/pod logs        -> Splunk Platform (HEC)     [platform_logs]
-#   - Host/node metrics         -> Splunk Observability      [signalfx]
-#   - App OTLP metrics          -> Splunk Observability      [signalfx]
-#   - App traces                -> Splunk Observability      [otlp_http, signalfx]
-#   - Secure app logs           -> Splunk Observability      [otlp_http/secureapp]
-#   - Discovery/receiver_creator metrics -> O11y               [signalfx]
+# Related manifests (not Helm values):
+#   splunk-astronomy-shop.yaml     — shop Deployments/Services (kubectl apply)
+#   secrets.yaml                   — workshop-secret (realm, tokens, instance)
+#   log-generator.yaml             — test workload; logs hit agents on each node
 #
-# NOT protected (cluster receiver Deployment — in-memory queues only):
-#   - Kubernetes cluster metrics (k8s_cluster receiver)     -> O11y [signalfx]
-#   - Kubernetes events (eventsEnabled)                       -> HEC / O11y
-#   - Kubernetes object watch logs (k8sObjects pods/events)   -> HEC / O11y
-#   - SQL Server DB metrics (sqlserver/* receivers)           -> O11y [signalfx]
-#   - SQL Server DBMON events (logs/dbmon pipeline)         -> O11y [otlp_http/dbmon]
-#   On force restart: unsent queue data is lost AND there is a collection gap
-#   (missed events/scrapes are not backfilled). Container logs on nodes are
-#   unaffected — those are collected by the agent DaemonSet, not here.
-#
-# Demo tip: log-generator / HEC log tests use agents. Restarting the cluster
-# receiver does not simulate container log loss; restarting agents does.
+# Adds:
+#   - clusterReceiver: k8s events/objects, SQL DBMON (shopshim + fraud)
+#   - agent: receiver_creator (mysql, redis), flagd trace drops, WORKSHOP_* envs
 # =============================================================================
-splunkPlatform:
-  sendingQueue:
-    queueSize: 5000
-    persistentQueue:
-      enabled: true
-      storagePath: "/var/addon/splunk/exporter_queue"
 
 # Cluster receiver: single-replica Deployment — persistent queue not supported
 # by the chart (pod may reschedule to a different node; hostPath would not follow).
-# See header comment for data at risk if this pod is force restarted.
 clusterReceiver:
   extraEnvs:
   - name: WORKSHOP_REALM
@@ -122,7 +104,7 @@ clusterReceiver:
           db.server.query_sample:
             enabled: true
           db.server.top_query:
-            enabled: true 
+            enabled: true
         metrics:
           sqlserver.batch.request.rate:
               enabled: true
@@ -158,9 +140,14 @@ clusterReceiver:
               enabled: true
           sqlserver.user.connection.count:
               enabled: true
-          sqlserver.database.latency:
-            enabled: true  
     exporters:
+%{ if gateway_enabled ~}
+      # Forward custom cluster-receiver pipelines to the gateway Deployment.
+      otlp_grpc:
+        endpoint: splunk-otel-collector:4317
+        tls:
+          insecure: true
+%{ endif ~}
       # NOT disk-backed — cluster receiver queues are in-memory only.
       otlp_http/dbmon:
         headers:
@@ -171,7 +158,7 @@ clusterReceiver:
           batch:
             flush_timeout: 15s
             max_size: 10485760 # 10 MiB
-            sizer: bytes 
+            sizer: bytes
     processors:
       transform/dbmon:
         error_mode: ignore
@@ -190,7 +177,12 @@ clusterReceiver:
     service:
       pipelines:
         metrics:
-          exporters: [signalfx]
+          exporters:
+%{ if gateway_enabled ~}
+            - otlp_grpc
+%{ else ~}
+            - signalfx
+%{ endif ~}
           processors: [memory_limiter, batch, resourcedetection, resource, resource/k8s_cluster, resource/add_collector_k8s, transform/dbmon]
           receivers: [k8s_cluster, sqlserver/fraud, sqlserver/shopshim]
         logs/dbmon:
@@ -205,12 +197,15 @@ clusterReceiver:
             - resource/add_collector_k8s
             - transform/dbmon
           exporters:
+%{ if gateway_enabled ~}
+            - otlp_grpc
+%{ else ~}
             - otlp_http/dbmon
+%{ endif ~}
+
+# Agent overlays for Astronomy Shop. Merged after base file — replaces metrics/traces
+# pipelines to add receiver_creator (mysql, redis-cart) and filter/drop_flagd (flagd noise).
 agent:
-  # 1Gi recommended by Splunk chart when persistentQueue is enabled.
-  resources:
-    limits:
-      memory: 1Gi
   extraEnvs:
   - name: WORKSHOP_ENVIRONMENT
     valueFrom:
@@ -218,17 +213,6 @@ agent:
         name: workshop-secret
         key: instance
   config:
-    exporters:
-      # Disk-backed sending queues for agent export paths (see header comment).
-      signalfx:
-        sending_queue:
-          storage: file_storage/persistent_queue
-      otlp_http:
-        sending_queue:
-          storage: file_storage/persistent_queue
-      otlp_http/secureapp:
-        sending_queue:
-          storage: file_storage/persistent_queue
     receivers:
       receiver_creator:
         receivers:
@@ -241,10 +225,10 @@ agent:
               password: root
               database: LxvGChW075
           redis:
-           rule: type == "port" && pod.name matches "redis-cart" && port == 6379
-           config:
-             endpoint: "redis-cart:6379"
-             collection_interval: 10s
+            rule: type == "port" && pod.name matches "redis-cart" && port == 6379
+            config:
+              endpoint: "redis-cart:6379"
+              collection_interval: 10s
     processors:
       filter/drop_flagd:
         traces:
@@ -258,33 +242,24 @@ agent:
           - attributes["url.full"] == "http://flagd:8013/flagd.evaluation.v1.Service/ResolveBoolean"
           - attributes["otel.scope.name"] == "flagd.evaluation.v1"
           - attributes["url.full"] == "http://flagd:8013/flagd.evaluation.v1.Service/EventStream"
-
     service:
       pipelines:
         metrics:
-          exporters: [signalfx]
+          exporters:
+%{ if gateway_enabled ~}
+            - otlp_grpc
+%{ else ~}
+            - signalfx
+%{ endif ~}
           processors: [memory_limiter, k8s_attributes, batch, resourcedetection, resource]
           receivers: [host_metrics, kubeletstats, otlp, receiver_creator]
         traces:
-          exporters: [signalfx, otlp_http]
-          processors: [memory_limiter,  filter/drop_flagd, k8s_attributes, batch, resourcedetection, resource, resource/add_environment]
+          exporters:
+%{ if gateway_enabled ~}
+            - otlp_grpc
+%{ else ~}
+            - signalfx
+            - otlp_http
+%{ endif ~}
+          processors: [memory_limiter, filter/drop_flagd, k8s_attributes, batch, resourcedetection, resource, resource/add_environment]
           receivers: [otlp, jaeger, zipkin]
-
-# logsCollection:
-#   extraFileLogs:
-#     filelog/syslog:
-#       include: [/var/log/syslog]
-#       include_file_path: true
-#       include_file_name: false
-#       resource:
-#         com.splunk.source: /var/log/syslog
-#         host.name: 'EXPR(env("K8S_NODE_NAME"))'
-#         com.splunk.sourcetype: syslog
-#     filelog/auth_log:
-#       include: [/var/log/auth.log]
-#       include_file_path: true
-#       include_file_name: false
-#       resource:
-#         com.splunk.source: /var/log/auth.log
-#         host.name: 'EXPR(env("K8S_NODE_NAME"))'
-#         com.splunk.sourcetype: auth_log

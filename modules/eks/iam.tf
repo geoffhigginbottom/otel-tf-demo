@@ -31,7 +31,7 @@ resource "aws_iam_role_policy_attachment" "eks_cluster-AmazonEKSVPCResourceContr
 
 
 resource "aws_iam_role" "eks_node" {
-  name = join("-",[var.environment,"node"])
+  name = join("-", [var.environment, "node"])
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17",
@@ -144,7 +144,7 @@ resource "aws_iam_policy" "eks_client_full_access" {
         Resource = "*"
       }
       # CloudFormation read
-      ,{
+      , {
         Effect = "Allow"
         Action = [
           "cloudformation:DescribeStacks",

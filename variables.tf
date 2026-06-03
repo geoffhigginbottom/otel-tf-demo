@@ -30,7 +30,7 @@ variable "splunk_hec_metrics_enabled" {
   type    = bool
   default = false
 }
-  variable "otel_logs_enabled" {
+variable "otel_logs_enabled" {
   type    = bool
   default = false
 }
@@ -73,7 +73,7 @@ variable "public_subnet_ids" {
   default = {}
 }
 variable "private_subnet_ids" {
-  type = list(string)
+  type    = list(string)
   default = []
 }
 variable "subnet_count" {
@@ -115,11 +115,11 @@ variable "windows_server_instance_type" {
 }
 
 variable "aws_api_gateway_deployment_retailorder_invoke_url" {
-  type = string
+  type    = string
   default = ""
 }
 variable "my_public_ip" {
-  type = string
+  type    = string
   default = ""
 }
 variable "splunk_ent_eip" {
@@ -170,6 +170,80 @@ variable "eks_ami_type" {
 variable "eks_admin_server_eip" {
   type    = string
   default = ""
+}
+
+variable "eks_node_group_desired_size" {
+  description = "Desired number of worker nodes in the EKS node group."
+  type        = number
+  default     = 3
+
+  validation {
+    condition     = var.eks_node_group_desired_size >= 1
+    error_message = "eks_node_group_desired_size must be at least 1."
+  }
+}
+
+variable "eks_node_group_min_size" {
+  description = "Minimum number of worker nodes in the EKS node group."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.eks_node_group_min_size >= 1
+    error_message = "eks_node_group_min_size must be at least 1."
+  }
+}
+
+variable "eks_node_group_max_size" {
+  description = "Maximum number of worker nodes in the EKS node group."
+  type        = number
+  default     = 6
+
+  validation {
+    condition     = var.eks_node_group_max_size >= 1
+    error_message = "eks_node_group_max_size must be at least 1."
+  }
+}
+
+variable "eks_otel_gateway_enabled" {
+  description = "Enable Splunk OTel collector gateway Deployment (production-style agent -> gateway -> backend)."
+  type        = bool
+  default     = true
+}
+
+variable "eks_otel_gateway_replica_count" {
+  description = "Number of Splunk OTel collector gateway pod replicas."
+  type        = number
+  default     = 3
+
+  validation {
+    condition     = var.eks_otel_gateway_replica_count >= 1
+    error_message = "eks_otel_gateway_replica_count must be at least 1."
+  }
+}
+
+variable "eks_otel_gateway_cpu_request" {
+  description = "CPU request for each Splunk OTel gateway pod."
+  type        = string
+  default     = "500m"
+}
+
+variable "eks_otel_gateway_memory_request" {
+  description = "Memory request for each Splunk OTel gateway pod."
+  type        = string
+  default     = "1Gi"
+}
+
+variable "eks_otel_gateway_cpu_limit" {
+  description = "CPU limit for each Splunk OTel gateway pod."
+  type        = string
+  default     = "2"
+}
+
+variable "eks_otel_gateway_memory_limit" {
+  description = "Memory limit for each Splunk OTel gateway pod. Chart default is 8Gi; use 2Gi on t3.large demo clusters."
+  type        = string
+  default     = "2Gi"
 }
 
 ### Certificate Vars ###
@@ -305,7 +379,7 @@ data "aws_ami" "windows-server" {
   owners      = ["801119661308"]
 
   filter {
-    name   = "name"
+    name = "name"
     # values = ["Windows_Server-2019-English-Full-ContainersLatest-*"]
     # values = ["Windows_Server-2022-English-Full-*"]
     values = ["Windows_Server-2022-English-Full-Base-*"]
@@ -376,7 +450,7 @@ variable "proxied_apache_web_count" {
   type = number
 }
 variable "proxied_mysql_count" {
-  type = number
+  type    = number
   default = 0
 }
 variable "proxied_windows_server_count" {
@@ -387,7 +461,7 @@ variable "proxy_server_count" {
 }
 
 variable "region" {
-  type = string
+  type        = string
   description = "Select region (1:eu-west-1, 2:eu-west-3, 3:eu-central-1, 4:us-east-1, 5:us-east-2, 6:us-west-1, 7:us-west-2, 8:ap-southeast-1, 9:ap-southeast-2, 10:sa-east-1 )"
 }
 
@@ -416,21 +490,21 @@ variable "aws_region" {
 ## List available at https://github.com/signalfx/lambda-layer-versions/blob/master/python/PYTHON.md ##
 variable "region_wrapper_python" {
   default = {
-    "7" = "arn:aws:lambda:us-east-2:254067382080:layer:signalfx-lambda-python-wrapper:18"
-    "6" = "arn:aws:lambda:us-east-1:254067382080:layer:signalfx-lambda-python-wrapper:17"
-    "4" = "arn:aws:lambda:eu-central-1:254067382080:layer:signalfx-lambda-python-wrapper:17"
-    "8" = "arn:aws:lambda:us-west-1:254067382080:layer:signalfx-lambda-python-wrapper:16"
-    "9" = "arn:aws:lambda:us-west-2:254067382080:layer:signalfx-lambda-python-wrapper:16"
+    "7"  = "arn:aws:lambda:us-east-2:254067382080:layer:signalfx-lambda-python-wrapper:18"
+    "6"  = "arn:aws:lambda:us-east-1:254067382080:layer:signalfx-lambda-python-wrapper:17"
+    "4"  = "arn:aws:lambda:eu-central-1:254067382080:layer:signalfx-lambda-python-wrapper:17"
+    "8"  = "arn:aws:lambda:us-west-1:254067382080:layer:signalfx-lambda-python-wrapper:16"
+    "9"  = "arn:aws:lambda:us-west-2:254067382080:layer:signalfx-lambda-python-wrapper:16"
     "12" = "arn:aws:lambda:ap-south-1:254067382080:layer:signalfx-lambda-python-wrapper:16"
     "13" = "arn:aws:lambda:ap-northeast-1:254067382080:layer:signalfx-lambda-python-wrapper:16"
     "14" = "arn:aws:lambda:ap-northeast-2:254067382080:layer:signalfx-lambda-python-wrapper:16"
     "15" = "arn:aws:lambda:ap-southeast-1:254067382080:layer:signalfx-lambda-python-wrapper:16"
     "16" = "arn:aws:lambda:ap-southeast-2:254067382080:layer:signalfx-lambda-python-wrapper:16"
     "10" = "arn:aws:lambda:ca-central-1:254067382080:layer:signalfx-lambda-python-wrapper:16"
-    "1" = "arn:aws:lambda:eu-west-1:254067382080:layer:signalfx-lambda-python-wrapper:16"
-    "2" = "arn:aws:lambda:eu-west-2:254067382080:layer:signalfx-lambda-python-wrapper:16"
-    "3" = "arn:aws:lambda:eu-west-3:254067382080:layer:signalfx-lambda-python-wrapper:16"
-    "5" = "arn:aws:lambda:eu-north-1:254067382080:layer:signalfx-lambda-python-wrapper:16"
+    "1"  = "arn:aws:lambda:eu-west-1:254067382080:layer:signalfx-lambda-python-wrapper:16"
+    "2"  = "arn:aws:lambda:eu-west-2:254067382080:layer:signalfx-lambda-python-wrapper:16"
+    "3"  = "arn:aws:lambda:eu-west-3:254067382080:layer:signalfx-lambda-python-wrapper:16"
+    "5"  = "arn:aws:lambda:eu-north-1:254067382080:layer:signalfx-lambda-python-wrapper:16"
     "11" = "arn:aws:lambda:sa-east-1:254067382080:layer:signalfx-lambda-python-wrapper:16"
   }
 }
@@ -438,21 +512,21 @@ variable "region_wrapper_python" {
 ## List available at https://github.com/signalfx/lambda-layer-versions/blob/main/splunk-apm/splunk-apm.md ##
 variable "region_wrapper_splunk_apm" {
   default = {
-    "7" = "arn:aws:lambda:us-east-2:254067382080:layer:splunk-apm:975"
-    "6" = "arn:aws:lambda:us-east-1:254067382080:layer:splunk-apm:121"
-    "4" = "arn:aws:lambda:eu-central-1:254067382080:layer:splunk-apm:121"
-    "8" = "arn:aws:lambda:us-west-1:254067382080:layer:splunk-apm:121"
-    "9" = "arn:aws:lambda:us-west-2:254067382080:layer:splunk-apm:121"
+    "7"  = "arn:aws:lambda:us-east-2:254067382080:layer:splunk-apm:975"
+    "6"  = "arn:aws:lambda:us-east-1:254067382080:layer:splunk-apm:121"
+    "4"  = "arn:aws:lambda:eu-central-1:254067382080:layer:splunk-apm:121"
+    "8"  = "arn:aws:lambda:us-west-1:254067382080:layer:splunk-apm:121"
+    "9"  = "arn:aws:lambda:us-west-2:254067382080:layer:splunk-apm:121"
     "12" = "arn:aws:lambda:ap-south-1:254067382080:layer:splunk-apm:120"
     "13" = "arn:aws:lambda:ap-northeast-1:254067382080:layer:splunk-apm:120"
     "14" = "arn:aws:lambda:ap-northeast-2:254067382080:layer:splunk-apm:120"
     "15" = "arn:aws:lambda:ap-southeast-1:254067382080:layer:splunk-apm:120"
     "16" = "arn:aws:lambda:ap-southeast-2:254067382080:layer:splunk-apm:119"
     "10" = "arn:aws:lambda:ca-central-1:254067382080:layer:splunk-apm:119"
-    "1" = "arn:aws:lambda:eu-west-1:254067382080:layer:splunk-apm:119"
-    "2" = "arn:aws:lambda:eu-west-2:254067382080:layer:splunk-apm:119"
-    "3" = "arn:aws:lambda:eu-west-3:254067382080:layer:splunk-apm:119"
-    "5" = "arn:aws:lambda:eu-north-1:254067382080:layer:splunk-apm:119"
+    "1"  = "arn:aws:lambda:eu-west-1:254067382080:layer:splunk-apm:119"
+    "2"  = "arn:aws:lambda:eu-west-2:254067382080:layer:splunk-apm:119"
+    "3"  = "arn:aws:lambda:eu-west-3:254067382080:layer:splunk-apm:119"
+    "5"  = "arn:aws:lambda:eu-north-1:254067382080:layer:splunk-apm:119"
     "11" = "arn:aws:lambda:sa-east-1:254067382080:layer:splunk-apm:119"
   }
 }
@@ -460,21 +534,21 @@ variable "region_wrapper_splunk_apm" {
 ## List available at https://github.com/signalfx/lambda-layer-versions/blob/master/node/NODE.md ##
 variable "region_wrapper_nodejs" {
   default = {
-    "7" = "arn:aws:lambda:us-east-2:254067382080:layer:signalfx-lambda-nodejs-wrapper:25"
-    "6" = "arn:aws:lambda:us-east-1:254067382080:layer:signalfx-lambda-nodejs-wrapper:25"
-    "4" = "arn:aws:lambda:eu-central-1:254067382080:layer:signalfx-lambda-nodejs-wrapper:25"
-    "8" = "arn:aws:lambda:us-west-1:254067382080:layer:signalfx-lambda-nodejs-wrapper:25"
-    "9" = "arn:aws:lambda:us-west-2:254067382080:layer:signalfx-lambda-nodejs-wrapper:25"
+    "7"  = "arn:aws:lambda:us-east-2:254067382080:layer:signalfx-lambda-nodejs-wrapper:25"
+    "6"  = "arn:aws:lambda:us-east-1:254067382080:layer:signalfx-lambda-nodejs-wrapper:25"
+    "4"  = "arn:aws:lambda:eu-central-1:254067382080:layer:signalfx-lambda-nodejs-wrapper:25"
+    "8"  = "arn:aws:lambda:us-west-1:254067382080:layer:signalfx-lambda-nodejs-wrapper:25"
+    "9"  = "arn:aws:lambda:us-west-2:254067382080:layer:signalfx-lambda-nodejs-wrapper:25"
     "12" = "arn:aws:lambda:ap-south-1:254067382080:layer:signalfx-lambda-nodejs-wrapper:24"
     "15" = "arn:aws:lambda:ap-southeast-1:254067382080:layer:signalfx-lambda-nodejs-wrapper:24"
     "16" = "arn:aws:lambda:ap-southeast-2:254067382080:layer:signalfx-lambda-nodejs-wrapper:24"
     "13" = "arn:aws:lambda:ap-northeast-1:254067382080:layer:signalfx-lambda-nodejs-wrapper:24"
     "14" = "arn:aws:lambda:ap-northeast-2:254067382080:layer:signalfx-lambda-nodejs-wrapper:24"
     "10" = "arn:aws:lambda:ca-central-1:254067382080:layer:signalfx-lambda-nodejs-wrapper:24"
-    "1" = "arn:aws:lambda:eu-west-1:254067382080:layer:signalfx-lambda-nodejs-wrapper:24"
-    "2" = "arn:aws:lambda:eu-west-2:254067382080:layer:signalfx-lambda-nodejs-wrapper:24"
-    "3" = "arn:aws:lambda:eu-west-3:254067382080:layer:signalfx-lambda-nodejs-wrapper:24"
-    "5" = "arn:aws:lambda:eu-north-1:254067382080:layer:signalfx-lambda-nodejs-wrapper:24"
+    "1"  = "arn:aws:lambda:eu-west-1:254067382080:layer:signalfx-lambda-nodejs-wrapper:24"
+    "2"  = "arn:aws:lambda:eu-west-2:254067382080:layer:signalfx-lambda-nodejs-wrapper:24"
+    "3"  = "arn:aws:lambda:eu-west-3:254067382080:layer:signalfx-lambda-nodejs-wrapper:24"
+    "5"  = "arn:aws:lambda:eu-north-1:254067382080:layer:signalfx-lambda-nodejs-wrapper:24"
     "11" = "arn:aws:lambda:sa-east-1:254067382080:layer:signalfx-lambda-nodejs-wrapper:24"
   }
 }
@@ -494,8 +568,8 @@ variable "access_token" {
 variable "api_url" {
 }
 variable "realm" {
-  type        = string
-  default     = "eu0"
+  type    = string
+  default = "eu0"
 }
 variable "notification_email" {
 }
@@ -550,7 +624,7 @@ variable "splunk_enterprise_license_filename" {
   default = {}
 }
 variable "add_itsi_splunk_enterprise" {
-  type = bool
+  type    = bool
   default = false
 }
 
