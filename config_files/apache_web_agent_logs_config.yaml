@@ -87,7 +87,22 @@ receivers:
       # Aggregated system process count metrics
       processes:
       # System processes metrics, disabled by default
-      # process:
+      process:
+        mute_process_exe_error: true
+        mute_process_io_error: true
+        mute_process_user_error: true
+        include:
+          names:
+            - otelcol
+            - httpd
+            - apache2
+          match_type: strict
+        metrics:
+          process.cpu.utilization:
+            enabled: true
+          process.memory.utilization:
+            enabled: true
+
   jaeger:
     protocols:
       grpc:
