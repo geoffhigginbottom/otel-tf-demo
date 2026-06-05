@@ -39,7 +39,7 @@ extensions:
 receivers:
   fluentforward:
     endpoint: "${SPLUNK_LISTEN_INTERFACE}:8006"
-  hostmetrics:
+  host_metrics:
     collection_interval: 1s
     scrapers:
       cpu:
@@ -288,7 +288,7 @@ service:
 
     metrics:
       receivers:
-      - hostmetrics
+      - host_metrics
       - otlp
       - mysql
       processors:
