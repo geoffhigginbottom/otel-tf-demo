@@ -84,6 +84,8 @@ gateway:
             topologyKey: kubernetes.io/hostname
   config:
     exporters:
+%{ if splunk_platform_enabled ~}
+      # Requires splunkPlatform.endpoint from helm --set (enterprise deploy only).
       splunk_hec/platform_logs:
         sending_queue:
           enabled: true
@@ -92,6 +94,7 @@ gateway:
         retry_on_failure:
           enabled: true
           max_elapsed_time: 0
+%{ endif ~}
       signalfx:
         sending_queue:
           enabled: true
@@ -117,7 +120,25 @@ agent:
 %{ else ~}
       memory: 1Gi
 %{ endif ~}
+%{ if !splunk_platform_enabled ~}
+  # Chart only mounts the persistent-queue hostPath when Splunk Platform logs are enabled
+  # (splunkPlatform.endpoint set). Without this, file_storage/persistent_queue has no backing path.
+  # hostPath dirs are root-owned; the chart chown initContainer runs only when logs are enabled.
+  securityContext:
+    runAsUser: 0
+  extraVolumes:
+    - name: persistent-queue
+      hostPath:
+        path: "/var/addon/splunk/exporter_queue/agent"
+        type: DirectoryOrCreate
+  extraVolumeMounts:
+    - name: persistent-queue
+      mountPath: "/var/addon/splunk/exporter_queue/agent"
+%{ endif ~}
   config:
+    extensions:
+      file_storage/persistent_queue:
+        create_directory: true
     exporters:
 %{ if gateway_enabled ~}
       # Disk-backed queue for agent -> gateway hop (production resilience).
@@ -185,3 +206,5 @@ agent:
 #         com.splunk.source: /var/log/auth.log
 #         host.name: 'EXPR(env("K8S_NODE_NAME"))'
 #         com.splunk.sourcetype: auth_log
+
+

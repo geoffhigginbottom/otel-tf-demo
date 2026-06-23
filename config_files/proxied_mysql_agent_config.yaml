@@ -4,8 +4,6 @@
 # environment variables are required to be manually defined or configured below:
 # - SPLUNK_ACCESS_TOKEN: The Splunk access token to authenticate requests
 # - SPLUNK_API_URL: The Splunk API URL, e.g. https://api.us0.observability.splunkcloud.com
-# - SPLUNK_BUNDLE_DIR: The path to the Smart Agent bundle, e.g. /usr/lib/splunk-otel-collector/agent-bundle
-# - SPLUNK_COLLECTD_DIR: The path to the collectd config directory for the Smart Agent, e.g. /usr/lib/splunk-otel-collector/agent-bundle/run/collectd
 # - SPLUNK_HEC_TOKEN: The Splunk HEC authentication token
 # - SPLUNK_HEC_URL: The Splunk HEC endpoint URL, e.g. https://http-inputs-acme.splunkcloud.com/services/collector
 # - SPLUNK_INGEST_URL: The Splunk ingest URL, e.g. https://ingest.us0.observability.splunkcloud.com
@@ -26,11 +24,28 @@ extensions:
     egress:
       endpoint: "${SPLUNK_API_URL}"
       # Use instead when sending to gateway
-      # endpoint: "${SPLUNK_GATEWAY_URL}"
-  smartagent:
-    bundleDir: "${SPLUNK_BUNDLE_DIR}"
-    collectd:
-      configDir: "${SPLUNK_COLLECTD_DIR}"
+      # endpoint: "http://${SPLUNK_GATEWAY_URL}"
+  http_forwarder/opamp_splunk_o11y:
+    ingress:
+      endpoint: "${SPLUNK_LISTEN_INTERFACE}:4320"
+    egress:
+      endpoint: "${SPLUNK_INGEST_URL}"
+      # Use instead when sending to gateway
+      # endpoint: "http://${SPLUNK_GATEWAY_URL}:4320"
+  # opamp/splunk_o11y is included in the default config, but startup removes it
+  # from service.extensions unless --feature-gates=+splunk.opamp.enabled is set.
+  opamp/splunk_o11y:
+    agent_description:
+      # Include the Collector's resource attributes as OpAMP non-identifying attributes.
+      include_resource_attributes: true
+    server:
+      http:
+        endpoint: "${SPLUNK_INGEST_URL}/v1/opamp"
+        # Use instead when sending to gateway (assuming the gateway is running http_forwarder/signalfx on port 4320)
+        # endpoint: "http://${SPLUNK_GATEWAY_URL}:4320/v1/opamp"
+        polling_interval: 30s
+        headers:
+          X-SF-Token: "${SPLUNK_ACCESS_TOKEN}"
   zpages:
     #endpoint: "${SPLUNK_LISTEN_INTERFACE}:55679"
     expvar:

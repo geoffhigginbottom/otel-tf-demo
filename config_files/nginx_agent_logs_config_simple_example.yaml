@@ -26,7 +26,7 @@ extensions:
     egress:
       # endpoint: "${SPLUNK_API_URL}"
       # Use instead when sending to gateway
-      endpoint: "${SPLUNK_GATEWAY_URL}"
+      endpoint: "http://${SPLUNK_GATEWAY_URL}"
   http_forwarder/opamp_splunk_o11y:
     ingress:
       endpoint: "${SPLUNK_LISTEN_INTERFACE}:4320"

@@ -160,6 +160,20 @@ clusterReceiver:
             max_size: 10485760 # 10 MiB
             sizer: bytes
     processors:
+      resource/add_collector_k8s:
+        attributes:
+          - action: insert
+            key: k8s.node.name
+            value: $${K8S_NODE_NAME}
+          - action: insert
+            key: k8s.pod.name
+            value: $${K8S_POD_NAME}
+          - action: insert
+            key: k8s.pod.uid
+            value: $${K8S_POD_UID}
+          - action: insert
+            key: k8s.namespace.name
+            value: $${K8S_NAMESPACE}
       transform/dbmon:
         error_mode: ignore
         metric_statements:

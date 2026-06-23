@@ -4,8 +4,6 @@
 # environment variables are required to be manually defined or configured below:
 # - SPLUNK_ACCESS_TOKEN: The Splunk access token to authenticate requests
 # - SPLUNK_API_URL: The Splunk API URL, e.g. https://api.us0.observability.splunkcloud.com
-# - SPLUNK_BUNDLE_DIR: The path to the Smart Agent bundle, e.g. /usr/lib/splunk-otel-collector/agent-bundle
-# - SPLUNK_COLLECTD_DIR: The path to the collectd config directory for the Smart Agent, e.g. /usr/lib/splunk-otel-collector/agent-bundle/run/collectd
 # - SPLUNK_HEC_TOKEN: The Splunk HEC authentication token
 # - SPLUNK_HEC_URL: The Splunk HEC endpoint URL, e.g. https://http-inputs-acme.splunkcloud.com/services/collector
 # - SPLUNK_INGEST_URL: The Splunk ingest URL, e.g. https://ingest.us0.observability.splunkcloud.com
@@ -26,14 +24,14 @@ extensions:
     egress:
       # endpoint: "${SPLUNK_API_URL}"
       # Use instead when sending to gateway
-      endpoint: "${SPLUNK_GATEWAY_URL}"
+      endpoint: "http://${SPLUNK_GATEWAY_URL}"
   http_forwarder/opamp_splunk_o11y:
     ingress:
       endpoint: "${SPLUNK_LISTEN_INTERFACE}:4320"
     egress:
-      endpoint: "${SPLUNK_INGEST_URL}"
+      # endpoint: "${SPLUNK_INGEST_URL}"
       # Use instead when sending to gateway
-      #endpoint: "${SPLUNK_GATEWAY_URL}:4320"
+      endpoint: "http://${SPLUNK_GATEWAY_URL}:4320"
   # opamp/splunk_o11y is included in the default config, but startup removes it
   # from service.extensions unless --feature-gates=+splunk.opamp.enabled is set.
   opamp/splunk_o11y:
@@ -42,16 +40,12 @@ extensions:
       include_resource_attributes: true
     server:
       http:
-        endpoint: "${SPLUNK_INGEST_URL}/v1/opamp"
+        # endpoint: "${SPLUNK_INGEST_URL}/v1/opamp"
         # Use instead when sending to gateway (assuming the gateway is running http_forwarder/signalfx on port 4320)
-        #endpoint: "${SPLUNK_GATEWAY_URL}:4320/v1/opamp"
+        endpoint: "http://${SPLUNK_GATEWAY_URL}:4320/v1/opamp"
         polling_interval: 30s
         headers:
           X-SF-Token: "${SPLUNK_ACCESS_TOKEN}"
-  smartagent:
-    bundleDir: "${SPLUNK_BUNDLE_DIR}"
-    # collectd:
-      # configDir: "${SPLUNK_COLLECTD_DIR}"
   zpages:
     #endpoint: "${SPLUNK_LISTEN_INTERFACE}:55679"
     expvar:
@@ -73,7 +67,21 @@ receivers:
       # Aggregated system process count metrics
       processes:
       # System processes metrics, disabled by default
-      # process:
+      process:
+        mute_process_exe_error: true
+        mute_process_io_error: true
+        mute_process_user_error: true
+        include:
+          names:
+            - otelcol.exe
+            - splunkd.exe
+          match_type: strict
+        metrics:
+          process.cpu.utilization:
+            enabled: true
+          process.memory.utilization:
+            enabled: true
+
   jaeger:
     protocols:
       grpc:
@@ -120,32 +128,70 @@ receivers:
 
   nop:
 
+  # sqlserver:
+  #   collection_interval: 5s
+  #   username: ${SPLUNK_SQL_USER}
+  #   password: ${SPLUNK_SQL_USER_PWD}
+  #   server: 0.0.0.0
+  #   port: 1433
+  #   resource_attributes:
+  #     sqlserver.instance.name:
+  #       enabled: true
+
   sqlserver:
-    collection_interval: 5s
+    collection_interval: 10s
     username: ${SPLUNK_SQL_USER}
     password: ${SPLUNK_SQL_USER_PWD}
     server: 0.0.0.0
     port: 1433
     resource_attributes:
+      sqlserver.computer.name:
+        enabled: true
       sqlserver.instance.name:
         enabled: true
+    events:
+      db.server.query_sample:
+        enabled: true
+      db.server.top_query:
+        enabled: true
 
-  smartagent/sqlserver:
-    type: telegraf/sqlserver
-    host: localhost
-    port: 1433
-    userID: ${SPLUNK_SQL_USER}
-    password: ${SPLUNK_SQL_USER_PWD}
-    appName: sqlserver
-    extraMetrics:
-      - sqlserver_memory_clerks.size_kb.bound_trees
-      - sqlserver_performance.active_temp_tables
+  windowsperfcounters/sqlservr:
+    collection_interval: 10s
+    metrics:
+      sqlserver.process.cpu.utilization:
+        description: CPU utilization for the sqlservr process
+        unit: "%"
+        gauge:
+      sqlserver.process.memory.working_set:
+        description: Working set memory for the sqlservr process
+        unit: By
+        gauge:
+      sqlserver.process.threads:
+        description: Thread count for the sqlservr process
+        unit: "{threads}"
+        gauge:
+      sqlserver.process.handles:
+        description: Handle count for the sqlservr process
+        unit: "{handles}"
+        gauge:
+    perfcounters:
+      - object: "Process"
+        instances: ["sqlservr"]
+        counters:
+          - name: "% Processor Time"
+            metric: sqlserver.process.cpu.utilization
+          - name: "Working Set"
+            metric: sqlserver.process.memory.working_set
+          - name: "Thread Count"
+            metric: sqlserver.process.threads
+          - name: "Handle Count"
+            metric: sqlserver.process.handles
 
-
-  smartagent/win_services:
-    type: telegraf/win_services
-    intervalSeconds: 1
-    serviceNames:
+  windows_service:
+    collection_interval: 1m
+    include_services:
+      - MSSQLSERVER
+      - SQLSERVERAGENT
       - Dnscache
       - Dhcp
       - LanmanServer
@@ -157,49 +203,11 @@ receivers:
       - RpcEptMapper
       - MSDTC
       - SamSs
-      - MSSQLSERVER
-      - SQLSERVERAGENT
 
-  smartagent/procstat-otel:
-    type: telegraf/procstat
-    intervalSeconds: 1
-    exe: otelcol.exe
-    pattern: otel
-    WinService: splunk-otel-collector
-
-  smartagent/procstat-mssqlserver:
-    type: telegraf/procstat
-    intervalSeconds: 1
-    exe: sqlservr.exe
-    pattern: MSSQLSERVER
-    WinService: MSSQLSERVER
-
-  # smartagent/telegraf/win_perf_counters:
-  #   type: telegraf/win_perf_counters
-  #   printValid: true
-  #   counterRefreshInterval: 10
-  #   objects:
-  #    - objectName: "Processor"
-  #      instances:
-  #       - "*"
-  #      counters:
-  #       - "% Idle Time"
-  #       - "% Interrupt Time"
-  #       - "% Privileged Time"
-  #       - "% User Time"
-  #       - "% Processor Time"
-  #      includeTotal: true
-  #      measurement: "win_cpu"
-
-  #    - objectName: "PhysicalDisk"
-  #      instances:
-  #       - "*"
-  #      counters:
-  #       - "% Disk Read Time"
-  #       - "% Disk Write Time"
-  #       - "% Idle Time"
-  #      includeTotal: false
-  #      measurement: "win_disk"
+  ntp:
+    endpoint: pool.ntp.org:123
+    collection_interval: 1h
+    initial_delay: 5m
 
 # Replaced SmartAgent with OTel Perfomn Receivers
 # https://docs.splunk.com/observability/en/gdi/opentelemetry/components/windowsperfcounters-receiver.html#windows-performance-counters-receiver
@@ -239,10 +247,6 @@ receivers:
             attributes:
               state: idle
 
-  smartagent/ntp:
-    type: ntp
-    host: pool.ntp.org
-
 processors:
   batch:
     metadata_keys:
@@ -274,13 +278,6 @@ processors:
       #- action: insert
         #value: staging/production/...
         #key: deployment.environment
-
-  # The following processor is used to add "otelcol.service.mode" attribute to the internal metrics
-  resource/add_mode:
-    attributes:
-      - action: insert
-        value: "agent"
-        key: otelcol.service.mode
 
   metricstransform:
     transforms:
@@ -393,7 +390,6 @@ service:
   - http_forwarder/opamp_splunk_o11y
   - opamp/splunk_o11y
   - zpages
-  - smartagent
 
   pipelines:
     traces:
@@ -408,23 +404,19 @@ service:
       #- resource/add_environment
       exporters:
       # - otlp_http
-      # - signalfx
       # Use instead when sending to gateway
       - otlp_http/gateway
-      - signalfx
 
     metrics:
       receivers:
       - host_metrics
       - otlp
       - sqlserver
-      - smartagent/sqlserver
-      - smartagent/win_services
-      - smartagent/procstat-otel
-      - smartagent/procstat-mssqlserver
-      - smartagent/ntp
+      - windows_service
+      - windowsperfcounters/sqlservr
       - windowsperfcounters/memory
       - windowsperfcounters/processor
+      - ntp
       processors:
       - memory_limiter
       - batch
@@ -444,7 +436,6 @@ service:
       - memory_limiter
       - batch
       - resourcedetection
-      - resource/add_mode
       # When sending to gateway, at least one metrics pipeline needs
       # to use signalfx exporter so host metadata gets emitted
       exporters:

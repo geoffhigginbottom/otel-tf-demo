@@ -20,12 +20,13 @@ resource "local_file" "eks_secrets" {
 
 resource "local_file" "eks_otel_collector_values" {
   content = templatefile("${local.eks_templates_dir}/splunk-otel-collector-values.yaml.tpl", {
-    gateway_enabled        = var.eks_otel_gateway_enabled
-    gateway_replica_count  = var.eks_otel_gateway_replica_count
-    gateway_cpu_request    = var.eks_otel_gateway_cpu_request
-    gateway_memory_request = var.eks_otel_gateway_memory_request
-    gateway_cpu_limit      = var.eks_otel_gateway_cpu_limit
-    gateway_memory_limit   = var.eks_otel_gateway_memory_limit
+    gateway_enabled          = var.eks_otel_gateway_enabled
+    gateway_replica_count    = var.eks_otel_gateway_replica_count
+    gateway_cpu_request      = var.eks_otel_gateway_cpu_request
+    gateway_memory_request   = var.eks_otel_gateway_memory_request
+    gateway_cpu_limit        = var.eks_otel_gateway_cpu_limit
+    gateway_memory_limit     = var.eks_otel_gateway_memory_limit
+    splunk_platform_enabled  = var.splunk_ent_count == 1 && var.instances_enabled
   })
   filename = "${local.eks_rendered_dir}/splunk-otel-collector-values.yaml"
 }
