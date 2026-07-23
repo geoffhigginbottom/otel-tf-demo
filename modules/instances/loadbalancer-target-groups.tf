@@ -22,6 +22,31 @@ resource "aws_lb_target_group_attachment" "gateway-lb-tg-4318-attachment" {
   port             = 4318
 }
 
+
+resource "aws_lb_target_group" "gateway-lb-tg-4320" {
+  name     = "gateway-lb-tg-4320"
+  port     = 4320
+  protocol = "HTTP"
+  vpc_id   = var.vpc_id
+  
+  health_check {
+    path = "/"
+    port = 13133
+    healthy_threshold = 5
+    unhealthy_threshold = 2
+    timeout = 2
+    interval = 5
+    matcher = "200"  # has to be HTTP 200 or fails
+  }
+}
+
+resource "aws_lb_target_group_attachment" "gateway-lb-tg-4320-attachment" {
+  count            = var.gateway_count
+  target_group_arn = aws_lb_target_group.gateway-lb-tg-4320.arn
+  target_id        = aws_instance.gateway[count.index].id
+  port             = 4320
+}
+
 resource "aws_lb_target_group" "gateway-lb-tg-9943" {
   name     = "gateway-lb-tg-9943"
   port     = 9943
