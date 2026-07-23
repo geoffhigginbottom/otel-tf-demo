@@ -12,20 +12,16 @@
 #   log-generator.yaml             — test workload; logs hit agents on each node
 #
 # Adds:
-#   - clusterReceiver: k8s events/objects, SQL DBMON (shopshim + fraud)
-#   - agent: receiver_creator (mysql, redis), flagd trace drops, WORKSHOP_* envs
+#   - clusterReceiver: k8s object watches, SQL DBMON (shopshim + fraud)
+#   - agent: receiver_creator (mysql, redis), flagd trace drops
+#
+# k8s events: enabled via helm --set splunkObservability.infrastructureMonitoringEventsEnabled=true
+# Gateway forwarding: chart wires otlp_grpc when gateway.enabled=true (no override needed)
 # =============================================================================
 
 # Cluster receiver: single-replica Deployment — persistent queue not supported
 # by the chart (pod may reschedule to a different node; hostPath would not follow).
 clusterReceiver:
-  extraEnvs:
-  - name: WORKSHOP_REALM
-    valueFrom:
-      secretKeyRef:
-        name: workshop-secret
-        key: realm
-  eventsEnabled: true
   k8sObjects:
     - name: events
       mode: watch
@@ -46,46 +42,46 @@ clusterReceiver:
         resource_attributes:
           sqlserver.instance.name:
             enabled: true
-        events:
+        events: &sqlserver_dbmon_events
           db.server.query_sample:
             enabled: true
           db.server.top_query:
             enabled: true
-        metrics:
+        metrics: &sqlserver_dbmon_metrics
           sqlserver.batch.request.rate:
-              enabled: true
+            enabled: true
           sqlserver.batch.sql_compilation.rate:
-              enabled: true
+            enabled: true
           sqlserver.batch.sql_recompilation.rate:
-              enabled: true
+            enabled: true
           sqlserver.database.count:
-              enabled: true
+            enabled: true
           sqlserver.database.io:
-              enabled: true
+            enabled: true
           sqlserver.database.latency:
-              enabled: true
+            enabled: true
           sqlserver.database.operations:
-              enabled: true
+            enabled: true
           sqlserver.deadlock.rate:
-              enabled: true
+            enabled: true
           sqlserver.lock.wait.count:
-              enabled: true
+            enabled: true
           sqlserver.lock.wait.rate:
-              enabled: true
+            enabled: true
           sqlserver.os.wait.duration:
-              enabled: true
+            enabled: true
           sqlserver.page.buffer_cache.hit_ratio:
-              enabled: true
+            enabled: true
           sqlserver.processes.blocked:
-              enabled: true
+            enabled: true
           sqlserver.resource_pool.disk.operations:
-              enabled: true
+            enabled: true
           sqlserver.resource_pool.disk.throttled.read.rate:
-              enabled: true
+            enabled: true
           sqlserver.resource_pool.disk.throttled.write.rate:
-              enabled: true
+            enabled: true
           sqlserver.user.connection.count:
-              enabled: true
+            enabled: true
       sqlserver/fraud:
         collection_interval: 10s
         top_query_collection:
@@ -95,70 +91,24 @@ clusterReceiver:
         server: sql-server-fraud.default.svc.cluster.local
         port: 1433
         resource_attributes:
-          # sqlserver.computer.name:
-          #   enabled: true
           sqlserver.instance.name:
             enabled: true
-        # ADD to ENABLE Database Monitoring
-        events:
-          db.server.query_sample:
-            enabled: true
-          db.server.top_query:
-            enabled: true
-        metrics:
-          sqlserver.batch.request.rate:
-              enabled: true
-          sqlserver.batch.sql_compilation.rate:
-              enabled: true
-          sqlserver.batch.sql_recompilation.rate:
-              enabled: true
-          sqlserver.database.count:
-              enabled: true
-          sqlserver.database.io:
-              enabled: true
-          sqlserver.database.latency:
-              enabled: true
-          sqlserver.database.operations:
-              enabled: true
-          sqlserver.deadlock.rate:
-              enabled: true
-          sqlserver.lock.wait.count:
-              enabled: true
-          sqlserver.lock.wait.rate:
-              enabled: true
-          sqlserver.os.wait.duration:
-              enabled: true
-          sqlserver.page.buffer_cache.hit_ratio:
-              enabled: true
-          sqlserver.processes.blocked:
-              enabled: true
-          sqlserver.resource_pool.disk.operations:
-              enabled: true
-          sqlserver.resource_pool.disk.throttled.read.rate:
-              enabled: true
-          sqlserver.resource_pool.disk.throttled.write.rate:
-              enabled: true
-          sqlserver.user.connection.count:
-              enabled: true
+        events: *sqlserver_dbmon_events
+        metrics: *sqlserver_dbmon_metrics
     exporters:
-%{ if gateway_enabled ~}
-      # Forward custom cluster-receiver pipelines to the gateway Deployment.
-      otlp_grpc:
-        endpoint: splunk-otel-collector:4317
-        tls:
-          insecure: true
-%{ endif ~}
-      # NOT disk-backed — cluster receiver queues are in-memory only.
+%{ if !gateway_enabled ~}
+      # Direct DBMON log export when gateway is disabled.
       otlp_http/dbmon:
         headers:
-          X-SF-Token: ${eks_access_token} # GH Modified
+          X-SF-Token: ${eks_access_token}
           X-splunk-instrumentation-library: dbmon
-        logs_endpoint: https://ingest.${realm}.signalfx.com/v3/event # GH Modified
+        logs_endpoint: https://ingest.${realm}.signalfx.com/v3/event
         sending_queue:
           batch:
             flush_timeout: 15s
             max_size: 10485760 # 10 MiB
             sizer: bytes
+%{ endif ~}
     processors:
       resource/add_collector_k8s:
         attributes:
@@ -197,7 +147,8 @@ clusterReceiver:
 %{ else ~}
             - signalfx
 %{ endif ~}
-          processors: [memory_limiter, batch, resourcedetection, resource, resource/k8s_cluster, resource/add_collector_k8s, transform/dbmon]
+          # Omit resourcedetection — cluster receiver is not node-local; avoids misleading host.name.
+          processors: [memory_limiter, batch, resource, resource/k8s_cluster, resource/add_collector_k8s, transform/dbmon]
           receivers: [k8s_cluster, sqlserver/fraud, sqlserver/shopshim]
         logs/dbmon:
           receivers:
@@ -206,7 +157,6 @@ clusterReceiver:
           processors:
             - memory_limiter
             - batch
-            - resourcedetection
             - resource
             - resource/add_collector_k8s
             - transform/dbmon
@@ -217,15 +167,8 @@ clusterReceiver:
             - otlp_http/dbmon
 %{ endif ~}
 
-# Agent overlays for Astronomy Shop. Merged after base file — replaces metrics/traces
-# pipelines to add receiver_creator (mysql, redis-cart) and filter/drop_flagd (flagd noise).
+# Agent overlays — replaces base agent metrics/traces pipelines (Helm fully redefines lists).
 agent:
-  extraEnvs:
-  - name: WORKSHOP_ENVIRONMENT
-    valueFrom:
-      secretKeyRef:
-        name: workshop-secret
-        key: instance
   config:
     receivers:
       receiver_creator:
@@ -262,6 +205,7 @@ agent:
           exporters:
 %{ if gateway_enabled ~}
             - otlp_grpc
+            - signalfx/host_metadata
 %{ else ~}
             - signalfx
 %{ endif ~}

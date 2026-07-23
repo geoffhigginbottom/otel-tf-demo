@@ -164,28 +164,8 @@ agent:
         sending_queue:
           storage: file_storage/persistent_queue
 %{ endif ~}
-    service:
-      pipelines:
-        # Base pipelines — astronomy-shop file adds receiver_creator + filter/drop_flagd.
-        metrics:
-          exporters:
-%{ if gateway_enabled ~}
-            - otlp_grpc
-%{ else ~}
-            - signalfx
-%{ endif ~}
-          processors: [memory_limiter, k8s_attributes, batch, resourcedetection, resource]
-          receivers: [host_metrics, kubeletstats, otlp]
-        traces:
-          exporters:
-%{ if gateway_enabled ~}
-            - otlp_grpc
-%{ else ~}
-            - signalfx
-            - otlp_http
-%{ endif ~}
-          processors: [memory_limiter, k8s_attributes, batch, resourcedetection, resource, resource/add_environment]
-          receivers: [otlp, jaeger, zipkin]
+    # Agent metrics/traces pipelines: defined in splunk-astronomy-shop-collector-values.yaml
+    # (Helm fully replaces service.pipelines lists; shop overlay adds receiver_creator + flagd filter).
 
 # Optional host log collection (uncomment to enable on all agents).
 # logsCollection:
