@@ -16,7 +16,8 @@
 #   - agent: receiver_creator (mysql, redis), flagd trace drops
 #
 # k8s events: enabled via helm --set splunkObservability.infrastructureMonitoringEventsEnabled=true
-# Gateway forwarding: chart wires otlp_grpc when gateway.enabled=true (no override needed)
+# Gateway forwarding: clusterReceiver must define otlp_grpc when overriding config.exporters
+# (empty exporters would wipe chart defaults via mustMergeOverwrite).
 # =============================================================================
 
 # Cluster receiver: single-replica Deployment — persistent queue not supported
@@ -96,7 +97,15 @@ clusterReceiver:
         events: *sqlserver_dbmon_events
         metrics: *sqlserver_dbmon_metrics
     exporters:
-%{ if !gateway_enabled ~}
+%{ if gateway_enabled ~}
+      # Forward cluster receiver telemetry to the gateway Deployment.
+      # Do not leave exporters empty here — mustMergeOverwrite would wipe chart defaults
+      # (signalfx, splunk_hec, etc.) and break k8s events/object pipelines.
+      otlp_grpc:
+        endpoint: splunk-otel-collector:4317
+        tls:
+          insecure: true
+%{ else ~}
       # Direct DBMON log export when gateway is disabled.
       otlp_http/dbmon:
         headers:
