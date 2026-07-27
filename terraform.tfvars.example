@@ -26,6 +26,7 @@ gateway_count               = "1" # uses var.collector_version
 apache_web_count            = "0" # uses var.collector_version & auto discovery - files from S3
 haproxy_count               = "0" # uses var.collector_version - files from S3
 nginx_count                 = "0" # uses var.collector_version & auto discovery - files from S3
+logs_workshop_count         = "0" # uses var.collector_version & auto discovery - files from S3
 mysql_count                 = "0" # uses var.collector_version & auto discovery - files from S3
 ms_sql_count                = "0" # uses var.collector_version - files from S3
 iis_server_count            = "0" # uses var.collector_version - files from S3
@@ -46,7 +47,7 @@ region = "<REGION>" - ensue this aligns with EIP settings below - see readme for
 
 ## VPC Settings ##
 vpc_cidr_block          = "172.32.0.0/16"
-subnet_count            = "2" 
+subnet_count            = "2"
 
 ## Auth Settings ##
 key_name                = "<NAME>"
@@ -69,7 +70,7 @@ api_url                          = "https://api.<REALM>.signalfx.com"
 realm                            = "<REALM>"
 environment                      = "<ENVIRONMENT>"
 notification_email               = "<EMAIL>"
-collector_version                = "0.139.2"
+collector_version                = "0.156.0"
 # https://docs.splunk.com/Observability/gdi/opentelemetry/install-windows.html#otel-install-windows 
 # https://github.com/signalfx/splunk-otel-collector/releases
 # https://github.com/signalfx/splunk-otel-collector/blob/main/cmd/otelcol/config/collector/agent_config.yaml
@@ -80,13 +81,13 @@ rum_access_token                   = "<RUM_ACCESS_TOKEN>"
 
 ### Splunk Enterprise Variables ###
 splunk_admin_pwd                    = "<STRONG_PASSWORD>"
-splunk_ent_filename                 = "splunk-10.2.0-d749cb17ea65-linux-amd64.deb "
-splunk_ent_version                  = "10.2.0"
+splunk_ent_filename                 = "splunk-10.4.1-5a009d941268-linux-amd64.deb"
+splunk_ent_version                  = "10.4.1"
 splunk_ent_inst_type                = "t2.2xlarge"
 # splunk_ent_inst_type                = "m6i.4xlarge"
-universalforwarder_filename         = "splunkforwarder-10.2.0-d749cb17ea65-linux-amd64.deb"
-universalforwarder_version          = "10.2.0"
-universalforwarder_url_windows      = "https://download.splunk.com/products/universalforwarder/releases/10.2.0/windows/splunkforwarder-10.2.0-d749cb17ea65-windows-x64.msi"
+universalforwarder_filename         = "splunkforwarder-10.4.1-5a009d941268-linux-amd64.deb"
+universalforwarder_version          = "10.4.1"
+universalforwarder_url_windows      = "https://download.splunk.com/products/universalforwarder/releases/10.4.1/windows/splunkforwarder-10.4.1-5a009d941268-windows-x64.msi"
 splunk_enterprise_license_filename  = "Splunk_Enterprise_NFR_CY2026.License" # should be added to the non_public_files folder which gets synced with S3 - get latest https://splunk.atlassian.net/wiki/spaces/PROD/pages/313538952312/Internal+NFR+License+Keys
 splunk_ent_eip                      = "nn.nn.nn.nn" # ensure this aligns with region setting above
 splunk_private_ip                   = "172.32.2.10"
@@ -96,10 +97,13 @@ fqdn        = "xxx.xxx.co.uk"
 
 ### Splunk ITSI Variables ###
 splunk_itsi_license_filename                     = "Splunk_ITSI_NFR_CY2026_1H.License"               # this file should be located in the non_public_files folder
-splunk_app_for_content_packs_filename            = "splunk-app-for-content-packs_240.spl"            # this file should be located in the non_public_files folder
-splunk_it_service_intelligence_filename          = "splunk-it-service-intelligence_4211.spl"         # this file should be located in the non_public_files folder
-splunk_infrastructure_monitoring_add_on_filename = "splunk-infrastructure-monitoring-add-on_127.tgz" # this file should be located in the non_public_files folder
-splunk_ai_toolkit_filename                       = "splunk-ai-toolkit_564.tgz"                       # this file should be located in the non_public_files folder
+splunk_app_for_content_packs_filename            = "splunk-app-for-content-packs_251.spl"            # this file should be located in the non_public_files folder
+splunk_it_service_intelligence_filename          = "splunk-it-service-intelligence_500.spl"         # this file should be located in the non_public_files folder
+
+### Splunk Apps ###
+splunk_infrastructure_monitoring_add_on_filename = "splunk-infrastructure-monitoring-add-on_131.tgz" # this file should be located in the non_public_files folder
+splunk_ai_toolkit_filename                       = "splunk-ai-toolkit_600.tgz"                       # this file should be located in the non_public_files folder
+splunk_connect_for_otlp_filename                 = "splunk-connect-for-otlp_041.tgz"                 # this file should be located in the non_public_files folder
 
 ### MS SQL Server Variables ###
 ms_sql_user              = "signalfxagent"
@@ -125,14 +129,14 @@ eks_ami_type            = "AL2023_x86_64_STANDARD" # x86
 # eks_ami_type            = "AL2_ARM_64" # ARM
 
 # EKS node group autoscaling (worker nodes)
-# eks_node_group_desired_size = 3
-# eks_node_group_min_size     = 1
-# eks_node_group_max_size     = 6
+eks_node_group_desired_size = 3
+eks_node_group_min_size     = 1
+eks_node_group_max_size     = 6
 
 # Splunk OTel collector gateway (production-style HA)
-# eks_otel_gateway_enabled       = true
-# eks_otel_gateway_replica_count = 3
-# eks_otel_gateway_cpu_request    = "500m"
-# eks_otel_gateway_memory_request = "1Gi"
-# eks_otel_gateway_cpu_limit      = "2"
-# eks_otel_gateway_memory_limit   = "2Gi"   # use "8Gi" with r6i.xlarge+ dedicated gateway nodes
+eks_otel_gateway_enabled        = false
+eks_otel_gateway_replica_count  = 3
+eks_otel_gateway_cpu_request    = "500m"
+eks_otel_gateway_memory_request = "2Gi"
+eks_otel_gateway_cpu_limit      = "2"
+eks_otel_gateway_memory_limit   = "4Gi"   # use "8Gi" with r6i.xlarge+ dedicated gateway nodes
