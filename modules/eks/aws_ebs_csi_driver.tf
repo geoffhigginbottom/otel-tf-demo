@@ -1,6 +1,8 @@
 data "aws_caller_identity" "current" {}
 
 resource "aws_eks_addon" "ebs_csi" {
+  count = var.eks_fargate_enabled ? 0 : 1
+
   cluster_name = var.eks_cluster_name
   addon_name   = "aws-ebs-csi-driver"
 

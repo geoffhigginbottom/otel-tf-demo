@@ -16,10 +16,10 @@ splunk_cloud_enabled        = false # Do not deploy Splunk Enterprise as well as
 
 # New for 3.3.0 - Allow insecure security group rules
 insecure_sg_rules           = false # Set to true to allow access from 0.0.0.0/0, false to restrict to your current public ip - leave as false unless absolutley necessary
+# my_public_ip              = ""    # Optional: set your IPv4 if auto-detect fails (VPN, CI). After apply: terraform output my_public_ip_used_for_ssh
 
-########## DO NOT USE ############
-eks_fargate_cluster_enabled = false # Not Working Yet
-########## DO NOT USE ############
+# EC2 managed node groups (default) or Fargate
+eks_fargate_enabled = false
 
 ## Instance Quantities ##
 gateway_count               = "1" # uses var.collector_version
@@ -120,13 +120,17 @@ mysql_user_pwd      = "<STRONG_PWD>"
 mysql_instance_type = "t3.xlarge"
 
 ### EKS Variables ###
-eks_access_token        = "<ACCESS_TOKEN>"
+eks_access_token        = "<ACCESS_TOKEN>" # defaults to access_token when empty
 eks_admin_server_eip    = "<nn.nn.nn.nn>" #ensure this aligns with region setting above
 # eks_splunk_index        = "k8s-logs"
+# eks_splunk_endpoint     = "https://172.32.2.10:8088"  # optional; defaults to splunk_private_ip in VPC
 eks_instance_type       = "t3.large" # x86
 eks_ami_type            = "AL2023_x86_64_STANDARD" # x86
 # eks_instance_type       = "m6g.xlarge" # ARM
 # eks_ami_type            = "AL2_ARM_64" # ARM
+
+# EC2 managed node groups (default) or Fargate — see eks_fargate_enabled at top of file
+# Fargate: ALB registers pod IPs, apps send OTLP to splunk-otel-collector gateway, no DaemonSet agent
 
 # EKS node group autoscaling (worker nodes)
 eks_node_group_desired_size = 3

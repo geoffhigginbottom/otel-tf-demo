@@ -1,7 +1,12 @@
 # Templates live in config_files/eks/; rendered YAML (tokens) goes to non_public_files/eks/ then S3.
 locals {
-  eks_templates_dir = "${path.root}/config_files/eks"
-  eks_rendered_dir  = "${path.root}/non_public_files/eks"
+  eks_templates_dir   = "${path.root}/config_files/eks"
+  eks_rendered_dir    = "${path.root}/non_public_files/eks"
+  # EKS collectors run inside the VPC; prefer private IP (SG allows vpc_cidr on 8088).
+  # FQDN often fails from Fargate (hairpin to public EIP). Override with eks_splunk_endpoint if needed.
+  splunk_hec_endpoint = var.eks_splunk_endpoint != "" ? var.eks_splunk_endpoint : (
+    var.splunk_private_ip != "" ? "https://${var.splunk_private_ip}:8088" : "https://${var.fqdn}:8088"
+  )
 }
 
 resource "local_file" "eks_secrets" {
@@ -11,7 +16,7 @@ resource "local_file" "eks_secrets" {
     eks_access_token   = var.eks_access_token
     rum_token          = var.rum_access_token
     hec_token          = var.hec_otel_k8s_token
-    hec_url            = "https://${var.splunk_private_ip}:8088/services/collector/event"
+    hec_url            = "${local.splunk_hec_endpoint}/services/collector/event"
     aws_lb_dns_name    = aws_lb.frontend_proxy_lb.dns_name
     environment        = var.environment
   })
@@ -20,13 +25,14 @@ resource "local_file" "eks_secrets" {
 
 resource "local_file" "eks_otel_collector_values" {
   content = templatefile("${local.eks_templates_dir}/splunk-otel-collector-values.yaml.tpl", {
-    gateway_enabled          = var.eks_otel_gateway_enabled
-    gateway_replica_count    = var.eks_otel_gateway_replica_count
+    gateway_enabled          = var.eks_fargate_enabled || var.eks_otel_gateway_enabled
+    gateway_replica_count    = var.eks_fargate_enabled && !var.eks_otel_gateway_enabled ? 1 : (var.eks_fargate_enabled ? min(var.eks_otel_gateway_replica_count, 2) : var.eks_otel_gateway_replica_count)
     gateway_cpu_request      = var.eks_otel_gateway_cpu_request
     gateway_memory_request   = var.eks_otel_gateway_memory_request
     gateway_cpu_limit        = var.eks_otel_gateway_cpu_limit
     gateway_memory_limit     = var.eks_otel_gateway_memory_limit
     splunk_platform_enabled  = var.splunk_ent_count == 1 && var.instances_enabled
+    fargate_enabled          = var.eks_fargate_enabled
   })
   filename = "${local.eks_rendered_dir}/splunk-otel-collector-values.yaml"
 }
@@ -35,7 +41,8 @@ resource "local_file" "eks_astronomy_shop_collector_values" {
   content = templatefile("${local.eks_templates_dir}/splunk-astronomy-shop-collector-values.yaml.tpl", {
     eks_access_token = var.eks_access_token
     realm            = var.realm
-    gateway_enabled  = var.eks_otel_gateway_enabled
+    gateway_enabled  = var.eks_fargate_enabled || var.eks_otel_gateway_enabled
+    fargate_enabled  = var.eks_fargate_enabled
   })
   filename = "${local.eks_rendered_dir}/splunk-astronomy-shop-collector-values.yaml"
 }
@@ -58,4 +65,20 @@ resource "null_resource" "sync_eks_non_public_config_to_s3" {
     local_file.eks_otel_collector_values,
     local_file.eks_astronomy_shop_collector_values,
   ]
+}
+
+locals {
+  eks_scripts_dir = "${path.module}/scripts"
+  eks_scripts_sync  = sort(fileset(local.eks_scripts_dir, "*.sh"))
+  eks_scripts_hash  = md5(join("", [for f in local.eks_scripts_sync : "${f}${filemd5("${local.eks_scripts_dir}/${f}")}"]))
+}
+
+resource "null_resource" "sync_eks_scripts_to_s3" {
+  provisioner "local-exec" {
+    command = "aws s3 sync '${local.eks_scripts_dir}/' 's3://${var.s3_bucket_name}/scripts/eks/' --delete --exclude '*.tpl' --exclude '*.ignore'"
+  }
+
+  triggers = {
+    content_hash = local.eks_scripts_hash
+  }
 }

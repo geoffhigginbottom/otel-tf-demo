@@ -18,6 +18,18 @@ resource "aws_security_group" "eks_cluster" {
   }
 }
 
+resource "aws_vpc_security_group_ingress_rule" "alb_to_fargate_pods" {
+  count = var.eks_fargate_enabled ? 1 : 0
+
+  # Fargate pod ENIs use the EKS-managed cluster security group, not aws_security_group.eks_cluster.
+  security_group_id            = aws_eks_cluster.eks_cluster.vpc_config[0].cluster_security_group_id
+  referenced_security_group_id = aws_security_group.frontend_proxy_sg.id
+  from_port                    = 8080
+  to_port                      = 8080
+  ip_protocol                  = "tcp"
+  description                  = "Allow ALB to reach Fargate frontend-proxy pods"
+}
+
 resource "aws_security_group" "eks_admin_server" {
   name        = "${var.environment}_eks_admin_server_sg"
   description = "Used by EKS Admins Server for Remote access via SSH and to allow outbound internet access"

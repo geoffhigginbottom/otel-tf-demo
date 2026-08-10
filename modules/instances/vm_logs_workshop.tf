@@ -165,12 +165,13 @@ resource "aws_instance" "logs_workshop" {
   }
 
   connection {
-    host = self.public_ip
-    port = 22
-    type = "ssh"
-    user = "ubuntu"
+    host        = self.public_ip
+    port        = 22
+    type        = "ssh"
+    user        = "ubuntu"
     private_key = file(var.private_key_path)
-    agent = "true"
+    agent       = "true"
+    timeout     = "5m"
   }
 }
 

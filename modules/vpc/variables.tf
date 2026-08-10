@@ -20,3 +20,9 @@ variable "vpc_cidr_block" {
 variable "subnet_count" {
   type    = number
 }
+
+variable "nat_gateway_enabled" {
+  description = "Create a NAT gateway and route private subnets through it (required for EKS Fargate)."
+  type        = bool
+  default     = false
+}

@@ -3,7 +3,10 @@ resource "aws_vpc_endpoint" "s3_gateway" {
   service_name = "com.amazonaws.${var.region}.s3"
   vpc_endpoint_type = "Gateway"
 
-  route_table_ids = [aws_route.main_vpc_route.route_table_id]
+  route_table_ids = var.nat_gateway_enabled ? [
+    aws_route_table.public[0].id,
+    aws_route_table.private[0].id,
+  ] : [aws_route.main_vpc_route[0].route_table_id]
   
 
 

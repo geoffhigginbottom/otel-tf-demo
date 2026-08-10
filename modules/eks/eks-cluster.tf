@@ -4,8 +4,13 @@ resource "aws_eks_cluster" "eks_cluster" {
   role_arn = aws_iam_role.eks_cluster.arn
 
   vpc_config {
-    security_group_ids = [aws_security_group.eks_cluster.id]
-    subnet_ids         = var.public_subnet_ids
+    security_group_ids      = [aws_security_group.eks_cluster.id]
+    endpoint_private_access = var.eks_fargate_enabled ? true : false
+    endpoint_public_access  = true
+    subnet_ids = var.eks_fargate_enabled ? concat(
+      var.public_subnet_ids,
+      var.private_subnet_ids
+    ) : var.public_subnet_ids
   }
 
   depends_on = [

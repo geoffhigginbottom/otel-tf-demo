@@ -3,6 +3,7 @@ resource "aws_instance" "gateway" {
   ami                       = var.ami
   instance_type             = var.gateway_instance_type
   subnet_id                 = "${var.public_subnet_ids[ count.index % length(var.public_subnet_ids) ]}"
+  associate_public_ip_address = true
   key_name                  = var.key_name
   vpc_security_group_ids    = [aws_security_group.instances_sg.id]
   iam_instance_profile      = var.ec2_instance_profile_name
@@ -62,12 +63,13 @@ resource "aws_instance" "gateway" {
   }
 
   connection {
-    host = self.public_ip
-    port = 22
-    type = "ssh"
-    user = "ubuntu"
+    host        = self.public_ip
+    port        = 22
+    type        = "ssh"
+    user        = "ubuntu"
     private_key = file(var.private_key_path)
-    agent = "true"
+    agent       = "true"
+    timeout     = "5m"
   }
 }
 

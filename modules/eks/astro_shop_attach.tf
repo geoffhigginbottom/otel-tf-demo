@@ -1,8 +1,10 @@
 resource "null_resource" "astro_shop_attach_nodes" {
+  count = var.eks_fargate_enabled ? 0 : 1
+
   provisioner "local-exec" {
     command = <<EOT
       ssh -o StrictHostKeyChecking=no -i ${var.private_key_path} ubuntu@${self.triggers.admin_ip} \
-      '/home/ubuntu/astro_shop_attach_nodes.sh ${var.eks_cluster_name} ${aws_eks_node_group.eks_nodes.node_group_name} ${aws_lb_target_group.frontend_proxy_tg.arn} "30080" ${var.region}'
+      '/home/ubuntu/astro_shop_attach_nodes.sh ${var.eks_cluster_name} ${aws_eks_node_group.eks_nodes[0].node_group_name} ${aws_lb_target_group.frontend_proxy_tg.arn} "30080" ${var.region}'
     EOT
   }
 
@@ -15,5 +17,6 @@ resource "null_resource" "astro_shop_attach_nodes" {
     aws_instance.eks_admin_server,
     aws_eip_association.eks_admin_server_eip_assoc,
     null_resource.astro_shop_deploy,
+    null_resource.otel_collector_deploy,
   ]
 }

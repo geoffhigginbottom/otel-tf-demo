@@ -14,6 +14,11 @@ provider "signalfx" {
   api_url    = var.api_url
 }
 
+locals {
+  # Single source of truth: Fargate only applies when the EKS module is actually enabled.
+  eks_fargate_enabled = var.eks_cluster_enabled && var.eks_fargate_enabled
+}
+
 module "dashboards" {
   source           = "./modules/dashboards"
   count            = var.dashboards_enabled ? 1 : 0
@@ -33,12 +38,13 @@ module "detectors" {
 }
 
 module "vpc" {
-  source         = "./modules/vpc"
-  vpc_name       = var.environment
-  vpc_cidr_block = var.vpc_cidr_block
-  subnet_count   = var.subnet_count
-  region         = lookup(var.aws_region, var.region)
-  environment    = var.environment
+  source              = "./modules/vpc"
+  vpc_name            = var.environment
+  vpc_cidr_block      = var.vpc_cidr_block
+  subnet_count        = var.subnet_count
+  region              = lookup(var.aws_region, var.region)
+  environment         = var.environment
+  nat_gateway_enabled = local.eks_fargate_enabled
 }
 
 module "s3" {
@@ -66,7 +72,7 @@ module "aws_ecs" {
 
 module "eks" {
   source                          = "./modules/eks"
-  depends_on                      = [module.vpc]
+  depends_on                      = [module.vpc, module.s3]
   count                           = var.eks_cluster_enabled ? 1 : 0
   region                          = lookup(var.aws_region, var.region)
   environment                     = var.environment
@@ -76,6 +82,8 @@ module "eks" {
   vpc_id                          = module.vpc.vpc_id
   vpc_cidr_block                  = var.vpc_cidr_block
   public_subnet_ids               = module.vpc.public_subnet_ids
+  private_subnet_ids              = local.eks_fargate_enabled ? module.vpc.private_subnet_ids : []
+  eks_fargate_enabled             = local.eks_fargate_enabled
   instance_type                   = var.instance_type
   eks_instance_type               = var.eks_instance_type
   eks_ami_type                    = var.eks_ami_type
@@ -83,13 +91,14 @@ module "eks" {
   key_name                        = var.key_name
   private_key_path                = var.private_key_path
   eks_cluster_name                = join("-", [var.environment, "eks-cluster"])
-  eks_access_token                = var.eks_access_token
+  eks_access_token                = var.eks_access_token != "" ? var.eks_access_token : var.access_token
   hec_otel_k8s_token              = var.splunk_ent_count > 0 ? try(module.instances[0].hec_otel_k8s_token, "faketoken") : "faketoken"
   eks_splunk_index                = var.eks_splunk_index
+  eks_splunk_endpoint             = var.eks_splunk_endpoint
   fqdn                            = var.fqdn
   eks_admin_server_eip            = var.eks_admin_server_eip
   splunk_private_ip               = var.splunk_private_ip
-  my_public_ip                    = chomp(data.http.my_public_ip.response_body)
+  my_public_ip                    = local.my_public_ip
   insecure_sg_rules               = var.insecure_sg_rules
   splunk_ent_count                = var.splunk_ent_count
   instances_enabled               = var.instances_enabled
@@ -104,16 +113,7 @@ module "eks" {
   eks_otel_gateway_memory_limit   = var.eks_otel_gateway_memory_limit
   s3_access_policy_arn            = module.s3.s3_access_policy_arn
   s3_bucket_name                  = var.s3_bucket_name
-}
-
-module "eks_fargate" {
-  source                   = "./modules/eks_fargate"
-  count                    = var.eks_fargate_cluster_enabled ? 1 : 0
-  region                   = lookup(var.aws_region, var.region)
-  environment              = var.environment
-  access_token             = var.access_token
-  realm                    = var.realm
-  eks_fargate_cluster_name = join("-", [var.environment, "eks-fargate"])
+  s3_config_files_sync_id         = module.s3.config_files_sync_id
 }
 
 # module "phone_shop" {
@@ -150,7 +150,7 @@ module "lambda_sqs_dynamodb" {
   instance_type             = var.instance_type
   public_subnet_ids         = module.vpc.public_subnet_ids
   ami                       = data.aws_ami.latest-ubuntu.id
-  my_public_ip              = chomp(data.http.my_public_ip.response_body)
+  my_public_ip              = local.my_public_ip
   collector_version         = var.collector_version
 }
 
@@ -184,13 +184,13 @@ module "proxied_instances" {
   windows_server_ami               = data.aws_ami.windows-server.id
   collector_version                = var.collector_version
   proxy_server_count               = var.proxy_server_count
-  my_public_ip                     = chomp(data.http.my_public_ip.response_body)
+  my_public_ip                     = local.my_public_ip
   insecure_sg_rules                = var.insecure_sg_rules
 }
 
 module "instances" {
   source                                           = "./modules/instances"
-  depends_on                                       = [module.vpc]
+  depends_on                                       = [module.vpc, module.s3]
   count                                            = var.instances_enabled ? 1 : 0
   access_token                                     = var.access_token
   rum_access_token                                 = var.rum_access_token
@@ -248,7 +248,7 @@ module "instances" {
   universalforwarder_filename                      = var.universalforwarder_filename
   universalforwarder_version                       = var.universalforwarder_version
   universalforwarder_url_windows                   = var.universalforwarder_url_windows
-  my_public_ip                                     = chomp(data.http.my_public_ip.response_body)
+  my_public_ip                                     = local.my_public_ip
   insecure_sg_rules                                = var.insecure_sg_rules
   slo_certpath                                     = var.slo_certpath
   le_certpath                                      = var.le_certpath

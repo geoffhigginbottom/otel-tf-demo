@@ -1,4 +1,5 @@
 resource "aws_launch_template" "eks_nodes" {
+  count = var.eks_fargate_enabled ? 0 : 1
   name_prefix   = "${var.environment}-eks-"
   instance_type = var.eks_instance_type
 
@@ -46,6 +47,8 @@ resource "aws_launch_template" "eks_nodes" {
 }
 
 resource "aws_eks_node_group" "eks_nodes" {
+  count = var.eks_fargate_enabled ? 0 : 1
+
   cluster_name    = aws_eks_cluster.eks_cluster.name
   node_group_name = "${var.environment}_eks_node_group"
   node_role_arn   = aws_iam_role.eks_node.arn
@@ -60,8 +63,8 @@ resource "aws_eks_node_group" "eks_nodes" {
   ami_type = var.eks_ami_type
 
   launch_template {
-    id      = aws_launch_template.eks_nodes.id
-    version = aws_launch_template.eks_nodes.latest_version
+    id      = aws_launch_template.eks_nodes[0].id
+    version = aws_launch_template.eks_nodes[0].latest_version
   }
 
   depends_on = [
@@ -72,7 +75,7 @@ resource "aws_eks_node_group" "eks_nodes" {
 }
 
 output "aws_eks_node_group_name" {
-  value = aws_eks_node_group.eks_nodes.node_group_name
+  value = var.eks_fargate_enabled ? null : aws_eks_node_group.eks_nodes[0].node_group_name
 }
 
 output "worker_nodes_sg_id" {

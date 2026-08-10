@@ -18,6 +18,7 @@ resource "aws_instance" "splunk_ent" {
   ami                       = var.ami
   instance_type             = var.splunk_ent_inst_type
   subnet_id                 = "${var.public_subnet_ids[ count.index % length(var.public_subnet_ids) ]}"
+  associate_public_ip_address = true
   private_ip                = var.splunk_private_ip
   key_name                  = var.key_name
   vpc_security_group_ids    = [
@@ -176,12 +177,13 @@ resource "aws_instance" "splunk_ent" {
   }
 
   connection {
-    host = self.public_ip
-    port = 22
-    type = "ssh"
-    user = "ubuntu"
+    host        = self.public_ip
+    port        = 22
+    type        = "ssh"
+    user        = "ubuntu"
     private_key = file(var.private_key_path)
-    agent = "true"
+    agent       = "true"
+    timeout     = "5m"
   }
 }
 

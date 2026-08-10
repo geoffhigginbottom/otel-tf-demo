@@ -2,55 +2,19 @@
 locals {
   use_enterprise = var.splunk_ent_count == 1 && var.instances_enabled == true
 
+  helm_distribution = var.eks_fargate_enabled ? "eks/fargate" : "eks"
+
+  # Fargate has no agent DaemonSet; the chart gateway Deployment is the cluster OTLP receiver.
+  # eks_otel_gateway_enabled=false still skips the EC2 agent->gateway hop but apps need this service.
+  helm_gateway_enabled       = var.eks_fargate_enabled || var.eks_otel_gateway_enabled
+  helm_gateway_replica_count = var.eks_fargate_enabled && !var.eks_otel_gateway_enabled ? 1 : (var.eks_fargate_enabled ? min(var.eks_otel_gateway_replica_count, 2) : var.eks_otel_gateway_replica_count)
+
   helm_gateway_set_flags = join(" ", [
-    "--set gateway.enabled='${var.eks_otel_gateway_enabled}'",
-    "--set gateway.replicaCount=${var.eks_otel_gateway_replica_count}",
+    "--set gateway.enabled='${local.helm_gateway_enabled}'",
+    "--set gateway.replicaCount=${local.helm_gateway_replica_count}",
   ])
 
-  helm_command_enterprise = join(" ", [
-    "helm install",
-    "--set cloudProvider='aws'",
-    "--set distribution='eks'",
-    "--set fullnameOverride='splunk-otel-collector'",
-    "--set splunkObservability.accessToken='${var.eks_access_token}'",
-    "--set clusterName='${var.eks_cluster_name}'",
-    "--set splunkObservability.realm='${var.realm}'",
-    local.helm_gateway_set_flags,
-    "--set splunkObservability.profilingEnabled='true'",
-    "--set splunkObservability.infrastructureMonitoringEventsEnabled=true",
-    # "--set logsEngine=otel",
-    "--set splunkObservability.secureAppEnabled=true",
-    "--set splunkPlatform.endpoint='https://${var.splunk_private_ip}:8088'",
-    "--set splunkPlatform.insecureSkipVerify=true",
-    "--set splunkPlatform.token='${var.hec_otel_k8s_token}'",
-    "--set splunkPlatform.index='${var.eks_splunk_index}'",
-    "--set environment='${var.environment}'",
-    "--generate-name splunk-otel-collector-chart/splunk-otel-collector",
-    "-f splunk-otel-collector-values.yaml",
-    "-f splunk-astronomy-shop-collector-values.yaml",
-  ])
-
-  helm_command_basic = join(" ", [
-    "helm install",
-    "--set cloudProvider='aws'",
-    "--set distribution='eks'",
-    "--set fullnameOverride='splunk-otel-collector'",
-    "--set splunkObservability.accessToken='${var.eks_access_token}'",
-    "--set clusterName='${var.eks_cluster_name}'",
-    "--set splunkObservability.realm='${var.realm}'",
-    local.helm_gateway_set_flags,
-    "--set splunkObservability.profilingEnabled='true'",
-    "--set splunkObservability.infrastructureMonitoringEventsEnabled=true",
-    # "--set logsEngine=otel",
-    "--set splunkObservability.secureAppEnabled=true",
-    "--set environment='${var.environment}'",
-    "--generate-name splunk-otel-collector-chart/splunk-otel-collector",
-    "-f splunk-otel-collector-values.yaml",
-    "-f splunk-astronomy-shop-collector-values.yaml",
-  ])
-
-  # Final command
-  helm_command = local.use_enterprise ? local.helm_command_enterprise : local.helm_command_basic
+  fargate_wait_command = var.eks_fargate_enabled ? "/home/ubuntu/wait_for_fargate_profiles.sh ${var.eks_cluster_name} ${var.region} ${var.eks_cluster_name}-coredns ${var.eks_cluster_name}-default ${var.eks_cluster_name}-kube-system" : "true"
 }
 
 resource "aws_instance" "eks_admin_server" {
@@ -81,19 +45,16 @@ resource "aws_instance" "eks_admin_server" {
   }
 
   provisioner "file" {
-    source      = "${path.module}/scripts/install_eks_tools.sh"
-    destination = "/home/ubuntu/install_eks_tools.sh"
-  }
-
-  provisioner "file" {
-    source      = "${path.module}/scripts/astro_shop_attach_nodes.sh"
-    destination = "/home/ubuntu/astro_shop_attach_nodes.sh"
+    source      = "${path.module}/scripts/eks-s3-sync.sh"
+    destination = "/home/ubuntu/eks-s3-sync.sh"
   }
 
   depends_on = [
     aws_eks_cluster.eks_cluster,
     null_resource.map_admin_vm_role,
     null_resource.sync_eks_non_public_config_to_s3,
+    null_resource.sync_eks_scripts_to_s3,
+    null_resource.wait_for_s3_config_sync,
   ]
 
   # remote-exec
@@ -117,12 +78,13 @@ resource "aws_instance" "eks_admin_server" {
       "unzip /tmp/awscliv2.zip",
       "sudo ~/aws/install",
 
-      ## EKS config from S3 (rendered Helm/secrets in non_public_files; static manifest in config_files)
-      "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/eks/secrets.yaml /home/ubuntu/secrets.yaml",
-      "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/eks/splunk-otel-collector-values.yaml /home/ubuntu/splunk-otel-collector-values.yaml",
-      "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/eks/splunk-astronomy-shop-collector-values.yaml /home/ubuntu/splunk-astronomy-shop-collector-values.yaml",
-      "aws s3 cp s3://${var.s3_bucket_name}/config_files/eks/log-generator.yaml /home/ubuntu/log-generator.yaml",
-      "aws s3 cp s3://${var.s3_bucket_name}/config_files/eks/splunk-astronomy-shop.yaml /home/ubuntu/splunk-astronomy-shop.yaml",
+      ## EKS S3 sync helper (scripts, static YAML, rendered Helm values)
+      "echo 'S3_BUCKET=${var.s3_bucket_name}' > /home/ubuntu/eks-s3.env",
+      "echo 'AWS_REGION=${var.region}' >> /home/ubuntu/eks-s3.env",
+      "echo 'EKS_HOME=/home/ubuntu' >> /home/ubuntu/eks-s3.env",
+      "sudo chmod +x /home/ubuntu/eks-s3-sync.sh",
+      "sudo ln -sf /home/ubuntu/eks-s3-sync.sh /usr/local/bin/eks-s3-sync",
+      "/home/ubuntu/eks-s3-sync.sh pull",
 
       ## Install EKS Tools
       "sudo chmod +x /home/ubuntu/install_eks_tools.sh",
@@ -147,7 +109,12 @@ resource "aws_instance" "eks_admin_server" {
 
       ## Prep for Astro Shop Deployment
       "sudo chmod +x /home/ubuntu/astro_shop_attach_nodes.sh",
-      "kubectl apply -f secrets.yaml",
+      "sudo chmod +x /home/ubuntu/astro_shop_attach_fargate.sh",
+      "sudo chmod +x /home/ubuntu/patch_fargate_otel_endpoint.sh",
+      "sudo chmod +x /home/ubuntu/patch_fargate_coredns.sh",
+      "sudo chmod +x /home/ubuntu/patch_fargate_workloads.sh",
+      "sudo chmod +x /home/ubuntu/wait_for_fargate_profiles.sh",
+      "kubectl apply -f /home/ubuntu/secrets.yaml",
       "mkdir -p /home/ubuntu/k8s-manifests",
 
       ## Write env vars to file (used for debugging)
@@ -161,24 +128,26 @@ resource "aws_instance" "eks_admin_server" {
       "echo $SPLUNK_PRIVATE_IP > /home/ubuntu/splunk_private_ip",
       "echo $HEC_TOKEN > /home/ubuntu/hec_token",
       "echo $SPLUNK_INDEX > /home/ubuntu/splunk_index",
-      "echo '${local.helm_command}' > /home/ubuntu/o11y_deployment_command",
+      "echo '${local.helm_upgrade_command}' > /home/ubuntu/o11y_deployment_command",
 
-      ## Install K8S Integration using Splunk OTel Collector Helm Chart
-      "helm repo add splunk-otel-collector-chart https://signalfx.github.io/splunk-otel-collector-chart",
-      "helm repo update",
-      "${local.helm_command}", # See locals block at top of file for command selection logic
+      ## Splunk OTel Collector Helm chart is installed by null_resource.otel_collector_deploy
 
       ## Configure motd
       "sudo curl -s https://raw.githubusercontent.com/signalfx/observability-workshop/master/cloud-init/motd -o /etc/motd",
       "sudo chmod -x /etc/update-motd.d/*",
+      "echo '' | sudo tee -a /etc/motd > /dev/null",
+      "echo 'EKS config sync: eks-s3-sync pull   (after terraform apply / eks-s3-push)' | sudo tee -a /etc/motd > /dev/null",
+      "echo 'S3 bucket: ${var.s3_bucket_name}' | sudo tee -a /etc/motd > /dev/null",
     ]
   }
 
   connection {
     host        = self.public_ip
+    port        = 22
     type        = "ssh"
     user        = "ubuntu"
     private_key = file(var.private_key_path)
     agent       = "true"
+    timeout     = "5m"
   }
 }

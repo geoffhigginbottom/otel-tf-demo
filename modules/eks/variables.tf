@@ -57,6 +57,15 @@ variable "public_subnet_ids" {
   type    = list(string)
   default = []
 }
+variable "private_subnet_ids" {
+  type    = list(string)
+  default = []
+}
+variable "eks_fargate_enabled" {
+  description = "Run workloads on EKS Fargate instead of EC2 managed node groups. Enables ALB IP targets, Helm distribution eks/fargate, and skips node group / EBS CSI / ALB-to-EC2 registration."
+  type        = bool
+  default     = false
+}
 variable "vpc_id" {
   type    = string
   default = ""
@@ -81,8 +90,9 @@ variable "rum_access_token" {
   default = {}
 }
 variable "eks_splunk_endpoint" {
-  type    = string
-  default = ""
+  description = "Splunk Enterprise HEC URL for EKS collector (e.g. https://172.32.2.10:8088). Defaults to private IP in VPC, then FQDN."
+  type        = string
+  default     = ""
 }
 variable "hec_otel_k8s_token" {
   type    = string
@@ -139,7 +149,7 @@ variable "eks_node_group_max_size" {
 }
 
 variable "eks_otel_gateway_enabled" {
-  description = "Enable Splunk OTel collector gateway Deployment (production-style agent -> gateway -> backend)."
+  description = "Enable Splunk OTel agent->gateway forwarding on EC2 (production-style two-tier export). On Fargate a single-replica gateway Deployment is always deployed as the cluster OTLP receiver when this is false."
   type        = bool
   default     = true
 }
@@ -177,6 +187,12 @@ variable "eks_otel_gateway_memory_limit" {
 variable "s3_access_policy_arn" {
   description = "IAM policy ARN for the Terraform S3 bucket (from module.s3). Same access as other EC2 instances."
   type        = string
+}
+
+variable "s3_config_files_sync_id" {
+  description = "Change trigger from module.s3 config sync so the admin server pulls after S3 is updated."
+  type        = string
+  default     = ""
 }
 
 variable "s3_bucket_name" {

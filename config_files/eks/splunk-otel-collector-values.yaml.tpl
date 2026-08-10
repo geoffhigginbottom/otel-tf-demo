@@ -60,6 +60,9 @@ splunkPlatform:
 
 %{ if gateway_enabled ~}
 # Gateway enabled — agents/cluster receiver use otlp_grpc; gateway exports to HEC/O11y.
+# On Fargate (distribution=eks/fargate) the chart agent DaemonSet is not deployed; the gateway
+# Deployment (enabled below when fargate_enabled) is the cluster OTLP receiver even if
+# eks_otel_gateway_enabled=false (no EC2 agent->gateway forwarding tier).
 # Gateway export queues below are in-memory (not disk-backed per replica).
 gateway:
   enabled: true
@@ -111,6 +114,7 @@ gateway:
           max_elapsed_time: 0
 %{ endif ~}
 
+%{ if !fargate_enabled ~}
 agent:
   # 1Gi minimum with persistentQueue; 2Gi when gateway enabled (high trace volume from astro shop).
   resources:
@@ -166,6 +170,7 @@ agent:
 %{ endif ~}
     # Agent metrics/traces pipelines: defined in splunk-astronomy-shop-collector-values.yaml
     # (Helm fully replaces service.pipelines lists; shop overlay adds receiver_creator + flagd filter).
+%{ endif ~}
 
 # Optional host log collection (uncomment to enable on all agents).
 # logsCollection:

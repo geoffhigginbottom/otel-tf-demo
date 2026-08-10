@@ -11,5 +11,5 @@ output "public_subnet_ids" {
 }
 
 output "route_table_ids" {
-    value = aws_route.main_vpc_route.route_table_id
+  value = var.nat_gateway_enabled ? aws_route_table.public[0].id : aws_route.main_vpc_route[0].route_table_id
 }

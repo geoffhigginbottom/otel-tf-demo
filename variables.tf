@@ -2,8 +2,15 @@
 variable "eks_cluster_enabled" {
   type = bool
 }
-variable "eks_fargate_cluster_enabled" {
-  type = bool
+variable "eks_fargate_enabled" {
+  description = "Run workloads on EKS Fargate instead of EC2 managed node groups. Enables VPC NAT gateway, ALB IP targets, Helm distribution eks/fargate, and skips node group / EBS CSI / ALB-to-EC2 registration."
+  type        = bool
+  default     = false
+
+  validation {
+    condition     = !var.eks_fargate_enabled || var.eks_cluster_enabled
+    error_message = "eks_fargate_enabled requires eks_cluster_enabled to be true."
+  }
 }
 variable "ecs_cluster_enabled" {
   type = bool
@@ -119,8 +126,9 @@ variable "aws_api_gateway_deployment_retailorder_invoke_url" {
   default = ""
 }
 variable "my_public_ip" {
-  type    = string
-  default = ""
+  type        = string
+  default     = ""
+  description = "Your public IPv4 for SSH/RDP security group rules. Leave empty to auto-detect via icanhazip.com at apply time."
 }
 variable "splunk_ent_eip" {
   type    = string
@@ -148,8 +156,9 @@ variable "eks_access_token" {
   default = ""
 }
 variable "eks_splunk_endpoint" {
-  type    = string
-  default = ""
+  description = "Splunk Enterprise HEC URL for EKS collector. Defaults to https://<splunk_private_ip>:8088 for in-VPC collectors."
+  type        = string
+  default     = ""
 }
 variable "splunk_ent_url_hec" {
   type    = string
@@ -206,7 +215,7 @@ variable "eks_node_group_max_size" {
 }
 
 variable "eks_otel_gateway_enabled" {
-  description = "Enable Splunk OTel collector gateway Deployment (production-style agent -> gateway -> backend)."
+  description = "Enable Splunk OTel collector gateway Deployment (production-style agent -> gateway -> backend). Optional on Fargate; apps can export OTLP directly to the collector Deployment when disabled."
   type        = bool
   default     = true
 }
@@ -287,12 +296,6 @@ variable "org" {
   default = "SplunkLabs"
 }
 
-
-## EKS-Fargate Variables ##
-variable "eks_fargate_cluster_name" {
-  type    = string
-  default = ""
-}
 
 ## AWS_ECS Variables ##
 variable "ecs_app_port" {

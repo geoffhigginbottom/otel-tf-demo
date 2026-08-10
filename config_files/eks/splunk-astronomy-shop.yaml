@@ -1532,6 +1532,10 @@ spec:
         - name: OTEL_LOG_LEVEL
         - name: OTEL_RESOURCE_ATTRIBUTES
           value: service.name=$(OTEL_SERVICE_NAME),service.namespace=opentelemetry-demo,service.version=1.4.0-test,service.kafka=no
+        - name: SPLUNK_AUTOMATIC_LOG_COLLECTION
+          value: 'true'
+        - name: OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+          value: http://$(OTEL_COLLECTOR_NAME):4318/v1/logs
         - name: API_TOKEN
           valueFrom:
             secretKeyRef:
@@ -1698,6 +1702,10 @@ spec:
           value: '4318'
         - name: OTEL_RESOURCE_ATTRIBUTES
           value: service.name=$(OTEL_SERVICE_NAME),service.namespace=opentelemetry-demo,service.version=1.4.0-test,service.kafka=no
+        - name: SPLUNK_AUTOMATIC_LOG_COLLECTION
+          value: 'true'
+        - name: OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+          value: http://$(OTEL_COLLECTOR_NAME):4318/v1/logs
         - name: FEATURE_USER
           valueFrom:
             secretKeyRef:
@@ -1799,6 +1807,10 @@ spec:
           value: $(OTEL_COLLECTOR_NAME)
         - name: OTEL_RESOURCE_ATTRIBUTES
           value: service.name=$(OTEL_SERVICE_NAME),service.namespace=opentelemetry-demo,service.version=1.4.0-test,service.kafka=no
+        - name: SPLUNK_AUTOMATIC_LOG_COLLECTION
+          value: 'true'
+        - name: OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+          value: http://$(OTEL_COLLECTOR_NAME):4318/v1/logs
         resources:
           limits:
             memory: 50Mi
@@ -2084,7 +2096,13 @@ spec:
         - name: OTEL_EXPORTER_OTLP_ENDPOINT
           value: http://$(OTEL_COLLECTOR_NAME):4318
         - name: OTEL_RESOURCE_ATTRIBUTES
-          value: service.name=$(OTEL_SERVICE_NAME),service.namespace=opentelemetry-demo,service.version=1.4.0-test,service.kafka=no
+          value: service.name=$(OTEL_SERVICE_NAME),service.namespace=opentelemetry-demo,service.version=1.4.0-test,service.kafka=no,deployment.environment=otel-tf-demo
+        - name: SPLUNK_PROFILER_LOGS_ENDPOINT
+          value: http://$(OTEL_COLLECTOR_NAME):4318/v1/logs
+        - name: SPLUNK_AUTOMATIC_LOG_COLLECTION
+          value: 'true'
+        - name: OTEL_EXPORTER_OTLP_LOGS_ENDPOINT
+          value: http://$(OTEL_COLLECTOR_NAME):4318/v1/logs
         - name: SPLUNK_INSTRUMENTATION_METRICS_ENABLED
           value: 'true'
         - name: SPLUNK_METRICS_ENABLED
@@ -3047,7 +3065,7 @@ spec:
           - /bin/bash
           - -c
           - |
-            export OTEL_RESOURCE_ATTRIBUTES="service.name=shop-dc-shim-service,deployment.environment=${ENV_VALUE}-datacenter-b01,service.version=1.4.0-test,service.namespace=shop-dc-shim"
+            export OTEL_RESOURCE_ATTRIBUTES="service.name=shop-dc-shim,deployment.environment=otel-tf-demo,service.version=1.4.0-test,service.namespace=shop-dc-shim"
             exec /app/start-app-dual.sh    
           env:
             - name: WORKSHOP_ENV
@@ -3067,8 +3085,10 @@ spec:
               value: "checkout:8080"
             - name: EMAIL_SERVICE_URL
               value: "http://email:8080"
+            - name: OTEL_COLLECTOR_NAME
+              value: splunk-otel-collector
             - name: OTEL_EXPORTER_OTLP_ENDPOINT
-              value: "http://splunk-otel-collector-agent:4318"
+              value: "http://$(OTEL_COLLECTOR_NAME):4318"
             - name: OTEL_SERVICE_NAME
               value: "shop-dc-shim"
             - name: OTEL_JAVAAGENT_ENABLED

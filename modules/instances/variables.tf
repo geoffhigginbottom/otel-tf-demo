@@ -48,7 +48,8 @@ variable "windows_server_ami" {
   default = {}
 }
 variable "my_public_ip" {
-  default = []
+  type        = string
+  description = "Public IPv4 allowed for SSH/RDP in security groups."
 }
 variable "splunk_ent_eip" {
   default = []

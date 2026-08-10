@@ -20,8 +20,15 @@
 # (empty exporters would wipe chart defaults via mustMergeOverwrite).
 # =============================================================================
 
-# Cluster receiver: single-replica Deployment — persistent queue not supported
-# by the chart (pod may reschedule to a different node; hostPath would not follow).
+# Cluster receiver: on Fargate use chart defaults (2-replica StatefulSet, k8s_cluster + kubeletstats).
+# Must set enabled: true explicitly — omitting the key leaves a prior helm release value (enabled: false).
+# Do not override config.service.pipelines on Fargate; chart Fargate templates configure kubeletstats.
+# EC2 mode only below: k8s object watches, SQL DBMON (shopshim + fraud).
+%{ if fargate_enabled ~}
+clusterReceiver:
+  enabled: true
+%{ endif ~}
+%{ if !fargate_enabled ~}
 clusterReceiver:
   k8sObjects:
     - name: events
@@ -175,8 +182,11 @@ clusterReceiver:
 %{ else ~}
             - otlp_http/dbmon
 %{ endif ~}
+%{ endif ~}
 
 # Agent overlays — replaces base agent metrics/traces pipelines (Helm fully redefines lists).
+# Not applied on Fargate: no agent DaemonSet; apps export OTLP to the collector service instead.
+%{ if !fargate_enabled ~}
 agent:
   config:
     receivers:
@@ -219,7 +229,7 @@ agent:
             - signalfx
 %{ endif ~}
           processors: [memory_limiter, k8s_attributes, batch, resourcedetection, resource]
-          receivers: [host_metrics, kubeletstats, otlp, receiver_creator]
+          receivers: [host_metrics, kubelet_stats, otlp, receiver_creator]
         traces:
           exporters:
 %{ if gateway_enabled ~}
@@ -230,3 +240,61 @@ agent:
 %{ endif ~}
           processors: [memory_limiter, filter/drop_flagd, k8s_attributes, batch, resourcedetection, resource, resource/add_environment]
           receivers: [otlp, jaeger, zipkin]
+%{ endif ~}
+
+# Fargate gateway: agent DaemonSet is absent, so flagd trace filtering must live on the gateway.
+# Without this, flagd gRPC streaming spans can trigger otlp_http HTTP 500 from Splunk ingest.
+# Do not add resourcedetection to the gateway traces pipeline — it would stamp every span with the
+# gateway pod's host.id/node.name. Apps must send k8s.pod.uid (via OTEL_RESOURCE_ATTRIBUTES +
+# downward API; see patch_fargate_otel_endpoint.sh) so k8s_attributes can associate by UID.
+%{ if fargate_enabled && gateway_enabled ~}
+gateway:
+  config:
+    processors:
+      filter/drop_flagd:
+        traces:
+          span:
+          - attributes["rpc.method"] == "EventStream"
+          - attributes["rpc.method"] == "ResolveAll"
+          - attributes["rpc.method"] == "ResolveBoolean"
+          - attributes["rpc.method"] == "ResolveFloat"
+          - attributes["rpc.method"] == "ResolveInt"
+          - attributes["http.url"] == "http://flagd:8016/ofrep/v1/evaluate/flags/loadGeneratorFloodHomepage"
+          - attributes["url.full"] == "http://flagd:8013/flagd.evaluation.v1.Service/ResolveBoolean"
+          - attributes["otel.scope.name"] == "flagd.evaluation.v1"
+          - attributes["url.full"] == "http://flagd:8013/flagd.evaluation.v1.Service/EventStream"
+      transform/trace_infra_correlation:
+        error_mode: ignore
+        trace_statements:
+          - context: resource
+            statements:
+              - set(attributes["service.instance.id"], attributes["k8s.pod.uid"]) where attributes["k8s.pod.uid"] != nil and attributes["service.instance.id"] == nil
+      # Normalize log resource attrs for service-map Related Content (Log Observer Connect).
+      # Node pino child loggers emit paymentservice; APM traces use payment. Copy body fields
+      # onto the log resource when apps put service.name/deployment.environment on the record.
+      transform/logs_service_map:
+        error_mode: ignore
+        log_statements:
+          - context: log
+            statements:
+              - set(resource.attributes["service.name"], "payment") where resource.attributes["service.name"] == "paymentservice"
+              - set(resource.attributes["service.name"], attributes["service.name"]) where resource.attributes["service.name"] == nil and attributes["service.name"] != nil
+              - set(resource.attributes["deployment.environment"], attributes["deployment.environment"]) where resource.attributes["deployment.environment"] == nil and attributes["deployment.environment"] != nil
+    service:
+      pipelines:
+        # Logs pipeline must include resource/add_environment so service-map Related Content
+        # can match logs to APM (same deployment.environment as traces/metrics). Trace view
+        # log links work via trace_id without this; service map links require service.name +
+        # deployment.environment on log records.
+        logs:
+          exporters:
+            - splunk_hec/o11y
+            - splunk_hec/platform_logs
+          processors: [memory_limiter, k8s_attributes, filter/logs, transform/logs_service_map, batch, resource/logs, resource/add_environment]
+          receivers: [routing/logs]
+        traces:
+          exporters:
+            - otlp_http
+          processors: [memory_limiter, filter/drop_flagd, k8s_attributes, transform/trace_infra_correlation, batch, resource/add_cluster_name, resource/add_environment]
+          receivers: [otlp, jaeger, zipkin]
+%{ endif ~}
