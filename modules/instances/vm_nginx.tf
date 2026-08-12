@@ -70,7 +70,7 @@ resource "aws_instance" "nginx" {
       "sudo /tmp/install_nginx.sh",
       "sudo mv /tmp/nginx_status.conf /etc/nginx/conf.d/nginx_status.conf",
       "sudo systemctl restart nginx",
-    
+
     ## Install Otel Agent
       "sudo curl -sSL https://dl.signalfx.com/splunk-otel-collector.sh > /tmp/splunk-otel-collector.sh",
       "sudo sh /tmp/splunk-otel-collector.sh --realm ${var.realm}  -- ${var.access_token} --mode agent --collector-version ${var.collector_version} --discovery",
@@ -79,31 +79,43 @@ resource "aws_instance" "nginx" {
       # "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml",
       "sudo mv /tmp/${var.otel_logs_enabled ? "agent_logs_config.yaml" : "agent_config.yaml"} /etc/otel/collector/agent_config.yaml", # Conditional to use different config if otel_logs_enabled is true or false
       "sudo chown splunk-otel-collector:splunk-otel-collector /etc/otel/collector/agent_config.yaml",
-      "sudo chmod +x /tmp/update_splunk_otel_collector.sh",
-      "sudo /tmp/update_splunk_otel_collector.sh $LBURL",
+      <<EOT
+if [ ${var.splunk_ent_count} -eq 1 ]; then
+  sudo chmod +x /tmp/update_splunk_otel_collector.sh
+  sudo /tmp/update_splunk_otel_collector.sh \
+    ${aws_lb.gateway-lb.dns_name} \
+    ${var.splunk_private_ip}:8089 \
+    "Bearer ${local.splunk_opamp_token}"
+else
+  echo "Skipping OpAMP Enterprise config: splunk_ent_count=${var.splunk_ent_count}"
+  sudo chmod +x /tmp/update_splunk_otel_collector.sh
+  sudo /tmp/update_splunk_otel_collector.sh ${aws_lb.gateway-lb.dns_name}
+fi
+EOT
+      ,
 
    ## Deploy UF for Splunk Ent, but only if splunk_ent_count = 1 AND otel_logs_enabled is false
-      <<EOT
+    <<EOT
     if [ ${var.splunk_ent_count} -eq 1 ] && [ "${var.otel_logs_enabled}" = "false" ]; then
-        sudo chmod +x /tmp/install_splunk_universal_forwarder.sh
-        UNIVERSAL_FORWARDER_FILENAME=${var.universalforwarder_filename}
-        UNIVERSAL_FORWARDER_VERSION=${var.universalforwarder_version}
-        PASSWORD=${var.splunk_admin_pwd}
-        SPLUNK_IP=${var.splunk_private_ip}
-        PRIVATE_DNS=${self.private_dns}
-        /tmp/install_splunk_universal_forwarder.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_VERSION $PASSWORD $SPLUNK_IP $PRIVATE_DNS
+      sudo chmod +x /tmp/install_splunk_universal_forwarder.sh
+      UNIVERSAL_FORWARDER_FILENAME=${var.universalforwarder_filename}
+      UNIVERSAL_FORWARDER_VERSION=${var.universalforwarder_version}
+      PASSWORD=${var.splunk_admin_pwd}
+      SPLUNK_IP=${var.splunk_private_ip}
+      PRIVATE_DNS=${self.private_dns}
+      /tmp/install_splunk_universal_forwarder.sh $UNIVERSAL_FORWARDER_FILENAME $UNIVERSAL_FORWARDER_VERSION $PASSWORD $SPLUNK_IP $PRIVATE_DNS
 
-        ## Write env vars to file (used for debugging)
-        echo $UNIVERSAL_FORWARDER_FILENAME > /tmp/UNIVERSAL_FORWARDER_FILENAME
-        echo $UNIVERSAL_FORWARDER_VERSION > /tmp/UNIVERSAL_FORWARDER_VERSION
-        echo $PASSWORD > /tmp/UNIVERSAL_FORWARDER_PASSWORD
-        echo $SPLUNK_IP > /tmp/SPLUNK_IP
-        echo $PRIVATE_DNS > /tmp/PRIVATE_DNS
-      else
+      ## Write env vars to file (used for debugging)
+      echo $UNIVERSAL_FORWARDER_FILENAME > /tmp/UNIVERSAL_FORWARDER_FILENAME
+      echo $UNIVERSAL_FORWARDER_VERSION > /tmp/UNIVERSAL_FORWARDER_VERSION
+      echo $PASSWORD > /tmp/UNIVERSAL_FORWARDER_PASSWORD
+      echo $SPLUNK_IP > /tmp/SPLUNK_IP
+      echo $PRIVATE_DNS > /tmp/PRIVATE_DNS
+    else
       echo "Skipping: splunk_ent_count is ${var.splunk_ent_count} or otel_logs_enabled is ${var.otel_logs_enabled}"
-      fi
-      EOT
-      ,
+    fi
+    EOT
+    ,
 
     ## Deloy UF for Splunk Cloud, but only if splunk_cloud_enabled = true AND otel_logs_enabled is false 
       <<EOT
@@ -125,7 +137,7 @@ resource "aws_instance" "nginx" {
       fi
       EOT
       ,
-          
+
       ## Enable Metrics to Splunk, but only if splunk_hec_metrics_enabled = true
       <<EOT
       if [ "${var.splunk_hec_metrics_enabled}" = "true" ]; then

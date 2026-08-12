@@ -64,6 +64,7 @@ resource "aws_instance" "splunk_ent" {
     ## Sync Non Public Files from S3
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/install_splunk_enterprise.sh /tmp/install_splunk_enterprise.sh",
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/certs.sh /tmp/certs.sh",
+      "aws s3 cp s3://${var.s3_bucket_name}/scripts/configure_splunk_opamp.sh /tmp/configure_splunk_opamp.sh",
       "aws s3 cp s3://${var.s3_bucket_name}/scripts/update_splunk_otel_collector.sh /tmp/update_splunk_otel_collector.sh",
 
       "aws s3 cp s3://${var.s3_bucket_name}/config_files/splunkent_agent_config.yaml /tmp/agent_config.yaml",

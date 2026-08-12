@@ -74,7 +74,7 @@ resource "aws_instance" "apache_web" {
       
       "aws s3 cp s3://${var.s3_bucket_name}/config_files/apache_web_agent_config.yaml /tmp/agent_config.yaml",
       "aws s3 cp s3://${var.s3_bucket_name}/config_files/apache_web_agent_logs_config.yaml /tmp/agent_logs_config.yaml",
-      
+
       "aws s3 cp s3://${var.s3_bucket_name}/non_public_files/splunkclouduf.spl /tmp/splunkclouduf.spl",
 
       # "aws s3 cp s3://${var.s3_bucket_name}/scripts/xxx /tmp/xxx",
@@ -97,10 +97,21 @@ resource "aws_instance" "apache_web" {
       # "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml",
       "sudo mv /tmp/${var.otel_logs_enabled ? "agent_logs_config.yaml" : "agent_config.yaml"} /etc/otel/collector/agent_config.yaml", # Conditional to use different config if otel_logs_enabled is true or false
       "sudo chown splunk-otel-collector:splunk-otel-collector /etc/otel/collector/agent_config.yaml",
-      "sudo chmod +x /tmp/update_splunk_otel_collector.sh",
-      "sudo /tmp/update_splunk_otel_collector.sh $LBURL",
+      <<EOT
+if [ ${var.splunk_ent_count} -eq 1 ]; then
+  sudo chmod +x /tmp/update_splunk_otel_collector.sh
+  sudo /tmp/update_splunk_otel_collector.sh \
+    ${aws_lb.gateway-lb.dns_name} \
+    ${var.splunk_private_ip}:8089 \
+    "Bearer ${local.splunk_opamp_token}"
+else
+  echo "Skipping OpAMP Enterprise config: splunk_ent_count=${var.splunk_ent_count}"
+  sudo chmod +x /tmp/update_splunk_otel_collector.sh
+  sudo /tmp/update_splunk_otel_collector.sh ${aws_lb.gateway-lb.dns_name}
+fi
+EOT
+      ,
       "sudo chown splunk-otel-collector:splunk-otel-collector -R /media/data/logs",
-      "sudo systemctl restart splunk-otel-collector",
 
    ## Deploy UF for Splunk Ent, but only if splunk_ent_count = 1 AND otel_logs_enabled is false
     <<EOT

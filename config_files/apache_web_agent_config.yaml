@@ -16,8 +16,10 @@ extensions:
         key: X-SF-TOKEN
         from_context: X-SF-TOKEN
         default_value: "${SPLUNK_ACCESS_TOKEN}"
+
   health_check:
     endpoint: "${SPLUNK_LISTEN_INTERFACE}:13133"
+
   http_forwarder:
     ingress:
       endpoint: "${SPLUNK_LISTEN_INTERFACE}:6060"
@@ -25,6 +27,7 @@ extensions:
       # endpoint: "${SPLUNK_API_URL}"
       # Use instead when sending to gateway
       endpoint: "http://${SPLUNK_GATEWAY_URL}"
+
   http_forwarder/opamp_splunk_o11y:
     ingress:
       endpoint: "${SPLUNK_LISTEN_INTERFACE}:4320"
@@ -32,6 +35,10 @@ extensions:
       # endpoint: "${SPLUNK_INGEST_URL}"
       # Use instead when sending to gateway
       endpoint: "http://${SPLUNK_GATEWAY_URL}:4320"
+      # Remove this header to use a token passed by the caller instead.
+      headers:
+        X-SF-Token: "${SPLUNK_ACCESS_TOKEN}"
+
   # opamp/splunk_o11y is included in the default config, but startup removes it
   # from service.extensions unless --feature-gates=+splunk.opamp.enabled is set.
   opamp/splunk_o11y:
@@ -46,6 +53,16 @@ extensions:
         polling_interval: 30s
         headers:
           X-SF-Token: "${SPLUNK_ACCESS_TOKEN}"
+
+  opamp/splunk_enterprise:
+    server:
+      http:
+        endpoint: "https://${SPLUNK_ENTERPRISE_URL}/services/tenant/agent-management/v2/opamp/otel"
+        tls:
+          insecure_skip_verify: true
+        headers:
+          Authorization: "${SPLUNK_OPAMP_TOKEN}"
+
   zpages:
     #endpoint: "${SPLUNK_LISTEN_INTERFACE}:55679"
     expvar:
@@ -149,19 +166,20 @@ processors:
   # Resource detection processor is configured to override all host and cloud attributes because instrumentation
   # libraries can send wrong values from container environments.
   # https://docs.splunk.com/Observability/gdi/opentelemetry/components/resourcedetection-processor.html#ordering-considerations
-  resourcedetection:
+  resource_detection:
     detectors: [gcp, ecs, ec2, azure, system]
     override: true
 
-  # Optional: The following processor can be used to add a default "deployment.environment" attribute to the logs and
+  # Optional: The following processor can be used to add a default "deployment.environment.name" attribute to the logs and
   # traces when it's not populated by instrumentation libraries.
   # If enabled, make sure to enable this processor in a pipeline.
+  # To use the deprecated attribute, change the key to "deployment.environment".
   # For more information, see https://docs.splunk.com/Observability/gdi/opentelemetry/components/resource-processor.html
   #resource/add_environment:
     #attributes:
       #- action: insert
         #value: staging/production/...
-        #key: deployment.environment
+        #key: deployment.environment.name
 
   metricstransform:
     transforms:
@@ -211,8 +229,8 @@ exporters:
   splunk_hec:
     token: "${SPLUNK_HEC_TOKEN}"
     endpoint: "${SPLUNK_HEC_URL}"
-    # source: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.source" attribute set by the transform processor
-    # sourcetype: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.sourcetype" attribute set by the transform processor
+    source: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.source" attribute set by the transform processor
+    sourcetype: "otel" # Will only take effect if the incoming log doesn't have "com.splunk.sourcetype" attribute set by the transform processor
     # index: "main" # Optional: specify the index to send logs to. If not set, it will go to the default index configured in HEC.
     # host: "otel-collector" # Optional: specify the host field for incoming logs. If not set, it will use the host from which the log was sent or "unknown" if not available.
     # batch_max_size: 1024 # Optional: maximum number of logs to include in a batch before sending to HEC. Default is 1024.
@@ -268,6 +286,10 @@ service:
       attributes:
         - name: otelcol.service.mode
           value: agent
+        # Optional: Add a deployment environment to the Collector's internal telemetry.
+        # To use the deprecated attribute, change the key to "deployment.environment".
+        # - name: deployment.environment.name
+        #   value: staging/production/...
     metrics:
       readers:
         - pull:
@@ -282,6 +304,7 @@ service:
   - http_forwarder
   - http_forwarder/opamp_splunk_o11y
   - opamp/splunk_o11y
+  - opamp/splunk_enterprise
   - zpages
 
   pipelines:
@@ -293,7 +316,7 @@ service:
       processors:
       - memory_limiter
       - batch
-      - resourcedetection
+      - resource_detection
       #- resource/add_environment
       exporters:
       # - otlp_http
@@ -307,7 +330,7 @@ service:
       processors:
       - memory_limiter
       - batch
-      - resourcedetection
+      - resource_detection
       - metricstransform
       exporters:
       # - signalfx
@@ -322,7 +345,7 @@ service:
       processors:
       - memory_limiter
       - batch
-      - resourcedetection
+      - resource_detection
       # When sending to gateway, at least one metrics pipeline needs
       # to use signalfx exporter so host metadata gets emitted
       exporters:
@@ -334,7 +357,7 @@ service:
       processors:
       - memory_limiter
       - batch
-      - resourcedetection
+      - resource_detection
       exporters:
       - signalfx
 
@@ -345,7 +368,7 @@ service:
       processors:
       - memory_limiter
       - batch
-      - resourcedetection
+      - resource_detection
       exporters:
       # - otlp_http/entities
       # Use instead when sending to gateway
@@ -358,7 +381,7 @@ service:
       processors:
       - memory_limiter
       - batch
-      - resourcedetection
+      - resource_detection
       #- resource/add_environment
       exporters:
       # - splunk_hec

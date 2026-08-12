@@ -19,7 +19,7 @@ resource "aws_instance" "mysql" {
       splunkit_data_classification  = "private"
     }
   }
-  
+
   tags = {
     Name = lower(join("-",[var.environment, "mysql", count.index + 1]))
     Environment = lower(var.environment)
@@ -111,8 +111,25 @@ resource "aws_instance" "mysql" {
       # "sudo mv /tmp/agent_config.yaml /etc/otel/collector/agent_config.yaml",
       "sudo mv /tmp/${var.otel_logs_enabled ? "agent_logs_config.yaml" : "agent_config.yaml"} /etc/otel/collector/agent_config.yaml", # Conditional to use different config if otel_logs_enabled is true or false
       "sudo chown splunk-otel-collector:splunk-otel-collector /etc/otel/collector/agent_config.yaml",
-      "sudo chmod +x /tmp/update_splunk_otel_collector.sh",
-      "sudo /tmp/update_splunk_otel_collector.sh $LBURL $MYSQLUSER $MYSQLPWD",
+      <<EOT
+if [ ${var.splunk_ent_count} -eq 1 ]; then
+  sudo chmod +x /tmp/update_splunk_otel_collector.sh
+  sudo /tmp/update_splunk_otel_collector.sh \
+    ${aws_lb.gateway-lb.dns_name} \
+    ${var.mysql_user} \
+    ${var.mysql_user_pwd} \
+    ${var.splunk_private_ip}:8089 \
+    "Bearer ${local.splunk_opamp_token}"
+else
+  echo "Skipping OpAMP Enterprise config: splunk_ent_count=${var.splunk_ent_count}"
+  sudo chmod +x /tmp/update_splunk_otel_collector.sh
+  sudo /tmp/update_splunk_otel_collector.sh \
+    ${aws_lb.gateway-lb.dns_name} \
+    ${var.mysql_user} \
+    ${var.mysql_user_pwd}
+fi
+EOT
+      ,
 
    ## Deploy UF for Splunk Ent, but only if splunk_ent_count = 1 AND otel_logs_enabled is false
     <<EOT
@@ -157,7 +174,7 @@ resource "aws_instance" "mysql" {
       fi
       EOT
       ,
-          
+
       ## Enable Metrics to Splunk, but only if splunk_hec_metrics_enabled = true
       <<EOT
       if [ "${var.splunk_hec_metrics_enabled}" = "true" ]; then

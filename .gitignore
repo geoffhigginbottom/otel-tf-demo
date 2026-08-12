@@ -45,6 +45,7 @@ lambda.zip
 lambda_function.py
 index.js
 hec_tokens.json
+opamp_token.json
 mySplunkWebCert.pem
 aws-auth.yaml
 

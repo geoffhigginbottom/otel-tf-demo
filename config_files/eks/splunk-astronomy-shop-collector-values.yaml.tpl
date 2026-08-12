@@ -228,7 +228,7 @@ agent:
 %{ else ~}
             - signalfx
 %{ endif ~}
-          processors: [memory_limiter, k8s_attributes, batch, resourcedetection, resource]
+          processors: [memory_limiter, k8s_attributes, batch, resource_detection, resource]
           receivers: [host_metrics, kubelet_stats, otlp, receiver_creator]
         traces:
           exporters:
@@ -238,7 +238,7 @@ agent:
             - signalfx
             - otlp_http
 %{ endif ~}
-          processors: [memory_limiter, filter/drop_flagd, k8s_attributes, batch, resourcedetection, resource, resource/add_environment]
+          processors: [memory_limiter, filter/drop_flagd, k8s_attributes, batch, resource_detection, resource, resource/add_environment]
           receivers: [otlp, jaeger, zipkin]
 %{ endif ~}
 

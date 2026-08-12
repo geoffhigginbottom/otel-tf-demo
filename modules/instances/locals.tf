@@ -6,6 +6,7 @@
 
 
 locals {
-  hec_metrics_token = var.splunk_ent_count != 0 ? lookup(data.external.hec_tokens[0].result, "OTEL-METRICS", var.access_token) : var.access_token
-  hec_otel_token    = var.splunk_ent_count != 0 ? lookup(data.external.hec_tokens[0].result, "OTEL-LOGS", var.access_token) : var.access_token
+  hec_metrics_token  = var.splunk_ent_count != 0 ? lookup(data.external.hec_tokens[0].result, "OTEL-METRICS", var.access_token) : var.access_token
+  hec_otel_token     = var.splunk_ent_count != 0 ? lookup(data.external.hec_tokens[0].result, "OTEL-LOGS", var.access_token) : var.access_token
+  splunk_opamp_token = var.splunk_ent_count != 0 ? lookup(data.external.opamp_token[0].result, "token", "") : ""
 }

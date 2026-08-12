@@ -3,40 +3,40 @@ variable "region" {
   default = {}
 }
 # variable "aws_access_key_id" {
-#   default = []
+#   default = {}
 # }
 # variable "aws_secret_access_key" {
-#   default = []
+#   default = {}
 # }
 variable "vpc_id" {
-  default = []
+  default = {}
 }
 variable "vpc_cidr_block" {
-  default = []
+  default = {}
 }
 variable "public_subnet_ids" {
   default = {}
 }
 variable "key_name" {
-  default = []
+  default = {}
 }
 variable "private_key_path"{
-  default = []
+  default = {}
 }
 variable "instance_type" {
-  default = []
+  default = {}
 }
 variable "gateway_instance_type" {
-  default = []
+  default = {}
 }
 variable "mysql_instance_type" {
-  default = []
+  default = {}
 }
 variable "ms_sql_instance_type" {
-  default = []
+  default = {}
 }
 variable "windows_server_instance_type" {
-  default = []
+  default = {}
 }
 variable "ami" {
   default = {}
@@ -52,16 +52,16 @@ variable "my_public_ip" {
   description = "Public IPv4 allowed for SSH/RDP in security groups."
 }
 variable "splunk_ent_eip" {
-  default = []
+  default = {}
 }
 variable "splunk_private_ip" {
-  default = []
+  default = {}
 }
 variable "ec2_instance_profile_name" {
   type = string
 }
 variable "s3_bucket_name" {
-  default = []
+  default = {}
 }
 variable "insecure_sg_rules" {
   description = "Set to true to allow access from 0.0.0.0/0, false to restrict to my_public_ip."
@@ -71,28 +71,28 @@ variable "insecure_sg_rules" {
 
 ### SignalFX Variables ###
 variable "access_token" {
-  default = []
+  default = {}
 }
 variable "api_url" {
-  default = []
+  default = {}
 }
 variable "realm" {
-  default = []
+  default = {}
 }
 # variable "smart_agent_version" {
 #   default = []
 # }
 variable "otelcol_version" {
-  default = []
+  default = {}
 }
 variable "collector_version" {
   default = {}
 }
 variable "ballast" {
-  default = []
+  default = {}
 }
 variable "environment" {
-  default = []
+  default = {}
 }
 variable "gateway_count" {
   type = number
@@ -115,34 +115,34 @@ variable "mysql_count" {
   default = 0
 }
 variable "mysql_user" {
-  default = []
+  default = {}
 }
 variable "mysql_user_pwd" {
-  default = []
+  default = {}
 }
 variable "ms_sql_count" {
   type = number
   default = 0
 }
 variable "ms_sql_user" {
-  default = []
+  default = {}
 }
 variable "ms_sql_user_pwd" {
-  default = []
+  default = {}
 }
 variable "iis_server_count" {
   type = number
   default = 0
 }
 variable "windows_server_administrator_pwd" {
-  default =[]
+  default = {}
 }
 variable "apache_web_count" {
   type = number
   default = 0
 }
 variable "branch" {
-  default = []
+  default = {}
 }
 variable "rum_access_token" {
   default = {}
@@ -218,26 +218,26 @@ variable "splunk_connect_for_otlp_filename" {
 
 ### Certificate Vars ###
 variable "slo_certpath" {
-  default = []
+  default = {}
 }
 variable "le_certpath" {
-  default = []
+  default = {}
 }
 variable "passphrase" {
-  default = []
+  default = {}
 }
 variable "fqdn" {
-  default = []
+  default = {}
 }
 variable "country" {
-  default = []
+  default = {}
 }
 variable "state" {
-  default = []
+  default = {}
 }
 variable "location" {
-  default = []
+  default = {}
 }
 variable "org" {
-  default = []
+  default = {}
 }
