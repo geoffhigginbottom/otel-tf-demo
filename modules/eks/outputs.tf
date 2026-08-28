@@ -55,6 +55,16 @@ output "eks_cluster_endpoint" {
   value       = aws_eks_cluster.eks_cluster.endpoint
 }
 
+output "eks_secrets_kms_key_arn" {
+  description = "KMS key ARN used for EKS envelope encryption of Kubernetes Secrets"
+  value       = aws_kms_key.eks_secrets.arn
+}
+
+output "eks_secrets_kms_key_id" {
+  description = "KMS key ID used for EKS envelope encryption of Kubernetes Secrets"
+  value       = aws_kms_key.eks_secrets.key_id
+}
+
 output "config_map_aws_auth" {
   value = local.config_map_aws_auth
 }

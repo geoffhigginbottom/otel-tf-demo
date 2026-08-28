@@ -28,6 +28,28 @@ resource "aws_iam_role_policy_attachment" "eks_cluster-AmazonEKSVPCResourceContr
   role       = aws_iam_role.eks_cluster.name
 }
 
+resource "aws_iam_role_policy" "eks_cluster_kms" {
+  name = join("-", [var.environment, "eks-cluster-kms"])
+  role = aws_iam_role.eks_cluster.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:CreateGrant",
+        "kms:ListGrants",
+        "kms:DescribeKey",
+      ]
+      Resource = aws_kms_key.eks_secrets.arn
+    }]
+  })
+}
+
 
 
 resource "aws_iam_role" "eks_node" {

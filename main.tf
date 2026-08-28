@@ -304,6 +304,7 @@ output "detector_promoting_tags_id" { value = var.detectors_enabled ? module.det
 
 ### EKS Outputs ###
 output "eks_admin_server" { value = var.eks_cluster_enabled ? module.eks.*.eks_admin_server_details : null }
+output "eks_secrets_kms_key_arn" { value = var.eks_cluster_enabled ? module.eks.*.eks_secrets_kms_key_arn : null }
 # output "aws_eks_node_group_name" {value = var.eks_cluster_enabled ? module.eks.*.aws_eks_node_group_name : null}
 # output "aws_lb_target_group_arn" {value = var.eks_cluster_enabled ? module.eks.*.aws_lb_target_group_arn : null}
 output "astro_shop_url" { value = var.eks_cluster_enabled ? module.eks.*.astro_shop_url : null }

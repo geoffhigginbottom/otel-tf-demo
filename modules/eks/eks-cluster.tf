@@ -13,8 +13,17 @@ resource "aws_eks_cluster" "eks_cluster" {
     ) : var.public_subnet_ids
   }
 
+  encryption_config {
+    provider {
+      key_arn = aws_kms_key.eks_secrets.arn
+    }
+    resources = ["secrets"]
+  }
+
   depends_on = [
     aws_iam_role_policy_attachment.eks_cluster-AmazonEKSClusterPolicy,
     aws_iam_role_policy_attachment.eks_cluster-AmazonEKSVPCResourceController,
+    aws_iam_role_policy.eks_cluster_kms,
+    aws_kms_key.eks_secrets,
   ]
 }
